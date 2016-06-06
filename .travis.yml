@@ -9,7 +9,6 @@ python:
   - pypy
 
 install:
-  - pip install --upgrade pip
   - pip install -e .
   - pip install codecov pytest
 

@@ -52,7 +52,7 @@ class MarshModelMeta(type):
         SchemaClass = type(
             '{name}Schema'.format(name=name),
             (Schema,),
-            attrs['Schema'].__dict__
+            dict(attrs['Schema'].__dict__)
         )
         attrs['Schema'] = SchemaClass(strict=True)
 
@@ -60,7 +60,7 @@ class MarshModelMeta(type):
         TableClass = type(
             '{name}Table'.format(name=name),
             (DynaTable,),
-            attrs['Table'].__dict__
+            dict(attrs['Table'].__dict__)
         )
         attrs['Table'] = TableClass(schema=attrs['Schema'])
 
