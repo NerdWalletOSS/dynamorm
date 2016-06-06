@@ -29,13 +29,13 @@ class HashKeyExists(MarshModelException):
 class MarshModelMeta(type):
     """MarshModelMeta is a metaclass for the MarshModel class that transforms our Table and Schema classes
 
-    Since we can introspect the data we need to build the full data structures needed for working with tables and
-    indexes users can define for more concise and readable table definitions that we transform into the final
-    To allow for a more concise definition of MarshModel's we do not require that users define their inner Schema class
-    as extending from the :class:`~marshmallow.Schema`.  Instead, when the class is being defined we take the inner
-    Schema and transform it into a new class named <Name>Schema, extending from :class:`~marshmallow.Schema`.  For
-    example, on a model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named
-    ``FooSchema``, rather than a class named ``Schema``
+    Since we can inspect the data we need to build the full data structures needed for working with tables and indexes
+    users can define for more concise and readable table definitions that we transform into the final To allow for a
+    more concise definition of MarshModel's we do not require that users define their inner Schema class as extending
+    from the :class:`~marshmallow.Schema`.  Instead, when the class is being defined we take the inner Schema and
+    transform it into a new class named <Name>Schema, extending from :class:`~marshmallow.Schema`.  For example, on a
+    model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
+    than a class named ``Schema``
     """
     def __new__(cls, name, parents, attrs):
         if name in ('MarshModel', 'MarshModelMeta'):

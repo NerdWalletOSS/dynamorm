@@ -16,6 +16,10 @@ class DynaTableException(Exception):
     """Base exception class for all DynaTable errors"""
 
 
+class MissingTableAttribute(DynaTableException):
+    """A required attribute is missing"""
+
+
 class InvalidSchemaField(DynaTableException):
     """A field provided does not exist in the schema"""
 
@@ -31,7 +35,7 @@ class DynaTable(object):
 
         for attr in required_attrs:
             if not hasattr(self, attr):
-                raise DynaTableException("Missing required Table attribute: {0}".format(attr))
+                raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
 
         for attr in optional_attrs:
             if not hasattr(self, attr):
