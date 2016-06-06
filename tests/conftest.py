@@ -5,7 +5,11 @@ import socket
 import subprocess
 import tarfile
 import tempfile
-import urllib
+
+try:
+    from urllib import urlretrieve
+except ImportError:
+    from urllib.request import urlretrieve
 
 import pytest
 
@@ -63,7 +67,7 @@ def dynamo_local(request, TestModel):
         temp_fd, temp_file = tempfile.mkstemp()
         os.close(temp_fd)
         log.info("Downloading dynamo local to: {0}".format(temp_file))
-        urllib.urlretrieve(
+        urlretrieve(
             'http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.tar.gz',
             temp_file
         )
