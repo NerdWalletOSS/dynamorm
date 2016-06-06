@@ -11,7 +11,7 @@ python:
 install:
   - pip install codecov
 
-script: coverage run --source=dynamallow python setup.py test
+script: coverage run --source=dynamallow setup.py test
 
 after_success:
   - codecov
