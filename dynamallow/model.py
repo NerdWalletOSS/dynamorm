@@ -43,14 +43,14 @@ class MarshModelMeta(type):
 
         for inner_class in ('Table', 'Schema'):
             if inner_class not in attrs or not inspect.isclass(attrs[inner_class]):
-                raise MarshModelException("You must define an inner '{}' class on your '{}' class".format(
-                    inner_class,
-                    name
+                raise MarshModelException("You must define an inner '{inner}' class on your '{name}' class".format(
+                    inner=inner_class,
+                    name=name
                 ))
 
         # transform the Schema
         SchemaClass = type(
-            '{}Schema'.format(name),
+            '{name}Schema'.format(name=name),
             (Schema,),
             attrs['Schema'].__dict__
         )
@@ -58,7 +58,7 @@ class MarshModelMeta(type):
 
         # transform the Table
         TableClass = type(
-            '{}Table'.format(name),
+            '{name}Table'.format(name=name),
             (DynaTable,),
             attrs['Table'].__dict__
         )
@@ -152,7 +152,7 @@ class MarshModel(object):
         if errors:
             # XXX TODO: the data loaded from dynamo doesn't match our expected schema, what to do?
             # XXX TODO: some of our data will likely still have loaded, so for now just log an error and continue
-            log.error("Data from dynamo failed schema validation! -> {}".format(errors))
+            log.error("Data from dynamo failed schema validation! -> {0}".format(errors))
         if data:
             return cls(raw=raw, **data)
 
@@ -161,5 +161,5 @@ class MarshModel(object):
         # XXX TODO: item on every save
         data, errors = self.Schema.dump(self)
         if errors:
-            raise ValueError("Failed to dump ourselves!? -> {}".format(errors))
+            raise ValueError("Failed to dump ourselves!? -> {0}".format(errors))
         return self.put(data)

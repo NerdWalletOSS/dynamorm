@@ -35,9 +35,9 @@ def TestModel():
             count = fields.Integer()
 
         def business_logic(self):
-            return 'http://art.lawver.net/funny/internet.jpg?foo={}&bar={}'.format(
-                self.foo,
-                self.bar
+            return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
+                foo=self.foo,
+                bar=self.bar
             )
 
     return TestModel
@@ -55,14 +55,14 @@ def dynamo_local(request, TestModel):
     dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
 
     if not os.path.isdir(dynamo_local_dir):
-        log.info("Creating dynamo_local_dir: {}".format(dynamo_local_dir))
+        log.info("Creating dynamo_local_dir: {0}".format(dynamo_local_dir))
         assert not os.path.exists(dynamo_local_dir)
-        os.makedirs(dynamo_local_dir, 0755)
+        os.makedirs(dynamo_local_dir, 0o755)
 
     if not os.path.exists(os.path.join(dynamo_local_dir, 'DynamoDBLocal.jar')):
         temp_fd, temp_file = tempfile.mkstemp()
         os.close(temp_fd)
-        log.info("Downloading dynamo local to: {}".format(temp_file))
+        log.info("Downloading dynamo local to: {0}".format(temp_file))
         urllib.urlretrieve(
             'http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.tar.gz',
             temp_file
@@ -87,7 +87,10 @@ def dynamo_local(request, TestModel):
 
     random_port = get_random_port()
 
-    log.info("Running dynamo from {} on port {}".format(dynamo_local_dir, random_port))
+    log.info("Running dynamo from {dir} on port {port}".format(
+        dir=dynamo_local_dir,
+        port=random_port
+    ))
 
     dynamo_proc = subprocess.Popen(
         (
@@ -112,7 +115,7 @@ def dynamo_local(request, TestModel):
         aws_access_key_id="anything",
         aws_secret_access_key="anything",
         region_name="us-west-2",
-        endpoint_url='http://localhost:{}'.format(random_port)
+        endpoint_url='http://localhost:{port}'.format(port=random_port)
     )
 
     return random_port

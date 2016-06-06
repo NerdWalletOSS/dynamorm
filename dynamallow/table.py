@@ -31,17 +31,17 @@ class DynaTable(object):
 
         for attr in required_attrs:
             if not hasattr(self, attr):
-                raise DynaTableException("Missing required Table attribute: {}".format(attr))
+                raise DynaTableException("Missing required Table attribute: {0}".format(attr))
 
         for attr in optional_attrs:
             if not hasattr(self, attr):
                 setattr(self, attr, None)
 
         if self.hash_key not in self.schema.fields:
-            raise InvalidSchemaField("The hash key '{}' does not exist in the schema".format(self.hash_key))
+            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
 
         if self.range_key and self.range_key not in self.schema.fields:
-            raise InvalidSchemaField("The range key '{}' does not exist in the schema".format(self.range_key))
+            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
 
     def get_table(self, resource):
         if self._table is None:
@@ -99,7 +99,7 @@ class DynaTable(object):
         return table.put_item(Item=item, **kwargs)
 
     def put_unique(self, resource, item, **kwargs):
-        kwargs['ConditionExpression'] = 'attribute_not_exists({})'.format(self.hash_key)
+        kwargs['ConditionExpression'] = 'attribute_not_exists({0})'.format(self.hash_key)
         return self.put(resource, item, **kwargs)
 
     def put_batch(self, resource, *items, **batch_kwargs):
@@ -112,7 +112,7 @@ class DynaTable(object):
         table = self.get_table(resource)
         for k, v in six.iteritems(kwargs):
             if k not in self.schema.fields:
-                raise InvalidSchemaField("{} does not exist in the schema fields".format(k))
+                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
         response = table.get_item(Key=kwargs)
         if 'Item' in response:
             return response['Item']
