@@ -1,11 +1,19 @@
+import logging
+import os
 import random
 import socket
+import subprocess
+import tarfile
+import tempfile
+import urllib
 
 import pytest
 
 from dynamallow import MarshModel
 
 from marshmallow import fields
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope='session')
@@ -44,8 +52,28 @@ def TestModel_table(request, TestModel):
 @pytest.fixture(scope='session')
 def dynamo_local(request, TestModel):
     """Connect to a local dynamo instance"""
-    # XXX TODO: check for DYNAMO_LOCAL in os.environ, if it doesn't exist then download the latest copy of dynamo and
-    # run it out of our build/ dir
+    dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
+
+    if not os.path.isdir(dynamo_local_dir):
+        log.info("Creating dynamo_local_dir: {}".format(dynamo_local_dir))
+        assert not os.path.exists(dynamo_local_dir)
+        os.makedirs(dynamo_local_dir, 0755)
+
+    if not os.path.exists(os.path.join(dynamo_local_dir, 'DynamoDBLocal.jar')):
+        temp_fd, temp_file = tempfile.mkstemp()
+        os.close(temp_fd)
+        log.info("Downloading dynamo local to: {}".format(temp_file))
+        urllib.urlretrieve(
+            'http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.tar.gz',
+            temp_file
+        )
+
+        log.info("Extracting dynamo local...")
+        archive = tarfile.open(temp_file, 'r:gz')
+        archive.extractall(dynamo_local_dir)
+        archive.close()
+
+        os.unlink(temp_file)
 
     def get_random_port():
         """Find a random port that appears to be available"""
@@ -59,19 +87,32 @@ def dynamo_local(request, TestModel):
 
     random_port = get_random_port()
 
-    # XXX TODO: start dynamo on a random port with inMemory in a new subprocess
+    log.info("Running dynamo from {} on port {}".format(dynamo_local_dir, random_port))
+
+    dynamo_proc = subprocess.Popen(
+        (
+            'java',
+            '-Djava.library.path=./DynamoDBLocal_lib',
+            '-jar', 'DynamoDBLocal.jar',
+            '-sharedDb',
+            '-inMemory',
+            '-port', str(random_port)
+        ),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=dynamo_local_dir
+    )
 
     def shutdown_dynamo():
-        # XXX TODO: shutdown dynamo here
-        pass
-
+        dynamo_proc.terminate()
+        dynamo_proc.wait()
     request.addfinalizer(shutdown_dynamo)
 
     TestModel.get_resource(
         aws_access_key_id="anything",
         aws_secret_access_key="anything",
         region_name="us-west-2",
-        endpoint_url='http://localhost:8000'
+        endpoint_url='http://localhost:{}'.format(random_port)
     )
 
     return random_port
