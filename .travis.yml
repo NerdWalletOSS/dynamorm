@@ -9,7 +9,8 @@ python:
   - pypy
 
 install:
-  - pip install codecov
+  - pip install -e .
+  - pip install codecov pytest
 
 script: coverage run --source=dynamallow setup.py test
 

@@ -17,9 +17,9 @@ setup(
         'pytest-runner',
     ],
     install_requires=[
-        'boto3>=1.3.1,<1.4',
-        'marshmallow>=2.7.0,<2.8.0'
-        'pytest>=2.0,<3.0',
+        'boto3<1.4',
+        'marshmallow<2.8.0'
+        'pytest<3.0',
         'six',
     ],
     packages=[
