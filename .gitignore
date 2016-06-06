@@ -1,0 +1,10 @@
+*.pyc
+.*.sw[op]
+
+build/
+dist/
+.cache/
+.eggs/
+
+*.egg-info/
+*.dist-info/
