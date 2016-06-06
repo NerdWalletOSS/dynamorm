@@ -67,6 +67,8 @@ class MarshModelMeta(type):
         return super(MarshModelMeta, cls).__new__(cls, name, parents, attrs)
 
 
+
+@six.add_metaclass(MarshModelMeta)
 class MarshModel(object):
     """MarshModel is the base class that is used for defining your objects
     
@@ -95,7 +97,6 @@ class MarshModel(object):
             def functionality(self)
                 ...
     """
-    __metaclass__ = MarshModelMeta
     _resource = None
 
     def __init__(self, raw=None, **kwargs):
