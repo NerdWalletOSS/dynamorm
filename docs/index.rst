@@ -1,5 +1,5 @@
-DynamoDB + Marshmallow == Dynamallow
-====================================
+DynamoDB + Marshmallow
+======================
 
 Two awesome things, better together!
 
@@ -12,14 +12,6 @@ Contents:
 
    usage
    developing
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
 
 .. _Boto v3 DynamoDB API: http://boto3.readthedocs.io/en/latest/guide/dynamodb.html
