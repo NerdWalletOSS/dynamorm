@@ -53,8 +53,12 @@ objects.
             name = fields.String()
             color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
 
-        def some_function(self):
-            ...
+        def say_hello(self):
+            print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
+                id=self.id,
+                name=self.name,
+                color=self.color
+            ))
 
 
 Creating new documents
@@ -71,8 +75,8 @@ Using objects:
 
     thing = Thing()
     thing.id = "thing1"
-    thing.name="Thing One"
-    thing.color="purple"
+    thing.name = "Thing One"
+    thing.color = "purple"
     thing.save()
 
 
