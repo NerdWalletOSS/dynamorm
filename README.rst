@@ -28,7 +28,9 @@ ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongl
 Documentation
 =============
 
-Documentation can be found at readthedocs: http://dynamallow.rtfd.org
+Full documentation can be found online at:
+
+http://borgstrom.github.io/dynamallow/
 
 
 TODO
