@@ -5,7 +5,10 @@ Two awesome things, better together!
 
 Dynamallow provides integration between the `Boto v3 DynamoDB API`_ and `Marshmallow`_.  Together they provide a simple,
 ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongly typed schema.
-Contents:
+
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2

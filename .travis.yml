@@ -10,9 +10,12 @@ python:
 
 install:
   - pip install -e .
-  - pip install codecov pytest
+  - pip install codecov pytest travis-sphinx
 
-script: coverage run --source=dynamallow setup.py test
+script:
+  - coverage run --source=dynamallow setup.py test
+  - travis-sphinx --source=docs/ build
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  - travis-sphinx deploy
