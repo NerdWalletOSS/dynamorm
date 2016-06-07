@@ -34,6 +34,8 @@ def test_table_validation():
             class Schema:
                 foo = fields.String(required=True)
 
+
+def test_invalid_hash_key():
     with pytest.raises(InvalidSchemaField):
         class Model(MarshModel):
             class Table:
@@ -44,3 +46,18 @@ def test_table_validation():
 
             class Schema:
                 bar = fields.String(required=True)
+
+
+def test_invalid_range_key():
+    with pytest.raises(InvalidSchemaField):
+        class Model(MarshModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+                range_key = 'bar'
+                read = 1
+                write = 1
+
+            class Schema:
+                foo = fields.String(required=True)
+                baz = fields.String(required=True)

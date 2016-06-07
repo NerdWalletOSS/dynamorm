@@ -8,3 +8,7 @@ dist/
 
 *.egg-info/
 *.dist-info/
+
+docs/_build
+
+.coverage
