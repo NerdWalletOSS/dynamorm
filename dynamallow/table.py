@@ -19,6 +19,9 @@ write      True      int   The provisioned write throughput.
 =========  ========  ====  ===========
 """
 
+import boto3
+import botocore
+
 import six
 
 from marshmallow import fields
@@ -33,16 +36,20 @@ def _field_to_dynamo_type(field):
     return 'S'
 
 
-class DynamoTable3Exception(Exception):
-    """Base exception class for all DynamoTable3 errors"""
+class DynamoTableException(Exception):
+    """Base exception class for all DynamoTable errors"""
 
 
-class MissingTableAttribute(DynamoTable3Exception):
+class MissingTableAttribute(DynamoTableException):
     """A required attribute is missing"""
 
 
-class InvalidSchemaField(DynamoTable3Exception):
+class InvalidSchemaField(DynamoTableException):
     """A field provided does not exist in the schema"""
+
+
+class HashKeyExists(DynamoTableException):
+    """A operating requesting a unique hash key failed"""
 
 
 class DynamoTable3(object):
@@ -68,6 +75,9 @@ class DynamoTable3(object):
 
         if self.range_key and self.range_key not in self.schema.fields:
             raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
+
+    def get_resource(self, **kwargs):
+        return boto3.resource('dynamodb', **kwargs)
 
     def get_table(self, resource):
         if self._table is None:
@@ -125,8 +135,13 @@ class DynamoTable3(object):
         return table.put_item(Item=item, **kwargs)
 
     def put_unique(self, resource, item, **kwargs):
-        kwargs['ConditionExpression'] = 'attribute_not_exists({0})'.format(self.hash_key)
-        return self.put(resource, item, **kwargs)
+        try:
+            kwargs['ConditionExpression'] = 'attribute_not_exists({0})'.format(self.hash_key)
+            return self.put(resource, item, **kwargs)
+        except botocore.exceptions.ClientError as exc:
+            if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                raise HashKeyExists
+            raise
 
     def put_batch(self, resource, *items, **batch_kwargs):
         table = self.get_table(resource)

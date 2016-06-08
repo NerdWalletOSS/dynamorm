@@ -7,16 +7,22 @@ from dynamallow.table import InvalidSchemaField, MissingTableAttribute
 
 
 def test_missing_inner_classes():
-    """Classes must define the correct inner class structure"""
+    """Classes must have both a Table and Schema inner class"""
     with pytest.raises(MarshModelException):
         class Model(MarshModel):
             pass
 
+
+def test_missing_inner_schema_class():
+    """Classes must have an inner Schema class"""
     with pytest.raises(MarshModelException):
         class Model(MarshModel):
             class Table:
                 pass
 
+
+def test_missing_inner_table_class():
+    """Classes must have an inner Table class"""
     with pytest.raises(MarshModelException):
         class Model(MarshModel):
             class Schema:

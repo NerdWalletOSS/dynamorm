@@ -1,7 +1,16 @@
 """These tests require dynamo local running"""
 import pytest
 
-from dynamallow.model import HashKeyExists
+from marshmallow import fields
+
+from dynamallow.table import HashKeyExists, InvalidSchemaField, _field_to_dynamo_type
+
+
+def test_field_to_dynamo_type():
+    assert _field_to_dynamo_type(fields.Number()) == 'N'
+    assert _field_to_dynamo_type(fields.Decimal()) == 'N'
+    assert _field_to_dynamo_type(fields.Raw()) == 'B'
+    assert _field_to_dynamo_type(fields.DateTime()) == 'S'
 
 
 def test_table_creation_deletion(TestModel, dynamo_local):
@@ -53,3 +62,8 @@ def test_put_unique(TestModel, TestModel_table, dynamo_local):
 
     with pytest.raises(HashKeyExists):
         TestModel.put_unique({"foo": "third", "bar": "three", "baz": "waa", "count": 9})
+
+def test_get_invalid_field(TestModel):
+    """Calling .get on an invalid field should result in an exception"""
+    with pytest.raises(InvalidSchemaField):
+        TestModel.get(bbq="wtf")

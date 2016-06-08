@@ -7,8 +7,6 @@ try:
 except ImportError:
     import json
 
-import boto3
-import botocore
 import six
 
 from marshmallow import Schema
@@ -20,10 +18,6 @@ log = logging.getLogger(__name__)
 
 class MarshModelException(Exception):
     """Base exception for MarshModel problems"""
-
-
-class HashKeyExists(MarshModelException):
-    """A operating requesting a unique hash key failed"""
 
 
 class MarshModelMeta(type):
@@ -113,7 +107,7 @@ class MarshModel(object):
         just need to call ``get_connection`` on any model with the correct kwargs BEFORE you use any of the models.
         """
         if MarshModel._resource is None:
-            MarshModel._resource = boto3.resource('dynamodb', **kwargs)
+            MarshModel._resource = cls.Table.get_resource(**kwargs)
         return MarshModel._resource
 
     @classmethod
@@ -134,12 +128,7 @@ class MarshModel(object):
 
     @classmethod
     def put_unique(cls, item, **kwargs):
-        try:
-            return cls.Table.put_unique(cls.get_resource(), item, **kwargs)
-        except botocore.exceptions.ClientError as exc:
-            if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                raise HashKeyExists
-            raise
+        return cls.Table.put_unique(cls.get_resource(), item, **kwargs)
 
     @classmethod
     def put_batch(cls, *items, **batch_kwargs):
