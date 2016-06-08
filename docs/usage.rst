@@ -44,7 +44,7 @@ objects.
 
         class Table:
             name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
-            hash_key = id
+            hash_key = 'id'
             read = 5
             write = 1
 
@@ -59,6 +59,12 @@ objects.
                 name=self.name,
                 color=self.color
             ))
+
+
+Table Data Model
+~~~~~~~~~~~~~~~~
+
+.. automodule:: dynamallow.table
 
 
 Creating new documents

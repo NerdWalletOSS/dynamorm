@@ -13,7 +13,7 @@ import six
 
 from marshmallow import Schema
 
-from .table import DynaTable
+from .table import DynamoTable3
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class MarshModelMeta(type):
         # transform the Table
         TableClass = type(
             '{name}Table'.format(name=name),
-            (DynaTable,),
+            (DynamoTable3,),
             dict(attrs['Table'].__dict__)
         )
         attrs['Table'] = TableClass(schema=attrs['Schema'])

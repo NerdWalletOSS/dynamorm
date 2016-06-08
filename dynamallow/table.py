@@ -1,3 +1,24 @@
+"""The attributes you define on your inner ``Table`` class map to underlying boto data structures.  This mapping is
+expressed through the following data model:
+
+=========  ========  ====  ===========
+Attribute  Required  Type  Description
+=========  ========  ====  ===========
+name       True      str   The name of the table, as stored in Dynamo.
+
+hash_key   True      str   The name of the field to use as the hash key.
+                           It must exist in the schema.
+
+range_key  False     str   The name of the field to use as the range_key, if one is used.
+                           It must exist in the schema.
+
+read       True      int   The provisioned read throughput.
+
+write      True      int   The provisioned write throughput.
+
+=========  ========  ====  ===========
+"""
+
 import six
 
 from marshmallow import fields
@@ -12,20 +33,21 @@ def _field_to_dynamo_type(field):
     return 'S'
 
 
-class DynaTableException(Exception):
-    """Base exception class for all DynaTable errors"""
+class DynamoTable3Exception(Exception):
+    """Base exception class for all DynamoTable3 errors"""
 
 
-class MissingTableAttribute(DynaTableException):
+class MissingTableAttribute(DynamoTable3Exception):
     """A required attribute is missing"""
 
 
-class InvalidSchemaField(DynaTableException):
+class InvalidSchemaField(DynamoTable3Exception):
     """A field provided does not exist in the schema"""
 
 
-class DynaTable(object):
-    """ """
+class DynamoTable3(object):
+    """Represents a Table object in the Boto3 DynamoDB API"""
+
     def __init__(self, schema):
         self.schema = schema
         self._table = None
