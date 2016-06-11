@@ -1,3 +1,11 @@
+"""Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
+schema that is used for validating and marshalling your data.
+
+.. autoclass:: MarshModel
+    :noindex:
+
+"""
+
 import inspect
 import logging
 import sys
@@ -18,6 +26,15 @@ log = logging.getLogger(__name__)
 
 class MarshModelException(Exception):
     """Base exception for MarshModel problems"""
+
+
+class ValidationError(MarshModelException):
+    """Schema validation failed"""
+    # XXX TODO: this needs to be improved so that it actually shows the errors
+
+    def __init__(self, errors, *args, **kwargs):
+        super(ValidationError, self).__init__(*args, **kwargs)
+        self.errors = errors
 
 
 class MarshModelMeta(type):
@@ -64,92 +81,142 @@ class MarshModelMeta(type):
 
 @six.add_metaclass(MarshModelMeta)
 class MarshModel(object):
-    """MarshModel is the base class that is used for defining your objects
+    """``MarshModel`` is the base class all of your models will extend from.  This model definition encapsulates the
+    parameters used to create and manage the table as well as the schema for validating and marshalling data into object
+    attributes.  It will also hold any custom business logic you need for your objects.
     
     Your class must define two inner classes that specify the Dynamo Table options and the Marshmallow Schema,
     respectively.
 
-    The Dynamo Table options are defined in a class named ``Table``.  TODO
+    The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamallow.table` module for
+    more information.
 
     The Marshmallow Schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
-    out any other :class:`~marshmallow.Schema`.  You do not need to have Schema extend from the marshmallow Schema class
-    as we automatically do that for you, to make model definition more concise.
+    out any other :class:`~marshmallow.Schema`.
+    
+    .. note::
+    
+        You do not need to have Schema extend from the marshmallow :class:`~marshmallow.Schema` class as we
+        automatically do that for you, to make model definition more concise.
+
+        The same is true for the Table class.  We will automatically transform it so that it extends from the
+        :class:`dynamallow.table.DynamoTable3`.
+
+        In either case you're free to define them as extending from the actual base classes if you prefer to be explicit.
+
+    For example:
 
     .. code-block:: python
 
-        class MyThing(MarshModel):
+        import os
+
+        from dynamallow import MarshModel
+
+        from marshmallow import fields, validate
+
+
+        class Thing(MarshModel):
             class Table:
-                name 'prod-things'
+                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
                 hash_key = 'id'
-                read = 1
+                read = 5
                 write = 1
 
             class Schema:
-                id = fields.Str()
-                ...
+                id = fields.String(required=True)
+                name = fields.String()
+                color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
 
-            def functionality(self)
-                ...
+            def say_hello(self):
+                print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
+                    id=self.id,
+                    name=self.name,
+                    color=self.color
+                ))
     """
-    _resource = None
 
     def __init__(self, raw=None, **kwargs):
+        """Create a new instance of a MarshModel
+
+        :param dict raw: The raw data that is being using to populate this model instance
+        :param \*\*kwargs: Any other keywords passed through to the constructor become attributes on the instance
+        """
         self._raw = raw
 
         for k, v in six.iteritems(kwargs):
             setattr(self, k, v)
 
     @classmethod
-    def get_resource(cls, **kwargs):
-        """Return the boto3 dynamodb resource, create it if it doesn't exist
-
-        The resource is stored globally on the ``MarshModel`` class, so to influence the connection parameters you
-        just need to call ``get_connection`` on any model with the correct kwargs BEFORE you use any of the models.
-        """
-        if MarshModel._resource is None:
-            MarshModel._resource = cls.Table.get_resource(**kwargs)
-        return MarshModel._resource
-
-    @classmethod
-    def table_exists(cls):
-        return cls.Table.exists(cls.get_resource())
-
-    @classmethod
-    def create_table(cls):
-        return cls.Table.create(cls.get_resource())
-
-    @classmethod
-    def delete_table(cls):
-        return cls.Table.delete(cls.get_resource())
-
-    @classmethod
     def put(cls, item, **kwargs):
-        return cls.Table.put(cls.get_resource(), item, **kwargs)
+        """Put a single item into the table for this model
+        
+        The attributes on the item go through validation, so this may raise :class:`ValidationError`.
+
+        :param dict item: The item to put into the table
+        :param \*\*kwargs: All other kwargs are passed through to the put method on the table
+        """
+        data, errors = cls.Schema.load(item)
+        if errors:
+            raise ValidationError("Failed to put item", errors=errors)
+        return cls.Table.put(data, **kwargs)
 
     @classmethod
     def put_unique(cls, item, **kwargs):
-        return cls.Table.put_unique(cls.get_resource(), item, **kwargs)
+        """Put a single item into the table for this model, with a unique attribute constraint on the hash key
+
+        :param dict item: The item to put into the table
+        :param \*\*kwargs: All other kwargs are passed through to the put_unique method on the table
+        """
+        data, errors = cls.Schema.load(item)
+        if errors:
+            raise ValidationError("Failed to put unique item", errors=errors)
+        return cls.Table.put_unique(data, **kwargs)
 
     @classmethod
     def put_batch(cls, *items, **batch_kwargs):
-        """Put one or more items into the table"""
-        return cls.Table.put_batch(cls.get_resource(), *items, **batch_kwargs)
+        """Put one or more items into the table
+
+        :param \*items: The items to put into the table
+        :param \*\*kwargs: All other kwargs are passed through to the put_batch method on the table
+
+        Example::
+
+            Thing.put_batch(
+                {"hash_key": "one"},
+                {"hash_key": "two"},
+                {"hash_key": "three"},
+            )
+        """
+        data, errors = cls.Schema.load(items, many=True)
+        if errors:
+            raise ValidationError("Failed to put batch items", errors=errors)
+        return cls.Table.put_batch(*data, **batch_kwargs)
 
     @classmethod
     def get(cls, **kwargs):
-        raw = cls.Table.get(cls.get_resource(), **kwargs)
+        """Get an item from the table
+
+        Example::
+
+            Thing.get(hash_key="three")
+
+        :param \*\*kwargs: You must supply your hash key, and range key if used, with the values to get
+        """
+        raw = cls.Table.get(**kwargs)
         data, errors = cls.Schema.load(raw)
         if errors:
-            # XXX TODO: the data loaded from dynamo doesn't match our expected schema, what to do?
-            # XXX TODO: some of our data will likely still have loaded, so for now just log an error and continue
-            log.error("Data from dynamo failed schema validation! -> {0}".format(errors))
+            raise ValidationError("Failed to load data from Dynamo via our Schema", errors=errors)
         if data:
             return cls(raw=raw, **data)
 
     def save(self):
+        """Save this instance to the table
+        
+        The attributes on the item go through validation, so this may raise :class:`ValidationError`.
+        """
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
         # XXX TODO: item on every save
         data, errors = self.Schema.dump(self)
         if errors:
-            raise ValueError("Failed to dump ourselves!? -> {0}".format(errors))
-        return self.put(data)
+            raise ValidationError("Failed to dump {0} via our Schema".format(self.__class__.__name__), errors=errors)
+        return self.Table.put(data)

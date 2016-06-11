@@ -13,7 +13,7 @@ except ImportError:
 
 import pytest
 
-from dynamallow import MarshModel
+from dynamallow import MarshModel  # , LocalIndex, GlobalIndex
 
 from marshmallow import fields
 
@@ -29,8 +29,14 @@ def TestModel():
             name = 'peanut-butter'
             hash_key = 'foo'
             range_key = 'bar'
-            read = 1
-            write = 1
+            read = 5
+            write = 5
+
+            """
+            class Bazillions(LocalIndex):
+                read = 5
+                write = 5
+            """
 
         class Schema:
             foo = fields.String(required=True)
@@ -49,8 +55,8 @@ def TestModel():
 @pytest.fixture(scope='function')
 def TestModel_table(request, TestModel):
     """Used with TestModel, creates and deletes the table around the test"""
-    TestModel.create_table()
-    request.addfinalizer(TestModel.delete_table)
+    TestModel.Table.create()
+    request.addfinalizer(TestModel.Table.delete)
 
 
 @pytest.fixture(scope='session')
@@ -82,7 +88,7 @@ def dynamo_local(request, TestModel):
     def get_random_port():
         """Find a random port that appears to be available"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        random_port = random.randint(35000, 45000)
+        random_port = random.randint(25000, 55000)
         result = sock.connect_ex(('127.0.0.1', random_port))
         sock.close()
         if result == 0:
@@ -115,11 +121,11 @@ def dynamo_local(request, TestModel):
         dynamo_proc.wait()
     request.addfinalizer(shutdown_dynamo)
 
-    TestModel.get_resource(
+    TestModel.Table.get_resource(
         aws_access_key_id="anything",
         aws_secret_access_key="anything",
         region_name="us-west-2",
-        endpoint_url='http://localhost:{port}'.format(port=random_port)
+        endpoint_url="http://localhost:{port}".format(port=random_port)
     )
 
     return random_port

@@ -38,6 +38,7 @@ TODO
 
 * Indexes -- Currently there is no support for indexes.
 * Schema Migrations
+* Partial updates on ``save()``
 
 
 .. _Boto v3 DynamoDB API: http://boto3.readthedocs.io/en/latest/guide/dynamodb.html

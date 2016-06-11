@@ -15,11 +15,11 @@ def test_field_to_dynamo_type():
 
 def test_table_creation_deletion(TestModel, dynamo_local):
     """Creating, detecting and deleting tables should work"""
-    assert not TestModel.table_exists()
-    assert TestModel.create_table()
-    assert TestModel.table_exists()
-    assert TestModel.delete_table()
-    assert not TestModel.table_exists()
+    assert not TestModel.Table.exists
+    assert TestModel.Table.create()
+    assert TestModel.Table.exists
+    assert TestModel.Table.delete()
+    assert not TestModel.Table.exists
 
 
 def test_put_get(TestModel, TestModel_table, dynamo_local):
@@ -67,3 +67,15 @@ def test_get_invalid_field(TestModel):
     """Calling .get on an invalid field should result in an exception"""
     with pytest.raises(InvalidSchemaField):
         TestModel.get(bbq="wtf")
+
+
+def test_query(TestModel, TestModel_table, dynamo_local):
+    """Querying should return the expected values"""
+
+    TestModel.put_batch(
+        {"foo": "first", "bar": "two", "baz": "wtf", "count": 321},
+        {"foo": "second", "bar": "one", "baz": "bbq", "count": 456},
+        {"foo": "third", "bar": "three", "baz": "omg", "count": 123},
+    )
+
+    #results = list(TestModel.query(

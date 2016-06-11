@@ -42,6 +42,7 @@ def test_table_validation():
 
 
 def test_invalid_hash_key():
+    """Defining a model where ``hash_key`` in Table points to an invalid field should raise InvalidSchemaField"""
     with pytest.raises(InvalidSchemaField):
         class Model(MarshModel):
             class Table:
@@ -55,6 +56,7 @@ def test_invalid_hash_key():
 
 
 def test_invalid_range_key():
+    """Defining a model where ``range_key`` in Table points to an invalid field should raise InvalidSchemaField"""
     with pytest.raises(InvalidSchemaField):
         class Model(MarshModel):
             class Table:

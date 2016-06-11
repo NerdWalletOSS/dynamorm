@@ -21,20 +21,27 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+import datetime
 import pkg_resources
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+needs_sphinx = '1.4'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
 ]
+
+intersphinx_mapping = {
+    'boto3': 'http://boto3.readthedocs.io/',
+    'marshmallow': 'https://marshmallow.readthedocs.io/'
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -54,8 +61,11 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Dynamallow'
-copyright = '2016, Evan Borgstrom'
 author = 'Evan Borgstrom'
+copyright = ' {0:%Y} <a href="http://borgstrom.ca">{1}</a>'.format(
+    datetime.datetime.utcnow(),
+    author
+)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -126,13 +136,22 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'nature'
+html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'logo': 'dynamallow-logo.png',
+    'description': 'DynamoDB + Marshmallow == Dynamallow — Two awesome things, better together!<br /><br />',
+    'github_user': 'borgstrom',
+    'github_repo': 'dynamallow',
+    'github_banner': True,
+    'github_type': 'star',
+    'travis_button': True,
+    'codecov_button': True,
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -160,7 +179,7 @@ todo_include_todos = False
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -182,6 +201,15 @@ todo_include_todos = False
 # Custom sidebar templates, maps document names to template names.
 #
 # html_sidebars = {}
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -202,7 +230,7 @@ todo_include_todos = False
 
 # If true, links to the reST sources are added to the pages.
 #
-# html_show_sourcelink = True
+html_show_sourcelink = False
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #

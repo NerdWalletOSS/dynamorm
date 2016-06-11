@@ -23,48 +23,36 @@ Make sure you have `configured boto3`_ and can access DynamoDB from the Python c
     list(dynamodb.tables.all())  # --> ['table1', 'table2', 'etc...']
 
 
-Defining the MarshModels
-------------------------
+Using Dynamo Local
+~~~~~~~~~~~~~~~~~~
 
-``MarshModel`` is the base class all of your models will extend from.  Each ``MarshModel`` represents a DynamoDB table.
-This model definition encapsulates the parameters used to create and manage the table as well as the schema used to
-validate and encode/decode data into object attributes.  It also holds any custom business logic you need for your
-objects.
+If you're using `Dynamo Local`_ for development you will need to configure Dynamallow appropriately by manually calling
+``get_resource`` on any model's ``Table`` object, which takes the same parameters as ``boto3.resource``.  The
+``dynamodb`` boto resource is shared globally by all models, so it only needs to be done once.  For example:
 
 .. code-block:: python
 
-    import os
+    MyModel.Table.get_resource(
+        aws_access_key_id="anything",
+        aws_secret_access_key="anything",
+        region_name="us-west-2",
+        endpoint_url="http://localhost:8000"
+    )
 
-    from dynamallow import MarshModel
+.. _Dynamo Local: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html
 
-    from marshmallow import fields, validate
+Defining your Models -- Tables & Schemas
+----------------------------------------
 
-
-    class Thing(MarshModel):
-
-        class Table:
-            name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
-            hash_key = 'id'
-            read = 5
-            write = 1
-
-        class Schema:
-            id = fields.String(required=True)
-            name = fields.String()
-            color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
-
-        def say_hello(self):
-            print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
-                id=self.id,
-                name=self.name,
-                color=self.color
-            ))
+.. automodule:: dynamallow.model
+    :noindex:
 
 
 Table Data Model
-~~~~~~~~~~~~~~~~
+----------------
 
 .. automodule:: dynamallow.table
+    :noindex:
 
 
 Creating new documents
