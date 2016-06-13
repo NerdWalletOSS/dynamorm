@@ -74,6 +74,7 @@ Contents
    usage
    developing
    api
+   motivation
 
 
 Indices and tables
