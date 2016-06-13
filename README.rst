@@ -17,12 +17,67 @@ DynamoDB + Marshmallow == Dynamallow
 
 ----
 
+*This package is a work in progress -- Feedback / Suggestions / Etc welcomed!*
+
 Two awesome things, better together!
 
-Dynamallow provides integration between the `Boto v3 DynamoDB API`_ and `Marshmallow`_.  Together they provide a simple,
-ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongly typed schema.
+Dynamallow is a Python library that provides integration between the `Boto v3 DynamoDB API`_ and `Marshmallow`_.
+Together they provide a simple, ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongly typed
+schema.
 
-*This package is still very much a work in progress -- Feedback / Suggestions / Etc welcomed*
+.. code-block:: python
+
+    from dynamallow import MarshModel
+    from marshmallow import fields
+
+    class Book(MarshModel):
+        class Table:
+            name = 'prod-books'
+            hash_key = 'isbn'
+            read = 25
+            write = 5
+
+        class Schema:
+            isbn = fields.String(validate=validate_isbn)
+            title = fields.String()
+            author = fields.String()
+            publisher = fields.String()
+            year = fields.Number()
+
+
+    # Store new documents directly from dictionaries
+    Book.put({
+        "isbn": "12345678910",
+        "title": "Foo",
+        "author": "Mr. Bar",
+        "publisher": "Publishorama"
+    })
+
+    # Work with the classes as objects
+    # You can pass attributes from the schema to the constructor
+    foo = Book(isbn="12345678910", title="Foo", author="Mr. Bar",
+               publisher="Publishorama")
+    foo.save()
+
+    # Or assign attributes
+    foo = Book()
+    foo.isbn = "12345678910"
+    foo.title = "Foo"
+    foo.author = "Mr. Bar"
+    foo.publisher = "Publishorama"
+    foo.save()
+
+    # In all cases they go through Schema validation, calls to
+    # .put or .save can result in ValidationError being raised.
+
+    # You can then fetch, query and scan your tables.
+
+    # Get on the hash key, and/or range key
+    Book.get(isbn="12345678910")
+
+    # Query / Scan based on attributes
+    Book.query(author="Mr. Bar")
+    Book.query(author__ne="Mr. Bar")
 
 
 Documentation

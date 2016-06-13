@@ -23,12 +23,18 @@ write      True      int   The provisioned write throughput.
 
 """
 
+import inspect
+import logging
+
 import boto3
 import botocore
-
 import six
 
+from boto3.dynamodb.conditions import Key, Attr
+
 from marshmallow import fields
+
+log = logging.getLogger(__name__)
 
 
 def _field_to_dynamo_type(field):
@@ -50,6 +56,10 @@ class MissingTableAttribute(DynamoTableException):
 
 class InvalidSchemaField(DynamoTableException):
     """A field provided does not exist in the schema"""
+
+
+class InvalidKey(DynamoTableException):
+    """A parameter is not a valid key"""
 
 
 class HashKeyExists(DynamoTableException):
@@ -182,7 +192,9 @@ class DynamoTable3(object):
         """Put a singular item into the table
         
         :param dict item: The data to put into the table
-        :param \*\*kwargs: All other keyword arguments are passed through to :func:`boto3.DynamoDB.Table.put_item`
+        :param \*\*kwargs: All other keyword arguments are passed through to the `DynamoDB Table put_item`_ function.
+
+        .. _DynamoDB Table put_item: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.put_item
         """
         return self.table.put_item(Item=item, **kwargs)
 
@@ -200,14 +212,73 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=item)
 
-    def get(self, **kwargs):
+    def get(self, consistent=False, **kwargs):
         for k, v in six.iteritems(kwargs):
             if k not in self.schema.fields:
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+        if consistent:
+            kwargs['ConsistentRead'] = True
         response = self.table.get_item(Key=kwargs)
         if 'Item' in response:
             return response['Item']
 
-    def get_consistent(self, **kwargs):
-        kwargs['ConsistentRead'] = True
-        return self.get(**kwargs)
+    def query(self, query_kwargs=None, **kwargs):
+        assert len(kwargs) in (1, 2), "Query only takes 1 or 2 keyword arguments"
+
+        if query_kwargs is None:
+            query_kwargs = {}
+
+        while len(kwargs):
+            key, value = kwargs.popitem()
+
+            try:
+                key, op = key.split('__')
+            except ValueError:
+                op = 'eq'
+
+            if key not in (self.hash_key, self.range_key):
+                raise InvalidSchemaField("{0} is not our hash or range key".format(key))
+
+            key = Key(key)
+            op = getattr(key, op)
+
+            if 'KeyConditionExpression' in query_kwargs:
+                query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & op(value)
+            else:
+                query_kwargs['KeyConditionExpression'] = op(value)
+
+        log.debug("Query: %s", query_kwargs)
+        response = self.table.query(**query_kwargs)
+        return response['Items']
+
+    def scan(self, scan_kwargs=None, **kwargs):
+        if scan_kwargs is None:
+            scan_kwargs = {}
+
+        while len(kwargs):
+            attr, value = kwargs.popitem()
+
+            parts = attr.split('__')
+            attr = Attr(parts.pop(0))
+            op = 'eq'
+
+            while len(parts):
+                if not hasattr(attr, parts[0]):
+                    # this is a nested field, extend the attr
+                    attr = Attr('.'.join([attr.name, parts.pop(0)]))
+                else:
+                    op = parts.pop(0)
+                    break
+
+            assert len(parts) == 0, "Left over parts after parsing query attr"
+
+            op = getattr(attr, op)
+
+            if 'FilterExpression' in scan_kwargs:
+                # XXX TODO: support | (or) and ~ (not)
+                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & op(value)
+            else:
+                scan_kwargs['FilterExpression'] = op(value)
+
+        response = self.table.scan(**scan_kwargs)
+        return response['Items']

@@ -3,10 +3,14 @@ DynamoDB + Marshmallow
 
 Two awesome things, better together!
 
-Dynamallow provides integration between the `Boto v3 DynamoDB API`_ and `Marshmallow`_.  Together they provide a simple,
-ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongly typed schema.
+Dynamallow is a Python library that provides integration between the `Boto v3 DynamoDB API`_ and `Marshmallow`_.
+Together they provide a simple, ORM inspired, interface to the `DynamoDB`_ service with a fully defined, strongly typed
+schema.
 
 .. code-block:: python
+
+    from dynamallow import MarshModel
+    from marshmallow import fields
 
     class Book(MarshModel):
         class Table:

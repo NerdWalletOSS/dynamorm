@@ -39,8 +39,8 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    'boto3': 'http://boto3.readthedocs.io/',
-    'marshmallow': 'https://marshmallow.readthedocs.io/'
+    'boto3': ('https://boto3.readthedocs.io/en/latest', None),
+    'marshmallow': ('https://marshmallow.readthedocs.io/en/latest', None)
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -144,7 +144,7 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'logo': 'dynamallow-logo.png',
-    'description': 'DynamoDB + Marshmallow == Dynamallow — Two awesome things, better together!<br /><br />',
+    'description': 'DynamoDB + Marshmallow — Two awesome things, better together!<br />',
     'github_user': 'borgstrom',
     'github_repo': 'dynamallow',
     'github_banner': True,

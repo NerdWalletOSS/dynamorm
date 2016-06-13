@@ -43,6 +43,7 @@ def TestModel():
             bar = fields.String(required=True)
             baz = fields.String()
             count = fields.Integer()
+            child = fields.Dict()
 
         def business_logic(self):
             return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
@@ -53,10 +54,20 @@ def TestModel():
     return TestModel
 
 @pytest.fixture(scope='function')
-def TestModel_table(request, TestModel):
+def TestModel_table(request, TestModel, dynamo_local):
     """Used with TestModel, creates and deletes the table around the test"""
     TestModel.Table.create()
     request.addfinalizer(TestModel.Table.delete)
+
+
+@pytest.fixture(scope='function')
+def TestModel_entries(TestModel, TestModel_table):
+    """Used with TestModel, creates and deletes the table and populates entries"""
+    TestModel.put_batch(
+        {"foo": "first", "bar": "one", "baz": "bbq", "count": 111, "child": {"sub": "one"}},
+        {"foo": "first", "bar": "two", "baz": "wtf", "count": 222, "child": {"sub": "two"}},
+        {"foo": "first", "bar": "three", "baz": "bbq", "count": 333, "child": {"sub": "three"}},
+    )
 
 
 @pytest.fixture(scope='session')

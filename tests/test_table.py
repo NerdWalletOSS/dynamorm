@@ -1,4 +1,5 @@
 """These tests require dynamo local running"""
+import inspect
 import pytest
 
 from marshmallow import fields
@@ -7,6 +8,7 @@ from dynamallow.table import HashKeyExists, InvalidSchemaField, _field_to_dynamo
 
 
 def test_field_to_dynamo_type():
+    """Field to dynamo type should map as expected"""
     assert _field_to_dynamo_type(fields.Number()) == 'N'
     assert _field_to_dynamo_type(fields.Decimal()) == 'N'
     assert _field_to_dynamo_type(fields.Raw()) == 'B'
@@ -69,13 +71,46 @@ def test_get_invalid_field(TestModel):
         TestModel.get(bbq="wtf")
 
 
-def test_query(TestModel, TestModel_table, dynamo_local):
+def test_query(TestModel, TestModel_entries, dynamo_local):
     """Querying should return the expected values"""
+    results = TestModel.query(foo="first")
+    assert len(results) == 3
 
-    TestModel.put_batch(
-        {"foo": "first", "bar": "two", "baz": "wtf", "count": 321},
-        {"foo": "second", "bar": "one", "baz": "bbq", "count": 456},
-        {"foo": "third", "bar": "three", "baz": "omg", "count": 123},
-    )
+    # our table has a hash and range key, so our results are ordered based on the range key
+    assert results[0].count == 111
+    assert results[1].count == 333
+    assert results[2].count == 222
 
-    #results = list(TestModel.query(
+    # get the results in the opposite order
+    # XXX TODO: should this be eaiser?
+    results = TestModel.query(foo="first", query_kwargs={'ScanIndexForward': False})
+    assert results[0].count == 222
+
+    with pytest.raises(InvalidSchemaField):
+        results = TestModel.query(baz="bbq")
+
+    results = TestModel.query(foo="first", bar="two")
+    assert len(results) == 1
+    assert results[0].count == 222
+
+    results = TestModel.query(foo="first", bar__begins_with="t")
+    assert len(results) == 2
+
+
+def test_scan(TestModel, TestModel_entries, dynamo_local):
+    """Scanning should return the expected values"""
+    results = TestModel.scan(count__gt=200)
+    assert len(results) == 2
+
+    # our table has a hash and range key, so our results are ordered based on the range key
+    assert results[0].count == 333
+    assert results[1].count == 222
+
+    results = TestModel.scan(child__sub="two")
+    assert len(results) == 1
+    assert results[0].count == 222
+
+    results = TestModel.scan(child__sub__begins_with="t")
+    assert len(results) == 2
+    assert results[0].count == 333
+    assert results[1].count == 222

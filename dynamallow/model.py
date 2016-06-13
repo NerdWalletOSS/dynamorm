@@ -193,21 +193,76 @@ class MarshModel(object):
         return cls.Table.put_batch(*data, **batch_kwargs)
 
     @classmethod
-    def get(cls, **kwargs):
+    def new_from_raw(cls, raw):
+        data, errors = cls.Schema.load(raw)
+        if errors:
+            raise ValidationError("Failed to load data from Dynamo via our Schema", errors=errors)
+        if data:
+            return cls(raw=raw, **data)
+
+    @classmethod
+    def get(cls, consistent=False, **kwargs):
         """Get an item from the table
 
         Example::
 
             Thing.get(hash_key="three")
 
+        :param bool consistent: If set to True the get will be a consistent read
         :param \*\*kwargs: You must supply your hash key, and range key if used, with the values to get
         """
-        raw = cls.Table.get(**kwargs)
-        data, errors = cls.Schema.load(raw)
-        if errors:
-            raise ValidationError("Failed to load data from Dynamo via our Schema", errors=errors)
-        if data:
-            return cls(raw=raw, **data)
+        return cls.new_from_raw(cls.Table.get(consistent=consistent, **kwargs))
+
+    @classmethod
+    def query(cls, query_kwargs=None, **kwargs):
+        """Execute a query on our table based on our keys
+
+        You supply the key(s) to query based on as keyword arguments::
+
+            Thing.query(foo="Mr. Foo")
+
+        By default the ``eq`` condition is used.  If you wish to use any of the other `valid conditions for keys`_ use
+        a double underscore syntax following the key name.  For example::
+
+            Thing.query(foo__begins_with="Mr.")
+
+        .. _valid conditions for keys: http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Key
+
+        :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
+        :param \*\*kwargs: The key(s) and value(s) to query based on
+        """
+        return [
+            cls.new_from_raw(raw)
+            for raw in cls.Table.query(query_kwargs=query_kwargs, **kwargs)
+        ]
+
+    @classmethod
+    def scan(cls, scan_kwargs=None, **kwargs):
+        """Execute a scan on our table
+
+        You supply the attr(s) to query based on as keyword arguments::
+
+            Thing.scan(age=10)
+
+        By default the ``eq`` condition is used.  If you wish to use any of the other `valid conditions for attrs`_ use
+        a double underscore syntax following the key name.  For example::
+
+            Thing.scan(age__lte=10)
+
+        .. _valid conditions for attrs: http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Attr
+
+        Accessing nested attributes also uses the double underscore syntax::
+
+            Thing.scan(address__state="CA")
+            Thing.scan(address__state__begins_with="C")
+
+        :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
+        :param \*\*kwargs: The key(s) and value(s) to filter based on
+        """
+        return [
+            cls.new_from_raw(raw)
+            for raw in cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
+        ]
 
     def save(self):
         """Save this instance to the table
