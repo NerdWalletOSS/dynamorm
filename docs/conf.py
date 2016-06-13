@@ -144,7 +144,7 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'logo': 'dynamallow-logo.png',
-    'description': 'DynamoDB + Marshmallow — Two awesome things, better together!<br />',
+    'description': u'DynamoDB + Marshmallow — Two awesome things, better together!<br />',
     'github_user': 'borgstrom',
     'github_repo': 'dynamallow',
     'github_banner': True,
