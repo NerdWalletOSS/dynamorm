@@ -75,9 +75,12 @@ schema.
     # Get on the hash key, and/or range key
     Book.get(isbn="12345678910")
 
-    # Query / Scan based on attributes
-    Book.query(author="Mr. Bar")
-    Book.query(author__ne="Mr. Bar")
+    # Query based on the keys
+    Book.query(isbn__begins_with="12345")
+
+    # Scan based on attributes
+    Book.scan(author="Mr. Bar")
+    Book.scan(author__ne="Mr. Bar")
 
 
 Documentation

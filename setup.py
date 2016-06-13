@@ -10,6 +10,7 @@ setup(
     description='Python ORM style interface to Amazon (AWS) DynamoDB using Marshmallow for Schema validation',
     long_description=long_description,
     author='Evan Borgstrom',
+    author_email='evan@borgstrom.ca',
     url='https://github.com/borgstrom/dynamallow',
     license='Apache License Version 2.0',
 
