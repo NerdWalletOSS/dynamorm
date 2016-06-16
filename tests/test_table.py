@@ -71,6 +71,15 @@ def test_get_invalid_field(TestModel):
         TestModel.get(bbq="wtf")
 
 
+def test_count(TestModel, TestModel_entries, dynamo_local):
+    """Test the raw query/scan functions to allow things like Counting"""
+    resp = TestModel.Table.query(foo="first", query_kwargs=dict(Select='COUNT'))
+    assert resp['Count'] == 3
+
+    resp = TestModel.Table.scan(count__lt=250, scan_kwargs=dict(Select='COUNT'))
+    assert resp['Count'] == 2
+
+
 def test_query(TestModel, TestModel_entries, dynamo_local):
     """Querying should return the expected values"""
     results = TestModel.query(foo="first")

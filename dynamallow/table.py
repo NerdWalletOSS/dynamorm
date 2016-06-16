@@ -68,7 +68,7 @@ class HashKeyExists(DynamoTableException):
 
 class DynamoTable3(object):
     """Represents a Table object in the Boto3 DynamoDB API
-    
+
     This is built in such a way that in the future, when Amazon releases future boto versions, a new DynamoTable class
     can be authored that implements the same methods but maps through to the new semantics.
     """
@@ -164,7 +164,7 @@ class DynamoTable3(object):
 
     def create(self, wait=True):
         """Create a new table based on our attributes
-        
+
         :param bool wait: If set to True, the default, this call will block until the table is created
         """
         table = self.resource.create_table(
@@ -190,7 +190,7 @@ class DynamoTable3(object):
 
     def put(self, item, **kwargs):
         """Put a singular item into the table
-        
+
         :param dict item: The data to put into the table
         :param \*\*kwargs: All other keyword arguments are passed through to the `DynamoDB Table put_item`_ function.
 
@@ -248,8 +248,7 @@ class DynamoTable3(object):
                 query_kwargs['KeyConditionExpression'] = op(value)
 
         log.debug("Query: %s", query_kwargs)
-        response = self.table.query(**query_kwargs)
-        return response['Items']
+        return self.table.query(**query_kwargs)
 
     def scan(self, scan_kwargs=None, **kwargs):
         if scan_kwargs is None:
@@ -280,5 +279,4 @@ class DynamoTable3(object):
             else:
                 scan_kwargs['FilterExpression'] = op(value)
 
-        response = self.table.scan(**scan_kwargs)
-        return response['Items']
+        return self.table.scan(**scan_kwargs)

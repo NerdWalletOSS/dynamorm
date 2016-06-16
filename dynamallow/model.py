@@ -231,9 +231,10 @@ class MarshModel(object):
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """
+        resp = cls.Table.query(query_kwargs=query_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)
-            for raw in cls.Table.query(query_kwargs=query_kwargs, **kwargs)
+            for raw in resp['Items']
         ]
 
     @classmethod
@@ -259,14 +260,15 @@ class MarshModel(object):
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """
+        resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)
-            for raw in cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
+            for raw in resp['Items']
         ]
 
     def save(self):
         """Save this instance to the table
-        
+
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
