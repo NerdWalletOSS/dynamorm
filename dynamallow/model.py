@@ -84,7 +84,7 @@ class MarshModel(object):
     """``MarshModel`` is the base class all of your models will extend from.  This model definition encapsulates the
     parameters used to create and manage the table as well as the schema for validating and marshalling data into object
     attributes.  It will also hold any custom business logic you need for your objects.
-    
+
     Your class must define two inner classes that specify the Dynamo Table options and the Marshmallow Schema,
     respectively.
 
@@ -93,9 +93,9 @@ class MarshModel(object):
 
     The Marshmallow Schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
     out any other :class:`~marshmallow.Schema`.
-    
+
     .. note::
-    
+
         You do not need to have Schema extend from the marshmallow :class:`~marshmallow.Schema` class as we
         automatically do that for you, to make model definition more concise.
 
@@ -149,7 +149,7 @@ class MarshModel(object):
     @classmethod
     def put(cls, item, **kwargs):
         """Put a single item into the table for this model
-        
+
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
 
         :param dict item: The item to put into the table
@@ -194,6 +194,10 @@ class MarshModel(object):
 
     @classmethod
     def new_from_raw(cls, raw):
+        """Return a new instance of this model from a raw (dict) of data that is loaded by our Schema
+
+        :param dict raw: The attributes to use when creating the instance
+        """
         data, errors = cls.Schema.load(raw)
         if errors:
             raise ValidationError("Failed to load data from Dynamo via our Schema", errors=errors)
