@@ -75,8 +75,14 @@ class MarshModelMeta(type):
         )
         attrs['Table'] = TableClass(schema=attrs['Schema'])
 
-        return super(MarshModelMeta, cls).__new__(cls, name, parents, attrs)
+        # call our parent to get the new instance
+        model = super(MarshModelMeta, cls).__new__(cls, name, parents, attrs)
 
+        # give the Schema and Table objects a reference back to the model
+        model.Schema._model = model
+        model.Table._model = model
+
+        return model
 
 
 @six.add_metaclass(MarshModelMeta)

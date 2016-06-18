@@ -123,3 +123,16 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert len(results) == 2
     assert results[0].count == 333
     assert results[1].count == 222
+
+
+def test_overwrite(TestModel, TestModel_entries, dynamo_local):
+    """Putting an existing hash+range should replace the old entry"""
+    TestModel.put(
+        {"foo": "first", "bar": "one", "baz": "omg", "count": 999, "child": {"sub": "zero"}},
+    )
+
+    resp = TestModel.Table.query(foo="first", query_kwargs=dict(Select='COUNT'))
+    assert resp['Count'] == 3
+
+    first_one = TestModel.get(foo="first", bar="one")
+    assert first_one.count == 999
