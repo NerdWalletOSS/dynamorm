@@ -8,7 +8,6 @@ schema that is used for validating and marshalling your data.
 
 import inspect
 import logging
-import sys
 
 try:
     import simplejson as json
@@ -17,32 +16,19 @@ except ImportError:
 
 import six
 
-from marshmallow import Schema
-
 from .table import DynamoTable3
+from .types import Model
+from .exc import MarshModelException
 
 log = logging.getLogger(__name__)
-
-
-class MarshModelException(Exception):
-    """Base exception for MarshModel problems"""
-
-
-class ValidationError(MarshModelException):
-    """Schema validation failed"""
-    # XXX TODO: this needs to be improved so that it actually shows the errors
-
-    def __init__(self, errors, *args, **kwargs):
-        super(ValidationError, self).__init__(*args, **kwargs)
-        self.errors = errors
 
 
 class MarshModelMeta(type):
     """MarshModelMeta is a metaclass for the MarshModel class that transforms our Table and Schema classes
 
     Since we can inspect the data we need to build the full data structures needed for working with tables and indexes
-    users can define for more concise and readable table definitions that we transform into the final To allow for a
-    more concise definition of MarshModel's we do not require that users define their inner Schema class as extending
+    users can define for more concise and readable table definitions that we transform into the final. To allow for a
+    more concise definition of MarshModels we do not require that users define their inner Schema class as extending
     from the :class:`~marshmallow.Schema`.  Instead, when the class is being defined we take the inner Schema and
     transform it into a new class named <Name>Schema, extending from :class:`~marshmallow.Schema`.  For example, on a
     model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
@@ -62,10 +48,10 @@ class MarshModelMeta(type):
         # transform the Schema
         SchemaClass = type(
             '{name}Schema'.format(name=name),
-            (Schema,),
-            dict(attrs['Schema'].__dict__)
+            (Model,),
+            dict(attrs['Schema'].__dict__),
         )
-        attrs['Schema'] = SchemaClass(strict=True)
+        attrs['Schema'] = SchemaClass
 
         # transform the Table
         TableClass = type(
@@ -97,8 +83,8 @@ class MarshModel(object):
     The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamallow.table` module for
     more information.
 
-    The Marshmallow Schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
-    out any other :class:`~marshmallow.Schema`.
+    The document schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
+    out any other :class:`~marshmallow.Schema` or :class:`~schematics.Model`.
 
     .. note::
 
@@ -114,12 +100,13 @@ class MarshModel(object):
 
     .. code-block:: python
 
+        # Marshmallow example
         import os
 
         from dynamallow import MarshModel
 
-        from marshmallow import fields, validate
-
+        from marshmallow import validate
+        from marshmallow import fields
 
         class Thing(MarshModel):
             class Table:
@@ -132,6 +119,36 @@ class MarshModel(object):
                 id = fields.String(required=True)
                 name = fields.String()
                 color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
+                compound = fields.Dict(required=True)
+
+            def say_hello(self):
+                print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
+                    id=self.id,
+                    name=self.name,
+                    color=self.color
+                ))
+
+    .. code-block:: python
+
+        # Schematics example
+        import os
+
+        from dynamallow import MarshModel
+
+        from schematics import types
+
+        class Thing(MarshModel):
+            class Table:
+                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
+                hash_key = 'id'
+                read = 5
+                write = 1
+
+            class Schema:
+                id = types.StringType(required=True, max_length=10)
+                name = types.StringType()
+                color = types.StringType()
+                compound = types.DictType(types.IntType, required=True)
 
             def say_hello(self):
                 print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
@@ -141,15 +158,15 @@ class MarshModel(object):
                 ))
     """
 
-    def __init__(self, raw=None, **kwargs):
+    def __init__(self, **raw):
         """Create a new instance of a MarshModel
 
-        :param dict raw: The raw data that is being using to populate this model instance
-        :param \*\*kwargs: Any other keywords passed through to the constructor become attributes on the instance
+        :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
+        input will be put onto ``self`` as attributes.
         """
         self._raw = raw
-
-        for k, v in six.iteritems(kwargs):
+        data = self.Schema.dynamallow_validate(raw)
+        for k, v in six.iteritems(data):
             setattr(self, k, v)
 
     @classmethod
@@ -161,10 +178,7 @@ class MarshModel(object):
         :param dict item: The item to put into the table
         :param \*\*kwargs: All other kwargs are passed through to the put method on the table
         """
-        data, errors = cls.Schema.load(item)
-        if errors:
-            raise ValidationError("Failed to put item", errors=errors)
-        return cls.Table.put(data, **kwargs)
+        return cls.Table.put(cls.Schema.dynamallow_validate(item), **kwargs)
 
     @classmethod
     def put_unique(cls, item, **kwargs):
@@ -173,10 +187,7 @@ class MarshModel(object):
         :param dict item: The item to put into the table
         :param \*\*kwargs: All other kwargs are passed through to the put_unique method on the table
         """
-        data, errors = cls.Schema.load(item)
-        if errors:
-            raise ValidationError("Failed to put unique item", errors=errors)
-        return cls.Table.put_unique(data, **kwargs)
+        return cls.Table.put_unique(cls.Schema.dynamallow_validate(item), **kwargs)
 
     @classmethod
     def put_batch(cls, *items, **batch_kwargs):
@@ -193,10 +204,9 @@ class MarshModel(object):
                 {"hash_key": "three"},
             )
         """
-        data, errors = cls.Schema.load(items, many=True)
-        if errors:
-            raise ValidationError("Failed to put batch items", errors=errors)
-        return cls.Table.put_batch(*data, **batch_kwargs)
+        return cls.Table.put_batch(*[
+            cls.Schema.dynamallow_validate(item) for item in items
+        ], **batch_kwargs)
 
     @classmethod
     def new_from_raw(cls, raw):
@@ -204,11 +214,9 @@ class MarshModel(object):
 
         :param dict raw: The attributes to use when creating the instance
         """
-        data, errors = cls.Schema.load(raw)
-        if errors:
-            raise ValidationError("Failed to load data from Dynamo via our Schema", errors=errors)
-        if data:
-            return cls(raw=raw, **data)
+        if raw is None:
+            return None
+        return cls(**raw)
 
     @classmethod
     def get(cls, consistent=False, **kwargs):
@@ -221,7 +229,8 @@ class MarshModel(object):
         :param bool consistent: If set to True the get will be a consistent read
         :param \*\*kwargs: You must supply your hash key, and range key if used, with the values to get
         """
-        return cls.new_from_raw(cls.Table.get(consistent=consistent, **kwargs))
+        item = cls.Table.get(consistent=consistent, **kwargs)
+        return cls.new_from_raw(item)
 
     @classmethod
     def query(cls, query_kwargs=None, **kwargs):
@@ -245,6 +254,7 @@ class MarshModel(object):
         return [
             cls.new_from_raw(raw)
             for raw in resp['Items']
+            if raw is not None
         ]
 
     @classmethod
@@ -274,16 +284,21 @@ class MarshModel(object):
         return [
             cls.new_from_raw(raw)
             for raw in resp['Items']
+            if raw is not None
         ]
 
-    def save(self):
+    def to_dict(self):
+        obj = {}
+        for k in self.Schema.dynamallow_fields():
+            if hasattr(self, k):
+                obj[k] = getattr(self, k)
+        return obj
+
+    def save(self, **kwargs):
         """Save this instance to the table
 
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
         # XXX TODO: item on every save
-        data, errors = self.Schema.dump(self)
-        if errors:
-            raise ValidationError("Failed to dump {0} via our Schema".format(self.__class__.__name__), errors=errors)
-        return self.Table.put(data)
+        return self.put(self.to_dict(), **kwargs)

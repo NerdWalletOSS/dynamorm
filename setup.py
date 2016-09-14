@@ -5,9 +5,9 @@ with open('README.rst', 'r') as readme_fd:
 
 setup(
     name='dynamallow',
-    version='0.0.1',
+    version='0.0.2',
 
-    description='Python ORM style interface to Amazon (AWS) DynamoDB using Marshmallow for Schema validation',
+    description='Python ORM style interface to Amazon (AWS) DynamoDB using Schematics or Marshmallow for Schema validation',
     long_description=long_description,
     author='Evan Borgstrom',
     author_email='evan@borgstrom.ca',
@@ -19,7 +19,6 @@ setup(
     ],
     install_requires=[
         'boto3>=1.3,<1.4',
-        'marshmallow>=2.7.0,<2.8.0',
         'pytest>=2.9,<3.0',
         'six',
     ],

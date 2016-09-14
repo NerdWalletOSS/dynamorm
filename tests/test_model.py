@@ -1,9 +1,12 @@
+import os
 import pytest
 
-from marshmallow import fields
-
-from dynamallow.model import MarshModel, MarshModelException
-from dynamallow.table import InvalidSchemaField, MissingTableAttribute
+from dynamallow.model import MarshModel
+from dynamallow.exc import InvalidSchemaField, MissingTableAttribute, MarshModelException
+if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    from marshmallow.fields import String
+else:
+    from schematics.types import StringType as String
 
 
 def test_missing_inner_classes():
@@ -38,7 +41,7 @@ def test_table_validation():
                 hash_key = 'foo'
 
             class Schema:
-                foo = fields.String(required=True)
+                foo = String(required=True)
 
 
 def test_invalid_hash_key():
@@ -52,7 +55,7 @@ def test_invalid_hash_key():
                 write = 1
 
             class Schema:
-                bar = fields.String(required=True)
+                bar = String(required=True)
 
 
 def test_invalid_range_key():
@@ -67,5 +70,5 @@ def test_invalid_range_key():
                 write = 1
 
             class Schema:
-                foo = fields.String(required=True)
-                baz = fields.String(required=True)
+                foo = String(required=True)
+                baz = String(required=True)
