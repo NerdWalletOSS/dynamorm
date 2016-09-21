@@ -2,7 +2,7 @@ import os
 import pytest
 
 from dynamallow.model import MarshModel
-from dynamallow.exc import InvalidSchemaField, MissingTableAttribute, MarshModelException
+from dynamallow.exceptions import InvalidSchemaField, MissingTableAttribute, MarshModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String
 else:

@@ -1,3 +1,8 @@
+import logging
+
+log = logging.getLogger(__name__)
+
+
 # --- Schema exceptions ---
 class MarshModelException(Exception):
     """Base exception for MarshModel problems"""
@@ -12,8 +17,9 @@ class ValidationError(MarshModelException):
         self.schema_name = schema_name
 
     def __unicode__(self):
-        return 'Validation failed for data {} with schema {}. Errors: {}'.format(
-           self.raw, self.schema_name, self.errors
+        log.debug('Validation failure for data: {0}'.format(self.raw))
+        return 'Validation failed for schema {0}. Errors: {1}'.format(
+            self.schema_name, self.errors
         )
 
 

@@ -101,8 +101,7 @@ def TestModel_entries(TestModel, TestModel_table):
 def dynamo_local(request, TestModel):
     """Connect to a local dynamo instance"""
     dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
-    dynamo_local_ = local.DynamoLocal(dynamo_local_dir, log=log)
-    request.addfinalizer(dynamo_local_.shutdown)
+    dynamo_local_ = local.DynamoLocal(dynamo_local_dir)
     TestModel.Table.get_resource(
         aws_access_key_id="anything",
         aws_secret_access_key="anything",

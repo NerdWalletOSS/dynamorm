@@ -18,7 +18,7 @@ import six
 
 from .table import DynamoTable3
 from .types import Model
-from .exc import MarshModelException
+from .exceptions import MarshModelException
 
 log = logging.getLogger(__name__)
 

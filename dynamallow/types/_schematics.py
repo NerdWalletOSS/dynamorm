@@ -3,7 +3,7 @@ from schematics.exceptions import ValidationError as SchematicsValidationError, 
 from schematics import types
 
 from .base import BaseModel as _BaseModel
-from ..exc import ValidationError as _ValidationError
+from ..exceptions import ValidationError as _ValidationError
 
 
 class Model(SchematicsModel, _BaseModel):

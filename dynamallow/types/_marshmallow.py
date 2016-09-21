@@ -2,7 +2,7 @@ from marshmallow import Schema as MarshmallowModel
 from marshmallow import fields
 
 from .base import BaseModel as BaseModel
-from ..exc import ValidationError as ValidationError
+from ..exceptions import ValidationError as ValidationError
 
 
 class Model(MarshmallowModel, BaseModel):

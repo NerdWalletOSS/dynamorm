@@ -30,7 +30,7 @@ import botocore
 import six
 
 from boto3.dynamodb.conditions import Key, Attr
-from dynamallow.exc import MissingTableAttribute, InvalidSchemaField, HashKeyExists
+from dynamallow.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists
 
 log = logging.getLogger(__name__)
 

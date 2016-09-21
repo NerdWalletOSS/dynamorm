@@ -15,7 +15,7 @@ class BaseModel(object):
     @classmethod
     def dynamallow_fields(cls):
         """ Returns a dictionary of key value pairs where keys are attributes and values are type classes """
-        raise NotImplementedError('{} class must implement dynamallow_fields'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dynamallow_fields'.format(cls.__name__))
 
     @classmethod
     def dynamallow_validate(cls, obj):
@@ -26,4 +26,4 @@ class BaseModel(object):
         Returns a dictionary representing the sanitized input ``obj``. On validation failure,
         this should raise ``dynamallow.exc.ValidationError``.
         """
-        raise NotImplementedError('{} class must implement dynamallow_validate'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dynamallow_validate'.format(cls.__name__))
