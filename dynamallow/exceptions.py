@@ -22,6 +22,12 @@ class ValidationError(MarshModelException):
             self.schema_name, self.errors
         )
 
+    def __str__(self):
+        log.debug('Validation failure for data: {0}'.format(self.raw))
+        return 'Validation failed for schema {0}. Errors: {1}'.format(
+            self.schema_name, self.errors
+        )
+
 
 # --- Table exceptions ---
 class DynamoTableException(Exception):
