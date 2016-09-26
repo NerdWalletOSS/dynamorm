@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open('README.rst', 'r') as readme_fd:
     long_description = readme_fd.read()
 
 setup(
     name='dynamallow',
-    version='0.0.2',
+    version='0.0.3',
 
     description='Python ORM style interface to Amazon (AWS) DynamoDB using Schematics or Marshmallow for Schema validation',
     long_description=long_description,
@@ -22,10 +22,7 @@ setup(
         'pytest>=2.9,<3.0',
         'six',
     ],
-    packages=[
-        'dynamallow',
-    ],
-
+    packages=find_packages('.', exclude=['tests', 'docs']),
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

@@ -4,16 +4,19 @@ import time
 
 from dynamallow.local import DynamoLocal
 
+DYNAMO_CONN_RETRIES = 10
+DYNAMO_CONN_SLEEP = 1
+
 
 def test_shutdown_local_dynamo():
     dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
     dynamo_local = DynamoLocal(dynamo_local_dir)
     connected = -1
-    for _ in range(5):
+    for _ in range(DYNAMO_CONN_RETRIES):
         connected = _connect_to_port(dynamo_local.port)
         if connected == 0:
             break
-        time.sleep(0.5)
+        time.sleep(DYNAMO_CONN_SLEEP)
     assert connected == 0
     dynamo_local.shutdown()
     assert dynamo_local.dynamo_proc is None
