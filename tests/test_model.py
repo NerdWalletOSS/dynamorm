@@ -1,9 +1,14 @@
+import os
 import pytest
 
-from marshmallow import fields
-
-from dynamallow.model import MarshModel, MarshModelException
-from dynamallow.table import InvalidSchemaField, MissingTableAttribute
+from dynamallow.model import MarshModel
+from dynamallow.exceptions import InvalidSchemaField, MissingTableAttribute, MarshModelException
+if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    from marshmallow.fields import String
+    from marshmallow.fields import Number
+else:
+    from schematics.types import StringType as String
+    from schematics.types import IntType as Number
 
 
 def test_missing_inner_classes():
@@ -38,7 +43,7 @@ def test_table_validation():
                 hash_key = 'foo'
 
             class Schema:
-                foo = fields.String(required=True)
+                foo = String(required=True)
 
 
 def test_invalid_hash_key():
@@ -52,7 +57,7 @@ def test_invalid_hash_key():
                 write = 1
 
             class Schema:
-                bar = fields.String(required=True)
+                bar = String(required=True)
 
 
 def test_invalid_range_key():
@@ -67,5 +72,22 @@ def test_invalid_range_key():
                 write = 1
 
             class Schema:
-                foo = fields.String(required=True)
-                baz = fields.String(required=True)
+                foo = String(required=True)
+                baz = String(required=True)
+
+
+def test_number_hash_key():
+    """Test a number hash key and ensure the dynamo type gets set correctly"""
+    class Model(MarshModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema:
+            foo = Number(required=True)
+            baz = String(required=True)
+
+    model = Model(foo=1, baz='foo')
+    assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]

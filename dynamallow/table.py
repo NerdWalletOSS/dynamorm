@@ -23,7 +23,6 @@ write      True      int   The provisioned write throughput.
 
 """
 
-import inspect
 import logging
 
 import boto3
@@ -31,39 +30,9 @@ import botocore
 import six
 
 from boto3.dynamodb.conditions import Key, Attr
-
-from marshmallow import fields
+from dynamallow.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists
 
 log = logging.getLogger(__name__)
-
-
-def _field_to_dynamo_type(field):
-    """Given a marshmallow field object return the appropriate Dynamo type character"""
-    if isinstance(field, fields.Raw):
-        return 'B'
-    if isinstance(field, fields.Number):
-        return 'N'
-    return 'S'
-
-
-class DynamoTableException(Exception):
-    """Base exception class for all DynamoTable errors"""
-
-
-class MissingTableAttribute(DynamoTableException):
-    """A required attribute is missing"""
-
-
-class InvalidSchemaField(DynamoTableException):
-    """A field provided does not exist in the schema"""
-
-
-class InvalidKey(DynamoTableException):
-    """A parameter is not a valid key"""
-
-
-class HashKeyExists(DynamoTableException):
-    """A operating requesting a unique hash key failed"""
 
 
 class DynamoTable3(object):
@@ -90,17 +59,17 @@ class DynamoTable3(object):
             if not hasattr(self, attr):
                 setattr(self, attr, None)
 
-        if self.hash_key not in self.schema.fields:
+        if self.hash_key not in self.schema.dynamallow_fields():
             raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
 
-        if self.range_key and self.range_key not in self.schema.fields:
+        if self.range_key and self.range_key not in self.schema.dynamallow_fields():
             raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
 
     @classmethod
     def get_resource(cls, **kwargs):
         """Return the boto3 dynamodb resource, create it if it doesn't exist
 
-        The resource is stored globally on the ``DynamoTable3`` class and is shared between all models.  To influence
+        The resource is stored globally on the ``DynamoTable3`` class and is shared between all models. To influence
         the connection parameters you just need to call ``get_resource`` on any model with the correct kwargs BEFORE you
         use any of the models.
         """
@@ -140,10 +109,10 @@ class DynamoTable3(object):
     @property
     def attribute_definitions(self):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
-        as_def = lambda name, field: {'AttributeName': name, 'AttributeType': _field_to_dynamo_type(field)}
-        defs = [as_def(self.hash_key, self.schema.fields[self.hash_key])]
+        as_def = lambda name, field: {'AttributeName': name, 'AttributeType': self.schema.field_to_dynamo_type(field)}
+        defs = [as_def(self.hash_key, self.schema.dynamallow_fields()[self.hash_key])]
         if self.range_key:
-            defs.append(as_def(self.range_key, self.schema.fields[self.range_key]))
+            defs.append(as_def(self.range_key, self.schema.dynamallow_fields()[self.range_key]))
         return defs
 
     @property
@@ -177,11 +146,10 @@ class DynamoTable3(object):
             table.meta.client.get_waiter('table_exists').wait(TableName=self.name)
         return table
 
-
     def delete(self, wait=True):
         """Delete this existing table
 
-        :param bool wait: If set to True, the default, this call will block until the table is created
+        :param bool wait: If set to True, the default, this call will block until the table is deleted
         """
         self.table.delete()
         if wait:
@@ -214,7 +182,7 @@ class DynamoTable3(object):
 
     def get(self, consistent=False, **kwargs):
         for k, v in six.iteritems(kwargs):
-            if k not in self.schema.fields:
+            if k not in self.schema.dynamallow_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
         if consistent:
             kwargs['ConsistentRead'] = True

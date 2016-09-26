@@ -8,9 +8,14 @@ python:
   - 3.5
   - pypy
 
+env:
+  - SERIALIZATION_PKG="marshmallow==2.7.0"
+  - SERIALIZATION_PKG="schematics==1.0.4"
+
 install:
   - pip install -e .
   - pip install codecov pytest travis-sphinx
+  - pip install $SERIALIZATION_PKG
 
 script:
   - coverage run --source=dynamallow setup.py test

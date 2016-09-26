@@ -1,18 +1,7 @@
 """These tests require dynamo local running"""
-import inspect
 import pytest
 
-from marshmallow import fields
-
-from dynamallow.table import HashKeyExists, InvalidSchemaField, _field_to_dynamo_type
-
-
-def test_field_to_dynamo_type():
-    """Field to dynamo type should map as expected"""
-    assert _field_to_dynamo_type(fields.Number()) == 'N'
-    assert _field_to_dynamo_type(fields.Decimal()) == 'N'
-    assert _field_to_dynamo_type(fields.Raw()) == 'B'
-    assert _field_to_dynamo_type(fields.DateTime()) == 'S'
+from dynamallow.exceptions import HashKeyExists, InvalidSchemaField, ValidationError
 
 
 def test_table_creation_deletion(TestModel, dynamo_local):
@@ -30,6 +19,22 @@ def test_put_get(TestModel, TestModel_table, dynamo_local):
     first_one = TestModel.get(foo="first", bar="one")
     assert isinstance(first_one, TestModel)
     assert first_one.baz == 'lol' and first_one.count == 123
+
+def test_schema_change(TestModel, TestModel_table, dynamo_local):
+    """Simulate a schema change and make sure we get the record correctly"""
+    data = {'foo': '1', 'bar': '2', 'bad_key': 10}
+    TestModel.Table.put(data)
+    item = TestModel.get(foo='1', bar='2')
+    assert item._raw == data
+    assert item.foo == '1'
+    assert item.bar == '2'
+    assert not hasattr(item, 'bad_key')
+
+
+def test_put_invalid_schema(TestModel, TestModel_table, dynamo_local):
+    """Putting an invalid schema should raise a ``ValidationError``."""
+    with pytest.raises(ValidationError):
+        TestModel.put({"foo": [1], "bar": '10'})
 
 
 def test_put_batch(TestModel, TestModel_table, dynamo_local):
@@ -136,3 +141,31 @@ def test_overwrite(TestModel, TestModel_entries, dynamo_local):
 
     first_one = TestModel.get(foo="first", bar="one")
     assert first_one.count == 999
+
+
+def test_save(TestModel, TestModel_table, dynamo_local):
+    test_model = TestModel(foo='a', bar='b', count=100)
+    test_model.save()
+    result = TestModel.get(foo='a', bar='b')
+    assert result.foo == 'a'
+    assert result.bar == 'b'
+    assert result.count == 100
+
+    test_model.count += 1
+    test_model.baz = 'hello_world'
+    test_model.save()
+    result = TestModel.get(foo='a', bar='b')
+    assert result.foo == 'a'
+    assert result.bar == 'b'
+    assert result.count == 101
+    assert result.baz == 'hello_world'
+
+
+def test_save_update(TestModel, TestModel_entries, dynamo_local):
+    result = TestModel.get(foo='first', bar='one')
+    assert result.baz == 'bbq'
+    result.baz = 'changed'
+    result.save()
+
+    result = TestModel.get(foo='first', bar='one')
+    assert result.baz == 'changed'
