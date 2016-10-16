@@ -1,6 +1,10 @@
 language: python
 sudo: false
 
+branches:
+  only:
+    - master
+
 python:
   - 2.6
   - 2.7
@@ -22,5 +26,5 @@ script:
   - travis-sphinx --source=docs/ build
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
-  - travis-sphinx deploy
+  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && bash <(curl -s https://codecov.io/bash)'
+  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && travis-sphinx deploy'
