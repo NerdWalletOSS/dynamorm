@@ -77,24 +77,13 @@ class DynaModel(object):
     parameters used to create and manage the table as well as the schema for validating and marshalling data into object
     attributes.  It will also hold any custom business logic you need for your objects.
 
-    Your class must define two inner classes that specify the Dynamo Table options and the Marshmallow Schema,
-    respectively.
+    Your class must define two inner classes that specify the Dynamo Table options and the Schema, respectively.
 
     The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamorm.table` module for
     more information.
 
     The document schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
-    out any other :class:`~marshmallow.Schema` or :class:`~schematics.Model`.
-
-    .. note::
-
-        You do not need to have Schema extend from the marshmallow :class:`~marshmallow.Schema` class as we
-        automatically do that for you, to make model definition more concise.
-
-        The same is true for the Table class.  We will automatically transform it so that it extends from the
-        :class:`dynamorm.table.DynamoTable3`.
-
-        In either case you're free to define them as extending from the actual base classes if you prefer to be explicit.
+    out any other Marshmallow :class:`~marshmallow.Schema` or Schematics :class:`~schematics.Model`.
 
     For example:
 
@@ -105,8 +94,7 @@ class DynaModel(object):
 
         from dynamorm import DynaModel
 
-        from marshmallow import validate
-        from marshmallow import fields
+        from marshmallow import fields, validate, validates, ValidationError
 
         class Thing(DynaModel):
             class Table:
@@ -120,6 +108,13 @@ class DynaModel(object):
                 name = fields.String()
                 color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
                 compound = fields.Dict(required=True)
+
+                @validates('name')
+                def validate_name(self, value):
+                    # this is a very silly example just to illustrate that you can fill out the
+                    # inner Schema class just like any other Marshmallow class
+                    if name.lower() == 'evan':
+                        raise ValidationError("No Evan's allowed")
 
             def say_hello(self):
                 print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(

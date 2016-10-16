@@ -1,7 +1,7 @@
 Usage
 =====
 
-Using Dynamallow is straight forward.  Simply define your models with some specific meta data to represent the DynamoDB
+Using DynamORM is straight forward.  Simply define your models with some specific meta data to represent the DynamoDB
 Table structure as well as the document schema.  You can then use class level methods to query for and get items,
 represented as instances of the class, as well as class level methods to interact with specific documents in the table.
 
@@ -9,6 +9,8 @@ represented as instances of the class, as well as class level methods to interac
 
     Not all functionality is covered in this documentation yet.  See `the tests`_ for all "supported" functionality
     (like: batch puts, unique puts, etc).
+
+.. _the tests: https://github.com/NerdWallet/DynamORM/tree/master/tests
 
 
 Setting up Boto3
@@ -22,11 +24,13 @@ Make sure you have `configured boto3`_ and can access DynamoDB from the Python c
     dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
     list(dynamodb.tables.all())  # --> ['table1', 'table2', 'etc...']
 
+.. _configured boto3: https://boto3.readthedocs.io/en/latest/guide/quickstart.html#configuration
+
 
 Using Dynamo Local
 ~~~~~~~~~~~~~~~~~~
 
-If you're using `Dynamo Local`_ for development you will need to configure Dynamallow appropriately by manually calling
+If you're using `Dynamo Local`_ for development you will need to configure DynamORM appropriately by manually calling
 ``get_resource`` on any model's ``Table`` object, which takes the same parameters as ``boto3.resource``.  The
 ``dynamodb`` boto resource is shared globally by all models, so it only needs to be done once.  For example:
 
@@ -41,17 +45,18 @@ If you're using `Dynamo Local`_ for development you will need to configure Dynam
 
 .. _Dynamo Local: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html
 
+
 Defining your Models -- Tables & Schemas
 ----------------------------------------
 
-.. automodule:: dynamallow.model
+.. automodule:: dynamorm.model
     :noindex:
 
 
 Table Data Model
 ----------------
 
-.. automodule:: dynamallow.table
+.. automodule:: dynamorm.table
     :noindex:
 
 
@@ -103,7 +108,10 @@ In all cases, the attributes go through validation against the Schema.
 Fetching existing documents
 ---------------------------
 
-To fetch an existing document you use the ``.get`` class method on your models:
+Get based on primary key
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+To fetch an existing document based on its primary key you use the ``.get`` class method on your models:
 
 .. code-block:: python
 
@@ -111,5 +119,46 @@ To fetch an existing document you use the ``.get`` class method on your models:
     assert thing1.color == 'purple'
 
 
-.. _configured boto3: https://boto3.readthedocs.io/en/latest/guide/quickstart.html#configuration
-.. _the tests: https://github.com/borgstrom/dynamallow/tree/master/tests
+Querying
+~~~~~~~~
+
+.. epigraph::
+
+    A Query operation uses the primary key of a table or a secondary index to directly access items from that table or index.
+
+    -- `Table query docs`_
+
+.. _Table query docs: https://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.query
+
+
+Like a ``get`` operation this takes arguments that map to the key names, but you can also specify a comparison operator
+for that key using the "double-under" syntax (``<field>__<operator>``).  For example to query a ``Book`` model for all
+entries with the ``isbn`` field that start with a specific value you would use the ``begins_with`` comparison operator:
+
+.. code-block:: python
+
+    Book.query(isbn__begins_with="12345")
+
+You can find the full list of supported comparison operators in the `Table query docs`_.
+
+
+Scanning
+~~~~~~~~
+
+.. epigraph::
+
+    The Scan operation returns one or more items and item attributes **by accessing every item** in a table or a
+    secondary index.
+
+    -- `Table scan docs`_
+
+.. _Table scan docs: https://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.scan
+
+Scanning works exactly the same as querying: comparison operators are specified using the "double-under" syntax
+(``<field>__<operator>``).
+
+.. code-block:: python
+
+    # Scan based on attributes
+    Book.scan(author="Mr. Bar")
+    Book.scan(author__ne="Mr. Bar")

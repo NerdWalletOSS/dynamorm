@@ -1,4 +1,5 @@
-"""The inner ``Table`` class on ``DynaModels`` becomes an instance of a DynamoTable3.
+"""The inner ``Table`` class on ``DynaModel`` definitions becomes an instance of our
+:class:`dynamorm.table.DynamoTable3` class.
 
 The attributes you define on your inner ``Table`` class map to underlying boto data structures.  This mapping is
 expressed through the following data model:

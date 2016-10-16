@@ -1,19 +1,19 @@
-Dynamallow API
-==============
+DynamORM API
+============
 
 
-``dynamallow``
+``dynamorm``
 --------------
-.. automodule:: dynamallow
+.. automodule:: dynamorm
 
 
-``dynamallow.model``
+``dynamorm.model``
 --------------------
-.. automodule:: dynamallow.model
+.. automodule:: dynamorm.model
     :members:
 
 
-``dynamallow.table``
+``dynamorm.table``
 --------------------
-.. automodule:: dynamallow.table
+.. automodule:: dynamorm.table
     :members:
