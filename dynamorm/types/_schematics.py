@@ -2,12 +2,12 @@ from schematics.models import Model as SchematicsModel
 from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
 from schematics import types
 
-from .base import BaseModel as _BaseModel
-from ..exceptions import ValidationError as _ValidationError
+from .base import BaseModel
+from ..exceptions import ValidationError
 
 
-class Model(SchematicsModel, _BaseModel):
-    """``Model`` is the base class for schematics_ based schemas """
+class Model(SchematicsModel, BaseModel):
+    """``Model`` is the base class for schematics based schemas """
     @staticmethod
     def field_to_dynamo_type(field):
         """Given a schematics field object return the appropriate Dynamo type character"""
@@ -17,12 +17,12 @@ class Model(SchematicsModel, _BaseModel):
         return 'S'
 
     @classmethod
-    def dynamallow_fields(cls):
+    def dynamorm_fields(cls):
         return cls.fields
 
     @classmethod
-    def dynamallow_validate(cls, obj):
+    def dynamorm_validate(cls, obj):
         try:
             return cls(obj, strict=False).to_primitive()
         except (SchematicsValidationError, ModelConversionError) as e:
-            raise _ValidationError(obj, cls.__name__, e.messages)
+            raise ValidationError(obj, cls.__name__, e.messages)
