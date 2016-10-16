@@ -4,14 +4,13 @@ with open('README.rst', 'r') as readme_fd:
     long_description = readme_fd.read()
 
 setup(
-    name='dynamallow',
+    name='dynamorm',
     version='0.0.3',
-
-    description='Python ORM style interface to Amazon (AWS) DynamoDB using Schematics or Marshmallow for Schema validation',
+    description='DynamORM is a Python object relation mapping library for Amazon\'s DynamoDB service.',
     long_description=long_description,
     author='Evan Borgstrom',
     author_email='evan@borgstrom.ca',
-    url='https://github.com/borgstrom/dynamallow',
+    url='https://github.com/NerdWallet/DynamORM',
     license='Apache License Version 2.0',
 
     setup_requires=[
