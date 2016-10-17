@@ -48,7 +48,7 @@ Example
     from marshmallow import fields
 
     # Our objects are defined as DynaModel classes
-    class Book(DyanModel):
+    class Book(DynaModel):
         # Define our DynamoDB properties
         class Table:
             name = 'prod-books'
