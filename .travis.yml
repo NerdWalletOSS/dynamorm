@@ -16,21 +16,12 @@ env:
   - SERIALIZATION_PKG="marshmallow==2.7.0"
   - SERIALIZATION_PKG="schematics==1.0.4"
 
-install:
-  #- pip install -e .
-  #- pip install codecov pytest
-  #- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then pip install travis-sphinx; fi
-  #- pip install $SERIALIZATION_PKG
+install: make install
 
-script:
-  #- coverage run --source=dynamorm setup.py test
-  - echo $TRAVIS_PULL_REQUEST
-  - if [ "$TRAVIS_PULL_REQUEST" = "true" ]; then git diff origin/master setup.py; fi
-  #- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then travis-sphinx --source=docs build; fi
+script: make test docs
 
 after_success:
-  #- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then bash <(curl -s https://codecov.io/bash); fi
-  #- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then travis-sphinx deploy; fi
+  - bash <(curl -s https://codecov.io/bash)
 
 deploy:
   provider: pypi
