@@ -1,11 +1,11 @@
 DynamORM
 ========
 
-.. image:: https://img.shields.io/travis/NerdWallet/DynamORM.svg
-           :target: https://travis-ci.org/NerdWallet/DynamORM
+.. image:: https://img.shields.io/travis/NerdWalletOSS/DynamORM.svg
+           :target: https://travis-ci.org/NerdWalletOSS/DynamORM
 
-.. image:: https://img.shields.io/codecov/c/github/NerdWallet/DynamORM.svg
-           :target: https://codecov.io/github/NerdWallet/DynamORM
+.. image:: https://img.shields.io/codecov/c/github/NerdWalletOSS/DynamORM.svg
+           :target: https://codecov.io/github/NerdWalletOSS/DynamORM
 
 .. image:: https://img.shields.io/pypi/v/DynamORM.svg
            :target: https://pypi.python.org/pypi/DynamORM
