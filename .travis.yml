@@ -24,6 +24,7 @@ install:
 
 script:
   #- coverage run --source=dynamorm setup.py test
+  - echo $TRAVIS_PULL_REQUEST
   - if [ "$TRAVIS_PULL_REQUEST" = "true" ]; then git diff origin/master setup.py; fi
   #- if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then travis-sphinx --source=docs build; fi
 
