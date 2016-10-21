@@ -1,21 +1,23 @@
 SERIALIZATION_PKG ?= marshmallow
+TRAVIS_PULL_REQUEST ?= nope
 
 all: install test docs
 
 test:
 	SERIALIZATION_PKG=$(SERIALIZATION_PKG) coverage run --source=dynamorm setup.py test
-	ifneq ($(TRAVIS_PULL_REQUEST), false)
-		git diff origin/master setup.py | grep "\+.*version=" || (echo "Bump version in setup.py!"; exit 1)
-	endif
+	if [ "$(TRAVIS_PULL_REQUEST)" != "false" ]; then \
+		git diff origin/master setup.py | grep "\+.*version=" || ( \
+			printf "\n\n\n\nBump version in setup.py!\n\n\n\n" \
+			exit 1 \
+		) \
+	fi
 
 docs:
-	ifeq ($(TRAVIS_PULL_REQUEST), false)
-		ifdef GH_TOKEN
-			pip install travis-sphinx
-			travis-sphinx --source=docs build
-			travis-sphinx deploy
-		endif
-	endif
+	if [ "$(TRAVIS_PULL_REQUEST)" = "false" ] && [ ! -z "$(GH_TOKEN)"]; then \
+		pip install travis-sphinx \
+		travis-sphinx --source=docs build \
+		travis-sphinx deploy \
+	fi
 
 install:
 	pip install -e .
