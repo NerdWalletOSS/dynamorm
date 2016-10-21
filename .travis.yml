@@ -16,10 +16,8 @@ env:
   - SERIALIZATION_PKG="marshmallow==2.7.0"
   - SERIALIZATION_PKG="schematics==1.0.4"
 
-install: make install
-
-script: make test docs
-
+install: false
+script: make
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
