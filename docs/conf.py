@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Dynamallow documentation build configuration file, created by
+# DynamORM documentation build configuration file, created by
 # sphinx-quickstart on Mon Jun  6 20:52:42 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -60,9 +60,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'Dynamallow'
-author = 'Evan Borgstrom'
-copyright = ' {0:%Y} <a href="http://borgstrom.ca">{1}</a>'.format(
+project = 'DynamORM'
+author = 'NerdWallet'
+copyright = ' {0:%Y} <a href="http://nerdwallet.com">{1}</a>'.format(
     datetime.datetime.utcnow(),
     author
 )
@@ -73,7 +73,7 @@ copyright = ' {0:%Y} <a href="http://borgstrom.ca">{1}</a>'.format(
 #
 
 # The full version, including alpha/beta/rc tags.
-release = pkg_resources.get_distribution('dynamallow').version
+release = pkg_resources.get_distribution('dynamorm').version
 
 # The short X.Y version.
 version = release.rsplit('.', 1)[0]
@@ -143,10 +143,9 @@ html_theme = 'alabaster'
 # documentation.
 #
 html_theme_options = {
-    'logo': 'dynamallow-logo.png',
-    'description': u'DynamoDB + Marshmallow — Two awesome things, better together!<br />',
-    'github_user': 'borgstrom',
-    'github_repo': 'dynamallow',
+    'description': u'Python object relation mapping library for Amazon\'s DynamoDB service.<br />',
+    'github_user': 'NerdWallet',
+    'github_repo': 'DynamORM',
     'github_banner': True,
     'github_type': 'star',
     'travis_button': True,
@@ -159,7 +158,7 @@ html_theme_options = {
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = 'Dynamallow v0.0.1'
+# html_title = 'DynamORM v0.0.1'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
@@ -268,7 +267,7 @@ html_show_sourcelink = False
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Dynamallow_doc'
+htmlhelp_basename = 'DynamORM_doc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -294,8 +293,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Dynamallow.tex', 'Dynamallow Documentation',
-     'Evan Borgstrom', 'manual'),
+    (master_doc, 'DynamORM.tex', 'DynamORM Documentation',
+     'NerdWallet', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -330,7 +329,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'dynamallow', 'Dynamallow Documentation',
+    (master_doc, 'dynamorm', 'DynamORM Documentation',
      [author], 1)
 ]
 
@@ -345,8 +344,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Dynamallow', 'Dynamallow Documentation',
-     author, 'Dynamallow', 'One line description of project.',
+    (master_doc, 'DynamORM', 'DynamORM Documentation',
+     author, 'DynamORM', 'One line description of project.',
      'Miscellaneous'),
 ]
 

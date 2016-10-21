@@ -1,7 +1,7 @@
 """Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
 schema that is used for validating and marshalling your data.
 
-.. autoclass:: MarshModel
+.. autoclass:: DynaModel
     :noindex:
 
 """
@@ -18,29 +18,29 @@ import six
 
 from .table import DynamoTable3
 from .types import Model
-from .exceptions import MarshModelException
+from .exceptions import DynaModelException
 
 log = logging.getLogger(__name__)
 
 
-class MarshModelMeta(type):
-    """MarshModelMeta is a metaclass for the MarshModel class that transforms our Table and Schema classes
+class DynaModelMeta(type):
+    """DynaModelMeta is a metaclass for the DynaModel class that transforms our Table and Schema classes
 
     Since we can inspect the data we need to build the full data structures needed for working with tables and indexes
     users can define for more concise and readable table definitions that we transform into the final. To allow for a
-    more concise definition of MarshModels we do not require that users define their inner Schema class as extending
+    more concise definition of DynaModels we do not require that users define their inner Schema class as extending
     from the :class:`~marshmallow.Schema`.  Instead, when the class is being defined we take the inner Schema and
     transform it into a new class named <Name>Schema, extending from :class:`~marshmallow.Schema`.  For example, on a
     model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
     than a class named ``Schema``
     """
     def __new__(cls, name, parents, attrs):
-        if name in ('MarshModel', 'MarshModelMeta'):
-            return super(MarshModelMeta, cls).__new__(cls, name, parents, attrs)
+        if name in ('DynaModel', 'DynaModelMeta'):
+            return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
         for inner_class in ('Table', 'Schema'):
             if inner_class not in attrs or not inspect.isclass(attrs[inner_class]):
-                raise MarshModelException("You must define an inner '{inner}' class on your '{name}' class".format(
+                raise DynaModelException("You must define an inner '{inner}' class on your '{name}' class".format(
                     inner=inner_class,
                     name=name
                 ))
@@ -62,7 +62,7 @@ class MarshModelMeta(type):
         attrs['Table'] = TableClass(schema=attrs['Schema'])
 
         # call our parent to get the new instance
-        model = super(MarshModelMeta, cls).__new__(cls, name, parents, attrs)
+        model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
@@ -71,30 +71,19 @@ class MarshModelMeta(type):
         return model
 
 
-@six.add_metaclass(MarshModelMeta)
-class MarshModel(object):
-    """``MarshModel`` is the base class all of your models will extend from.  This model definition encapsulates the
+@six.add_metaclass(DynaModelMeta)
+class DynaModel(object):
+    """``DynaModel`` is the base class all of your models will extend from.  This model definition encapsulates the
     parameters used to create and manage the table as well as the schema for validating and marshalling data into object
     attributes.  It will also hold any custom business logic you need for your objects.
 
-    Your class must define two inner classes that specify the Dynamo Table options and the Marshmallow Schema,
-    respectively.
+    Your class must define two inner classes that specify the Dynamo Table options and the Schema, respectively.
 
-    The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamallow.table` module for
+    The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamorm.table` module for
     more information.
 
     The document schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
-    out any other :class:`~marshmallow.Schema` or :class:`~schematics.Model`.
-
-    .. note::
-
-        You do not need to have Schema extend from the marshmallow :class:`~marshmallow.Schema` class as we
-        automatically do that for you, to make model definition more concise.
-
-        The same is true for the Table class.  We will automatically transform it so that it extends from the
-        :class:`dynamallow.table.DynamoTable3`.
-
-        In either case you're free to define them as extending from the actual base classes if you prefer to be explicit.
+    out any other Marshmallow :class:`~marshmallow.Schema` or Schematics :class:`~schematics.Model`.
 
     For example:
 
@@ -103,12 +92,11 @@ class MarshModel(object):
         # Marshmallow example
         import os
 
-        from dynamallow import MarshModel
+        from dynamorm import DynaModel
 
-        from marshmallow import validate
-        from marshmallow import fields
+        from marshmallow import fields, validate, validates, ValidationError
 
-        class Thing(MarshModel):
+        class Thing(DynaModel):
             class Table:
                 name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
                 hash_key = 'id'
@@ -120,6 +108,13 @@ class MarshModel(object):
                 name = fields.String()
                 color = fields.String(validate=validate.OneOf(('purple', 'red', 'yellow')))
                 compound = fields.Dict(required=True)
+
+                @validates('name')
+                def validate_name(self, value):
+                    # this is a very silly example just to illustrate that you can fill out the
+                    # inner Schema class just like any other Marshmallow class
+                    if name.lower() == 'evan':
+                        raise ValidationError("No Evan's allowed")
 
             def say_hello(self):
                 print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
@@ -133,11 +128,11 @@ class MarshModel(object):
         # Schematics example
         import os
 
-        from dynamallow import MarshModel
+        from dynamorm import DynaModel
 
         from schematics import types
 
-        class Thing(MarshModel):
+        class Thing(DynaModel):
             class Table:
                 name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
                 hash_key = 'id'
@@ -159,13 +154,13 @@ class MarshModel(object):
     """
 
     def __init__(self, **raw):
-        """Create a new instance of a MarshModel
+        """Create a new instance of a DynaModel
 
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
         input will be put onto ``self`` as attributes.
         """
         self._raw = raw
-        data = self.Schema.dynamallow_validate(raw)
+        data = self.Schema.dynamorm_validate(raw)
         for k, v in six.iteritems(data):
             setattr(self, k, v)
 
@@ -178,7 +173,7 @@ class MarshModel(object):
         :param dict item: The item to put into the table
         :param \*\*kwargs: All other kwargs are passed through to the put method on the table
         """
-        return cls.Table.put(cls.Schema.dynamallow_validate(item), **kwargs)
+        return cls.Table.put(cls.Schema.dynamorm_validate(item), **kwargs)
 
     @classmethod
     def put_unique(cls, item, **kwargs):
@@ -187,7 +182,7 @@ class MarshModel(object):
         :param dict item: The item to put into the table
         :param \*\*kwargs: All other kwargs are passed through to the put_unique method on the table
         """
-        return cls.Table.put_unique(cls.Schema.dynamallow_validate(item), **kwargs)
+        return cls.Table.put_unique(cls.Schema.dynamorm_validate(item), **kwargs)
 
     @classmethod
     def put_batch(cls, *items, **batch_kwargs):
@@ -205,7 +200,7 @@ class MarshModel(object):
             )
         """
         return cls.Table.put_batch(*[
-            cls.Schema.dynamallow_validate(item) for item in items
+            cls.Schema.dynamorm_validate(item) for item in items
         ], **batch_kwargs)
 
     @classmethod
@@ -289,7 +284,7 @@ class MarshModel(object):
 
     def to_dict(self):
         obj = {}
-        for k in self.Schema.dynamallow_fields():
+        for k in self.Schema.dynamorm_fields():
             if hasattr(self, k):
                 obj[k] = getattr(self, k)
         return obj

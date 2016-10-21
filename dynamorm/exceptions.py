@@ -4,11 +4,11 @@ log = logging.getLogger(__name__)
 
 
 # --- Schema exceptions ---
-class MarshModelException(Exception):
-    """Base exception for MarshModel problems"""
+class DynaModelException(Exception):
+    """Base exception for DynaModel problems"""
 
 
-class ValidationError(MarshModelException):
+class ValidationError(DynaModelException):
     """Schema validation failed"""
     def __init__(self, raw, schema_name, errors, *args, **kwargs):
         super(ValidationError, self).__init__(*args, **kwargs)

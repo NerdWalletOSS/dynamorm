@@ -1,7 +1,7 @@
 """These tests require dynamo local running"""
 import pytest
 
-from dynamallow.exceptions import HashKeyExists, InvalidSchemaField, ValidationError
+from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError
 
 
 def test_table_creation_deletion(TestModel, dynamo_local):

@@ -1,5 +1,5 @@
-Motivation for creating Dynamallow
-==================================
+Motivation for creating DynamORM
+================================
 
 *This was written Q2 2016*
 

@@ -1,4 +1,5 @@
-"""The inner ``Table`` class on ``MarshModels`` becomes an instance of a DynamoTable3.
+"""The inner ``Table`` class on ``DynaModel`` definitions becomes an instance of our
+:class:`dynamorm.table.DynamoTable3` class.
 
 The attributes you define on your inner ``Table`` class map to underlying boto data structures.  This mapping is
 expressed through the following data model:
@@ -30,7 +31,7 @@ import botocore
 import six
 
 from boto3.dynamodb.conditions import Key, Attr
-from dynamallow.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists
+from dynamorm.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +60,10 @@ class DynamoTable3(object):
             if not hasattr(self, attr):
                 setattr(self, attr, None)
 
-        if self.hash_key not in self.schema.dynamallow_fields():
+        if self.hash_key not in self.schema.dynamorm_fields():
             raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
 
-        if self.range_key and self.range_key not in self.schema.dynamallow_fields():
+        if self.range_key and self.range_key not in self.schema.dynamorm_fields():
             raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
 
     @classmethod
@@ -110,9 +111,9 @@ class DynamoTable3(object):
     def attribute_definitions(self):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
         as_def = lambda name, field: {'AttributeName': name, 'AttributeType': self.schema.field_to_dynamo_type(field)}
-        defs = [as_def(self.hash_key, self.schema.dynamallow_fields()[self.hash_key])]
+        defs = [as_def(self.hash_key, self.schema.dynamorm_fields()[self.hash_key])]
         if self.range_key:
-            defs.append(as_def(self.range_key, self.schema.dynamallow_fields()[self.range_key]))
+            defs.append(as_def(self.range_key, self.schema.dynamorm_fields()[self.range_key]))
         return defs
 
     @property
@@ -182,7 +183,7 @@ class DynamoTable3(object):
 
     def get(self, consistent=False, **kwargs):
         for k, v in six.iteritems(kwargs):
-            if k not in self.schema.dynamallow_fields():
+            if k not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
         if consistent:
             kwargs['ConsistentRead'] = True

@@ -2,7 +2,7 @@ import os
 import socket
 import time
 
-from dynamallow.local import DynamoLocal
+from dynamorm.local import DynamoLocal
 
 DYNAMO_CONN_RETRIES = 10
 DYNAMO_CONN_SLEEP = 1

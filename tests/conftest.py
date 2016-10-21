@@ -8,8 +8,8 @@ except ImportError:
 
 import pytest
 
-from dynamallow import MarshModel  # , LocalIndex, GlobalIndex
-from dynamallow import local
+from dynamorm import DynaModel  # , LocalIndex, GlobalIndex
+from dynamorm import local
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def TestModel():
     if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
         from marshmallow import fields
 
-        class TestModel(MarshModel):
+        class TestModel(DynaModel):
             class Table:
                 name = 'peanut-butter'
                 hash_key = 'foo'
@@ -51,7 +51,7 @@ def TestModel():
         from schematics import types
         from schematics.types import compound
 
-        class TestModel(MarshModel):
+        class TestModel(DynaModel):
             class Table:
                 name = 'peanut-butter'
                 hash_key = 'foo'
