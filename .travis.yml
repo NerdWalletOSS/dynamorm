@@ -17,7 +17,7 @@ env:
   - SERIALIZATION_PKG="schematics==1.0.4"
 
 install: false
-script: make
+script: ./build.sh
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
