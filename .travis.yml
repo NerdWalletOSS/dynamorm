@@ -18,13 +18,24 @@ env:
 
 install:
   - pip install -e .
-  - pip install codecov pytest travis-sphinx
+  - pip install codecov pytest
+  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && pip install travis-sphinx'
   - pip install $SERIALIZATION_PKG
 
 script:
-  - coverage run --source=dynamallow setup.py test
-  - travis-sphinx --source=docs/ build
+  - coverage run --source=dynamorm setup.py test
+  - '[ "$TRAVIS_PULL_REQUEST" = "true" ] && { git diff origin/master setup.py | grep "\+.*version=" || (echo "Bump version in setup.py!" && exit 1) }'
+  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && travis-sphinx --source=docs build'
 
 after_success:
   - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && bash <(curl -s https://codecov.io/bash)'
   - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && travis-sphinx deploy'
+
+deploy:
+  provider: pypi
+  user: nerdwallet
+  password:
+    secure: FcwdP+EvSobBQHBgg3EJJ8A1atMV1kA+5ObICRGV6HAB1ZigUil/8LSeiuDct9/GcQMnPK09U9pQpS5nm/YdqEW4hteIGg0FTcD7qphCUZX3CnP7f+svvXghWX+TfQ4m1BpvC+bShUJ+dI9vrzoh+DY6rxijcNElVvRZTA0DarwPXnFllogBF9G0wJxVbxMsoG5zWWCYeWfKZOojpkk0rCaGnR4Tl/5tnbiS/dSEEXnk60DGJFvW4aXK1CkHPv8wAiRNFKp4AfNL6WXQJcLfaZaj7STcU5AHvOsCFL7ojGKHjz2EkKLTSN+oa9L2nct36ZLv8nbzpDiPqBcteS0sVO40FqsgMp8+Ou6KFK9jIxGf7FuTf6we3f4sVEyaaRAZvmOX4cmieBnqB9YVv+njrYB2O7clJcCG3eypq7y5HelQ0lslzYlpWOvLG9Xo6qL0zUSl2PPgJx179WKncLSa0k/cWgNW9q1h2Vqc0+g64CPh8OjEjEhlmUAHBp/zfUyAMc9hZDlwLOU087R/0X6DznPlfpMO6/5Cb24wW6bU3XVnBteNhJrDj8aoR1lie5hjzldxLi2xngjPwqEHGz9FCx3FXeRKTPuk9aNH1xB+2S42jx42SR4ZiXrPmy06jhrpupnA0qkPsEsQ//5Dw9L/9mVeeQ9tm6PpgJdS2YELDsE=
+  on:
+    branch: master
+  distributions: "sdist bdist_wheel"
