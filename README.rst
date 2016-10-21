@@ -1,14 +1,14 @@
 DynamORM
 ========
 
-.. image:: https://img.shields.io/travis/NerdWalletOSS/DynamORM.svg
-           :target: https://travis-ci.org/NerdWalletOSS/DynamORM
+.. image:: https://img.shields.io/travis/NerdWalletOSS/dynamorm.svg
+           :target: https://travis-ci.org/NerdWalletOSS/dynamorm
 
-.. image:: https://img.shields.io/codecov/c/github/NerdWalletOSS/DynamORM.svg
-           :target: https://codecov.io/github/NerdWalletOSS/DynamORM
+.. image:: https://img.shields.io/codecov/c/github/NerdWalletOSS/dynamorm.svg
+           :target: https://codecov.io/github/NerdWalletOSS/dynamorm
 
-.. image:: https://img.shields.io/pypi/v/DynamORM.svg
-           :target: https://pypi.python.org/pypi/DynamORM
+.. image:: https://img.shields.io/pypi/v/dynamorm.svg
+           :target: https://pypi.python.org/pypi/dynamorm
            :alt: Latest PyPI version
 
 ----
