@@ -19,17 +19,17 @@ env:
 install:
   - pip install -e .
   - pip install codecov pytest
-  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && pip install travis-sphinx || true'
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then pip install travis-sphinx; fi
   - pip install $SERIALIZATION_PKG
 
 script:
   - coverage run --source=dynamorm setup.py test
-  - '[ "$TRAVIS_PULL_REQUEST" = "true" ] && { git diff origin/master setup.py | grep "\+.*version=" || (echo "Bump version in setup.py!" && exit 1) } || true'
-  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && travis-sphinx --source=docs build || true'
+  - if [ "$TRAVIS_PULL_REQUEST" = "true" ]; then git diff origin/master setup.py | grep "\+.*version=" || (echo "Bump version in setup.py!"; exit 1); fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then travis-sphinx --source=docs build; fi
 
 after_success:
-  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && bash <(curl -s https://codecov.io/bash) || true'
-  - '[ "$TRAVIS_PULL_REQUEST" = "false" ] && travis-sphinx deploy || true'
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then bash <(curl -s https://codecov.io/bash); fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then travis-sphinx deploy; fi
 
 deploy:
   provider: pypi
