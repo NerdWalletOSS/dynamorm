@@ -18,7 +18,7 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     fi
 fi
 
-if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}"]; then
+if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ]; then
     pip install travis-sphinx
     travis-sphinx --source=docs build
     travis-sphinx deploy
