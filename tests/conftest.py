@@ -1,11 +1,6 @@
 import logging
 import os
 
-try:
-    from urllib import urlretrieve
-except ImportError:
-    from urllib.request import urlretrieve
-
 import pytest
 
 from dynamorm import DynaModel  # , LocalIndex, GlobalIndex
@@ -79,6 +74,7 @@ def TestModel():
                 )
 
     return TestModel
+
 
 @pytest.fixture(scope='function')
 def TestModel_table(request, TestModel, dynamo_local):

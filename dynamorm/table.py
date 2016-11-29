@@ -101,7 +101,11 @@ class DynamoTable3(object):
     @property
     def key_schema(self):
         """Return an appropriate KeySchema, based on our key attributes and the schema object"""
-        as_schema = lambda name, key_type: {'AttributeName': name, 'KeyType': key_type}
+        def as_schema(name, key_type):
+            return {
+                'AttributeName': name,
+                'KeyType': key_type
+            }
         schema = [as_schema(self.hash_key, 'HASH')]
         if self.range_key:
             schema.append(as_schema(self.range_key, 'RANGE'))
@@ -110,7 +114,11 @@ class DynamoTable3(object):
     @property
     def attribute_definitions(self):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
-        as_def = lambda name, field: {'AttributeName': name, 'AttributeType': self.schema.field_to_dynamo_type(field)}
+        def as_def(name, field):
+            return {
+                'AttributeName': name,
+                'AttributeType': self.schema.field_to_dynamo_type(field)
+            }
         defs = [as_def(self.hash_key, self.schema.dynamorm_fields()[self.hash_key])]
         if self.range_key:
             defs.append(as_def(self.range_key, self.schema.dynamorm_fields()[self.range_key]))
@@ -164,7 +172,7 @@ class DynamoTable3(object):
         :param \*\*kwargs: All other keyword arguments are passed through to the `DynamoDB Table put_item`_ function.
 
         .. _DynamoDB Table put_item: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.put_item
-        """
+        """  # noqa
         return self.table.put_item(Item=item, **kwargs)
 
     def put_unique(self, item, **kwargs):

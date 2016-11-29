@@ -9,15 +9,9 @@ schema that is used for validating and marshalling your data.
 import inspect
 import logging
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
-
 import six
 
 from .table import DynamoTable3
-from .types import Model
 from .exceptions import DynaModelException
 
 log = logging.getLogger(__name__)
@@ -46,6 +40,23 @@ class DynaModelMeta(type):
                 ))
 
         # transform the Schema
+        # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
+        # dict and see if the item comes from either of them and lazily import our local Model implementation
+        for _, schema_item in six.iteritems(attrs['Schema'].__dict__):
+            try:
+                module_name = schema_item.__module__
+            except AttributeError:
+                continue
+
+            if module_name.startswith('marshmallow.'):
+                from .types._marshmallow import Model
+                break
+            elif module_name.startswith('schematics.'):
+                from .types._schematics import Model
+                break
+        else:
+            raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
+
         SchemaClass = type(
             '{name}Schema'.format(name=name),
             (Model,),
@@ -244,7 +255,7 @@ class DynaModel(object):
 
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
-        """
+        """  # noqa
         resp = cls.Table.query(query_kwargs=query_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)
@@ -274,7 +285,7 @@ class DynaModel(object):
 
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
         :param \*\*kwargs: The key(s) and value(s) to filter based on
-        """
+        """  # noqa
         resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)
