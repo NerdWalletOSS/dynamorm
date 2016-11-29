@@ -9,11 +9,6 @@ schema that is used for validating and marshalling your data.
 import inspect
 import logging
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
-
 import six
 
 from .table import DynamoTable3
@@ -260,7 +255,7 @@ class DynaModel(object):
 
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
-        """
+        """  # noqa
         resp = cls.Table.query(query_kwargs=query_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)
@@ -290,7 +285,7 @@ class DynaModel(object):
 
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
         :param \*\*kwargs: The key(s) and value(s) to filter based on
-        """
+        """  # noqa
         resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
         return [
             cls.new_from_raw(raw)

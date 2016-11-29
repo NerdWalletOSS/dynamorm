@@ -20,6 +20,7 @@ def test_put_get(TestModel, TestModel_table, dynamo_local):
     assert isinstance(first_one, TestModel)
     assert first_one.baz == 'lol' and first_one.count == 123
 
+
 def test_schema_change(TestModel, TestModel_table, dynamo_local):
     """Simulate a schema change and make sure we get the record correctly"""
     data = {'foo': '1', 'bar': '2', 'bad_key': 10}
@@ -69,6 +70,7 @@ def test_put_unique(TestModel, TestModel_table, dynamo_local):
 
     with pytest.raises(HashKeyExists):
         TestModel.put_unique({"foo": "third", "bar": "three", "baz": "waa", "count": 9})
+
 
 def test_get_invalid_field(TestModel):
     """Calling .get on an invalid field should result in an exception"""

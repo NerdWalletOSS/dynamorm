@@ -5,4 +5,4 @@
     from dynamorm import DynaModel
 
 """
-from .model import DynaModel
+from .model import DynaModel  # noqa
