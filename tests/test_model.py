@@ -91,3 +91,11 @@ def test_number_hash_key():
 
     model = Model(foo=1, baz='foo')
     assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]
+
+
+def test_none_values(TestModel, TestModel_table, dynamo_local):
+    """None values should not be included in dict output"""
+    tm = TestModel(foo="first", bar="one", baz="lol")
+    tm_dict = tm.to_dict()
+    assert tm_dict['baz'] == 'lol'
+    assert 'count' not in tm_dict

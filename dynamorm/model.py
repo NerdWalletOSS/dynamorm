@@ -296,8 +296,15 @@ class DynaModel(object):
     def to_dict(self):
         obj = {}
         for k in self.Schema.dynamorm_fields():
-            if hasattr(self, k):
-                obj[k] = getattr(self, k)
+            try:
+                attr = getattr(self, k)
+                # There is no point including None/null values when we serialize, it just wastes bandwidth to/from
+                # dynamo to include the key names, which already become None when we load the values if they don't
+                # exist.  Marshmallow already does this for us (will raise AttributeError), but Schematics returns None
+                if attr is not None:
+                    obj[k] = attr
+            except AttributeError:
+                pass
         return obj
 
     def save(self, **kwargs):
