@@ -189,13 +189,19 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=item)
 
-    def get(self, consistent=False, **kwargs):
+    def get(self, consistent=False, get_item_kwargs=None, **kwargs):
+        get_item_kwargs = get_item_kwargs or {}
+
         for k, v in six.iteritems(kwargs):
             if k not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+
+        get_item_kwargs['Key'] = kwargs
         if consistent:
-            kwargs['ConsistentRead'] = True
-        response = self.table.get_item(Key=kwargs)
+            get_item_kwargs['ConsistentRead'] = True
+
+        response = self.table.get_item(**get_item_kwargs)
+
         if 'Item' in response:
             return response['Item']
 

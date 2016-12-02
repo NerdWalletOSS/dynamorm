@@ -171,3 +171,16 @@ def test_save_update(TestModel, TestModel_entries, dynamo_local):
 
     result = TestModel.get(foo='first', bar='one')
     assert result.baz == 'changed'
+
+
+def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
+    test_model = TestModel(foo='a', bar='b', count=100)
+    test_model.save()
+
+    test_model = TestModel.get(foo='a', bar='b')
+    assert test_model.count == 100
+
+    TestModel(foo='a', bar='b', count=200).save()
+
+    test_model = TestModel.get(foo='a', bar='b', consistent=True)
+    assert test_model.count == 200
