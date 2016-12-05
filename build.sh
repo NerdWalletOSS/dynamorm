@@ -6,7 +6,7 @@ SERIALIZATION_PKG=${SERIALIZATION_PKG:-marshmallow}
 TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-nope}
 
 pip install -e .
-pip install codecov pytest
+pip install codecov pytest pytest-mock
 pip install ${SERIALIZATION_PKG}
 
 SERIALIZATION_PKG=${SERIALIZATION_PKG} coverage run --source=dynamorm setup.py test

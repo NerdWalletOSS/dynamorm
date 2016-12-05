@@ -21,6 +21,17 @@ def test_put_get(TestModel, TestModel_table, dynamo_local):
     assert first_one.baz == 'lol' and first_one.count == 123
 
 
+def test_put_remove_nones(TestModel, TestModel_table, dynamo_local, mocker):
+    # mock out the underlying table resource, we have to reach deep in to find it...
+    mocker.patch.object(TestModel.Table.__class__, '_table')
+
+    TestModel.put({'foo': 'first', 'bar': 'one'})
+
+    TestModel.Table.__class__._table.put_item.assert_called_with(
+        Item={'foo': 'first', 'bar': 'one'}
+    )
+
+
 def test_schema_change(TestModel, TestModel_table, dynamo_local):
     """Simulate a schema change and make sure we get the record correctly"""
     data = {'foo': '1', 'bar': '2', 'bad_key': 10}

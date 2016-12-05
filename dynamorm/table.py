@@ -173,7 +173,7 @@ class DynamoTable3(object):
 
         .. _DynamoDB Table put_item: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.put_item
         """  # noqa
-        return self.table.put_item(Item=item, **kwargs)
+        return self.table.put_item(Item=remove_nones(item), **kwargs)
 
     def put_unique(self, item, **kwargs):
         try:
@@ -187,7 +187,7 @@ class DynamoTable3(object):
     def put_batch(self,  *items, **batch_kwargs):
         with self.table.batch_writer(**batch_kwargs) as writer:
             for item in items:
-                writer.put_item(Item=item)
+                writer.put_item(Item=remove_nones(item))
 
     def get(self, consistent=False, get_item_kwargs=None, **kwargs):
         get_item_kwargs = get_item_kwargs or {}
@@ -263,3 +263,17 @@ class DynamoTable3(object):
                 scan_kwargs['FilterExpression'] = op(value)
 
         return self.table.scan(**scan_kwargs)
+
+
+def remove_nones(in_dict):
+    """
+    Recursively remove keys with a value of ``None`` from the ``in_dict`` collection
+    """
+    try:
+        return dict(
+            (key, remove_nones(val))
+            for key, val in six.iteritems(in_dict)
+            if val is not None
+        )
+    except (ValueError, AttributeError):
+        return in_dict

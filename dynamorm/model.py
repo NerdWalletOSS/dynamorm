@@ -297,15 +297,7 @@ class DynaModel(object):
         obj = {}
         for k in self.Schema.dynamorm_fields():
             try:
-                attr = getattr(self, k)
-                # There is no point including None/null values when we serialize, it just wastes bandwidth to/from
-                # dynamo to include the key names, which already become None when we load the values if they don't
-                # exist.  Marshmallow already does this for us (will raise AttributeError), but Schematics returns None
-                if attr is None:
-                    continue
-
-                # Since we may nest other dicts/models we need to recursively fiter out None's
-                obj[k] = recursive_dict_filter(attr, None)
+                obj[k] = getattr(self, k)
             except AttributeError:
                 pass
         return obj
@@ -318,17 +310,3 @@ class DynaModel(object):
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
         # XXX TODO: item on every save
         return self.put(self.to_dict(), **kwargs)
-
-
-def recursive_dict_filter(in_dict, to_filter):
-    """
-    Recursively filter ``to_filter`` from the ``in_dict`` collection
-    """
-    try:
-        return dict(
-            (key, recursive_dict_filter(val, to_filter))
-            for key, val in six.iteritems(in_dict)
-            if val is not to_filter
-        )
-    except (ValueError, AttributeError):
-        return in_dict
