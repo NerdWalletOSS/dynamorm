@@ -105,7 +105,7 @@ Documentation
 
 Full documentation can be found online at:
 
-http://nerdwalletoss.github.io/DynamORM/
+https://nerdwalletoss.github.io/dynamorm/
 
 
 TODO
