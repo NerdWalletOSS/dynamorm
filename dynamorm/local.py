@@ -32,7 +32,7 @@ class DynamoLocal(object):
             os.close(temp_fd)
             log.info("Downloading dynamo local to: {0}".format(temp_file))
             urlretrieve(
-                'http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.tar.gz',
+                'https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz',
                 temp_file
             )
 
