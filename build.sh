@@ -3,7 +3,7 @@
 set -eux
 
 SERIALIZATION_PKG=${SERIALIZATION_PKG:-marshmallow}
-TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-nope}
+TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 
 pip install -e .
 pip install codecov pytest pytest-mock
@@ -18,7 +18,9 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     fi
 fi
 
-if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ]; then
+if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && \
+   [ "${TRAVIS_PYTHON_VERSION}" != "2.6" ] && \
+   [ ! -z "${GH_TOKEN}" ]; then
     pip install travis-sphinx
     travis-sphinx --source=docs build
     travis-sphinx deploy

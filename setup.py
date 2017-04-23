@@ -10,7 +10,7 @@ setup(
     long_description=long_description,
     author='Evan Borgstrom',
     author_email='evan@borgstrom.ca',
-    url='https://github.com/NerdWallet/DynamORM',
+    url='https://github.com/NerdWalletOSS/DynamORM',
     license='Apache License Version 2.0',
 
     setup_requires=[
