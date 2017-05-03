@@ -91,3 +91,16 @@ def test_number_hash_key():
 
     model = Model(foo=1, baz='foo')
     assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]
+
+
+def test_scan_gen(TestModel, TestModel_entries, dynamo_local):
+    """Test the scan generator to ensure paging works"""
+
+    # Apply artificial limit to force scan to page results
+    results = list(TestModel.gen_scan(scan_kwargs={'Limit': 2}, count__gt=0))
+    assert len(results) == 3
+
+    # our table has a hash and range key, so our results are ordered based on the range key
+    assert results[0].count == 111
+    assert results[1].count == 333
+    assert results[2].count == 222
