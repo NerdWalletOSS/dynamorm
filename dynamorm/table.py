@@ -255,12 +255,13 @@ class DynamoTable3(object):
             assert len(parts) == 0, "Left over parts after parsing query attr"
 
             op = getattr(attr, op)
+            op_fn = op(value) if value is not None else op()
 
             if 'FilterExpression' in scan_kwargs:
                 # XXX TODO: support | (or) and ~ (not)
-                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & op(value)
+                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & op_fn
             else:
-                scan_kwargs['FilterExpression'] = op(value)
+                scan_kwargs['FilterExpression'] = op_fn
 
         return self.table.scan(**scan_kwargs)
 

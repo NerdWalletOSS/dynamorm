@@ -142,6 +142,12 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 333
     assert results[1].count == 222
 
+    # Test no arg operator
+    TestModel.put({"foo": "no_baz", "bar": "omg"})
+    results = TestModel.scan(baz__not_exists=None)
+    assert len(results) == 1
+    assert results[0].foo == "no_baz"
+
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):
     """Putting an existing hash+range should replace the old entry"""
