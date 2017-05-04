@@ -283,25 +283,8 @@ class DynaModel(object):
             Thing.scan(address__state="CA")
             Thing.scan(address__state__begins_with="C")
 
-        :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
-        :param \*\*kwargs: The key(s) and value(s) to filter based on
-        """  # noqa
-        resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
-        return [
-            cls.new_from_raw(raw)
-            for raw in resp['Items']
-            if raw is not None
-        ]
-
-    @classmethod
-    def gen_scan(cls, scan_kwargs=None, **kwargs):
-        """Execute a scan on our table, yielding items and abstracting away pagination
-
-        Identical to the scan method, but will produce an item generator instead of a list, and will continue to
-        generate until all items are produced instead of just returning the first page. Note that this will generate
-        individual scan results instead of the full page as a list, as is done in the scan method.
-
-        More information on scan pagination: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination
+        This returns a generator, which will continue to yield items until all matching the scan are produced,
+        abstracting away pagination. More information on scan pagination: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination
 
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
         :param \*\*kwargs: The key(s) and value(s) to filter based on

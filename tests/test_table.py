@@ -126,27 +126,36 @@ def test_query(TestModel, TestModel_entries, dynamo_local):
 
 def test_scan(TestModel, TestModel_entries, dynamo_local):
     """Scanning should return the expected values"""
-    results = TestModel.scan(count__gt=200)
+    results = list(TestModel.scan(count__gt=200))
     assert len(results) == 2
 
     # our table has a hash and range key, so our results are ordered based on the range key
     assert results[0].count == 333
     assert results[1].count == 222
 
-    results = TestModel.scan(child__sub="two")
+    results = list(TestModel.scan(child__sub="two"))
     assert len(results) == 1
     assert results[0].count == 222
 
-    results = TestModel.scan(child__sub__begins_with="t")
+    results = list(TestModel.scan(child__sub__begins_with="t"))
     assert len(results) == 2
     assert results[0].count == 333
     assert results[1].count == 222
 
-    # Test no arg operator
+    # Test auto-paging
+    results = list(TestModel.scan(scan_kwargs={'Limit': 2}, count__gt=0))
+    assert len(results) == 3
+    assert results[0].count == 111
+    assert results[1].count == 333
+    assert results[2].count == 222
+
     TestModel.put({"foo": "no_baz", "bar": "omg"})
-    results = TestModel.scan(baz__not_exists=None)
+    results = list(TestModel.scan(baz__not_exists=True))
     assert len(results) == 1
     assert results[0].foo == "no_baz"
+
+    with pytest.raises(TypeError):
+        list(TestModel.scan(baz__not_exists=False))
 
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):
