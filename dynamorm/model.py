@@ -294,15 +294,8 @@ class DynaModel(object):
         :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """
-        if method_name == 'scan':
-            method = cls.Table.scan
-            dynamo_kwargs_key = 'scan_kwargs'
-        elif method_name == 'query':
-            method = cls.Table.query
-            dynamo_kwargs_key = 'query_kwargs'
-        else:
-            raise ValueError('Method should be one of: scan,query')
-
+        method = getattr(cls.Table, method_name)
+        dynamo_kwargs_key  = '_'.join([method_name, 'kwargs'])
         all_kwargs = {dynamo_kwargs_key: dynamo_kwargs or {}}
         all_kwargs.update(kwargs)
 
@@ -323,7 +316,7 @@ class DynaModel(object):
 
                 # Stop if we've reached the limit set by the caller
                 if all_kwargs[dynamo_kwargs_key]['Limit'] <= 0:
-                    return
+                    break
 
             # Update calling kwargs with offset key
             all_kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']

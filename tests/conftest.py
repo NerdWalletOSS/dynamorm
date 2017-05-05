@@ -93,6 +93,15 @@ def TestModel_entries(TestModel, TestModel_table):
     )
 
 
+@pytest.fixture(scope='function')
+def TestModel_entries_xlarge(TestModel, TestModel_table):
+    """Used with TestModel, creates and deletes the table and populates multiple pages of entries"""
+    TestModel.put_batch(*[
+        {"foo": str(i), "bar": "baz", "baz": "bat" * 100}
+        for i in range(4000)  # 1mb page is roughly 3300 items, so 4000 will be two pages.
+    ])
+
+
 @pytest.fixture(scope='session')
 def dynamo_local(request, TestModel):
     """Connect to a local dynamo instance"""

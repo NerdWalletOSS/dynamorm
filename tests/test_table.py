@@ -189,8 +189,13 @@ def test_yield_items(TestModel, mocker):
     assert results[0].count == 111
     assert results[1].count == 222
 
-    with pytest.raises(ValueError):
-        list(TestModel._yield_items('foo'))
+
+def test_yield_items_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
+    mocker.spy(TestModel.Table.__class__, 'scan')
+    results = list(TestModel._yield_items('scan'))
+
+    assert TestModel.Table.scan.call_count == 2
+    assert len(results) == 4000
 
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):
