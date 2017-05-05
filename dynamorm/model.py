@@ -256,12 +256,7 @@ class DynaModel(object):
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
-        resp = cls.Table.query(query_kwargs=query_kwargs, **kwargs)
-        return [
-            cls.new_from_raw(raw)
-            for raw in resp['Items']
-            if raw is not None
-        ]
+        return cls._yield_items('query', dynamo_kwargs=query_kwargs, **kwargs)
 
     @classmethod
     def scan(cls, scan_kwargs=None, **kwargs):
@@ -289,18 +284,50 @@ class DynaModel(object):
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
-        resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
-        for raw in resp['Items']:
-            if raw is not None:
-                yield cls.new_from_raw(raw)
+        return cls._yield_items('scan', dynamo_kwargs=scan_kwargs, **kwargs)
 
-        while 'LastEvaluatedKey' in resp:
-            scan_kwargs = scan_kwargs or {}
-            scan_kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
-            resp = cls.Table.scan(scan_kwargs=scan_kwargs, **kwargs)
+    @classmethod
+    def _yield_items(cls, method_name, dynamo_kwargs=None, **kwargs):
+        """Private helper method to yield items from a scan or query response
+
+        :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
+        :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
+        :param \*\*kwargs: The key(s) and value(s) to filter based on
+        """
+        if method_name == 'scan':
+            method = cls.Table.scan
+            dynamo_kwargs_key = 'scan_kwargs'
+        elif method_name == 'query':
+            method = cls.Table.query
+            dynamo_kwargs_key = 'query_kwargs'
+        else:
+            raise ValueError('Method should be one of: scan,query')
+
+        all_kwargs = {dynamo_kwargs_key: dynamo_kwargs or {}}
+        all_kwargs.update(kwargs)
+
+        while True:
+            # Fetch and yield values
+            resp = method(**all_kwargs)
             for raw in resp['Items']:
                 if raw is not None:
                     yield cls.new_from_raw(raw)
+
+            # Stop if no further pages
+            if 'LastEvaluatedKey' not in resp:
+                break
+
+            if 'Limit' in all_kwargs[dynamo_kwargs_key]:
+                # Reduce limit by amount scanned for subsequent calls
+                all_kwargs[dynamo_kwargs_key]['Limit'] -= resp['ScannedCount']
+
+                # Stop if we've reached the limit set by the caller
+                if all_kwargs[dynamo_kwargs_key]['Limit'] <= 0:
+                    return
+
+            # Update calling kwargs with offset key
+            all_kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+
 
     def to_dict(self):
         obj = {}

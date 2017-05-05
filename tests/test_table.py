@@ -1,4 +1,5 @@
 """These tests require dynamo local running"""
+from decimal import Decimal
 import pytest
 
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError
@@ -100,7 +101,7 @@ def test_count(TestModel, TestModel_entries, dynamo_local):
 
 def test_query(TestModel, TestModel_entries, dynamo_local):
     """Querying should return the expected values"""
-    results = TestModel.query(foo="first")
+    results = list(TestModel.query(foo="first"))
     assert len(results) == 3
 
     # our table has a hash and range key, so our results are ordered based on the range key
@@ -110,18 +111,23 @@ def test_query(TestModel, TestModel_entries, dynamo_local):
 
     # get the results in the opposite order
     # XXX TODO: should this be eaiser?
-    results = TestModel.query(foo="first", query_kwargs={'ScanIndexForward': False})
+    results = list(TestModel.query(foo="first", query_kwargs={'ScanIndexForward': False}))
     assert results[0].count == 222
 
     with pytest.raises(InvalidSchemaField):
-        results = TestModel.query(baz="bbq")
+        results = list(TestModel.query(baz="bbq"))
 
-    results = TestModel.query(foo="first", bar="two")
+    results = list(TestModel.query(foo="first", bar="two"))
     assert len(results) == 1
     assert results[0].count == 222
 
-    results = TestModel.query(foo="first", bar__begins_with="t")
+    results = list(TestModel.query(foo="first", bar__begins_with="t"))
     assert len(results) == 2
+
+    results = list(TestModel.query(query_kwargs={"Limit": 2}, foo="first"))
+    assert len(results) == 2
+    assert results[0].count == 111
+    assert results[1].count == 333
 
 
 def test_scan(TestModel, TestModel_entries, dynamo_local):
@@ -142,12 +148,10 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 333
     assert results[1].count == 222
 
-    # Test auto-paging
-    results = list(TestModel.scan(scan_kwargs={'Limit': 2}, count__gt=0))
-    assert len(results) == 3
+    results = list(TestModel.scan(scan_kwargs={"Limit": 2}, count__gt=0))
+    assert len(results) == 2
     assert results[0].count == 111
     assert results[1].count == 333
-    assert results[2].count == 222
 
     TestModel.put({"foo": "no_baz", "bar": "omg"})
     results = list(TestModel.scan(baz__not_exists=True))
@@ -155,7 +159,35 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert results[0].foo == "no_baz"
 
     with pytest.raises(TypeError):
+        # Make sure we reject if the value isn't True
         list(TestModel.scan(baz__not_exists=False))
+
+
+def test_yield_items(TestModel, mocker):
+    # Mock out Dynamo responses as each having only one item to test auto-paging
+    side_effects = [{
+        'Items': [{'bar': 'one', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('111'), 'foo': 'first'}],
+        'LastEvaluatedKey': {'cookie_id': 'ec477c69-8bc5-4e14-995d-37a73e8eb185', 'created_at': Decimal('1490000000')},
+        'ScannedCount': 1
+        }, {
+        'Items': [{'bar': 'two', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('222'), 'foo': 'second'}],
+        'ScannedCount': 1
+    }]
+    mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
+    results = list(TestModel._yield_items('scan', dynamo_kwargs={"Limit": 2}))
+
+    assert TestModel.Table.scan.call_count == 2
+    assert len(results) == 2
+    assert results[0].count == 111
+    assert results[1].count == 222
+
+    mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
+    results = list(TestModel._yield_items('query', dynamo_kwargs={"Limit": 2}))
+
+    assert TestModel.Table.query.call_count == 2
+    assert len(results) == 2
+    assert results[0].count == 111
+    assert results[1].count == 222
 
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):

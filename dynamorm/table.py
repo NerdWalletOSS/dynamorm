@@ -259,7 +259,7 @@ class DynamoTable3(object):
                 filter_expression = op(value)
             except TypeError:
                 # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
-                # doesn't take an arg if our value is True then we try to re-call the op function without any
+                # doesn't take an arg. If our value is True then we try to re-call the op function without any
                 # arguments, otherwise we bubble it up.
                 if value is True:
                     filter_expression = op()
