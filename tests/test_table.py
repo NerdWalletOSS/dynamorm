@@ -189,6 +189,9 @@ def test_yield_items(TestModel, mocker):
     assert results[0].count == 111
     assert results[1].count == 222
 
+    with pytest.raises(ValueError):
+        list(TestModel._yield_items('foo'))
+
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):
     """Putting an existing hash+range should replace the old entry"""
