@@ -173,7 +173,7 @@ def test_yield_items(TestModel, mocker):
         'Items': [{'bar': 'two', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('222'), 'foo': 'second'}],
         'ScannedCount': 1
     }]
-    mocker.patch.object(TestModel.Table, 'scan', side_effect=side_effects)
+    mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
     results = list(TestModel._yield_items('scan', dynamo_kwargs={"Limit": 2}))
 
     assert TestModel.Table.scan.call_count == 2
@@ -181,7 +181,7 @@ def test_yield_items(TestModel, mocker):
     assert results[0].count == 111
     assert results[1].count == 222
 
-    mocker.patch.object(TestModel.Table, 'query', side_effect=side_effects)
+    mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
     results = list(TestModel._yield_items('query', dynamo_kwargs={"Limit": 2}))
 
     assert TestModel.Table.query.call_count == 2
@@ -191,7 +191,11 @@ def test_yield_items(TestModel, mocker):
 
 
 def test_yield_items_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
-    mocker.spy(TestModel.Table, 'scan')
+    try:
+        mocker.spy(TestModel.Table.__class__, 'scan')
+    except TypeError:
+        # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
+        mocker.spy(TestModel.Table, 'scan')
     results = list(TestModel._yield_items('scan'))
 
     assert TestModel.Table.scan.call_count == 2
