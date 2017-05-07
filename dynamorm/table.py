@@ -255,12 +255,22 @@ class DynamoTable3(object):
             assert len(parts) == 0, "Left over parts after parsing query attr"
 
             op = getattr(attr, op)
+            try:
+                filter_expression = op(value)
+            except TypeError:
+                # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
+                # doesn't take an arg. If our value is True then we try to re-call the op function without any
+                # arguments, otherwise we bubble it up.
+                if value is True:
+                    filter_expression = op()
+                else:
+                    raise
 
             if 'FilterExpression' in scan_kwargs:
                 # XXX TODO: support | (or) and ~ (not)
-                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & op(value)
+                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & filter_expression
             else:
-                scan_kwargs['FilterExpression'] = op(value)
+                scan_kwargs['FilterExpression'] = filter_expression
 
         return self.table.scan(**scan_kwargs)
 
