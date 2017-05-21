@@ -18,8 +18,9 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     fi
 fi
 
+# only build docs on py2.7, non-pr builds
 if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && \
-   [ "${TRAVIS_PYTHON_VERSION}" != "2.6" ] && \
+   [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ] && \
    [ ! -z "${GH_TOKEN}" ]; then
     pip install travis-sphinx
     travis-sphinx --source=docs build
