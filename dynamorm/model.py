@@ -32,45 +32,59 @@ class DynaModelMeta(type):
         if name in ('DynaModel', 'DynaModelMeta'):
             return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
-        for inner_class in ('Table', 'Schema'):
-            if inner_class not in attrs or not inspect.isclass(attrs[inner_class]):
-                raise DynaModelException("You must define an inner '{inner}' class on your '{name}' class".format(
-                    inner=inner_class,
-                    name=name
-                ))
+        def should_transform(inner_class):
+            """Closure to determine if we should transfer an inner class (Schema or Table)"""
+            # if the inner class exists in our own attributes we use that
+            if inner_class in attrs:
+                return True
+
+            # if any of our parent classes have the class then we use that
+            for parent in parents:
+                try:
+                    getattr(parent, inner_class)
+                    return False
+                except AttributeError:
+                    pass
+
+            raise DynaModelException("You must define an inner '{inner}' class on your '{name}' class".format(
+                inner=inner_class,
+                name=name
+            ))
 
         # transform the Schema
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation
-        for _, schema_item in six.iteritems(attrs['Schema'].__dict__):
-            try:
-                module_name = schema_item.__module__
-            except AttributeError:
-                continue
+        if should_transform('Schema'):
+            for _, schema_item in six.iteritems(attrs['Schema'].__dict__):
+                try:
+                    module_name = schema_item.__module__
+                except AttributeError:
+                    continue
 
-            if module_name.startswith('marshmallow.'):
-                from .types._marshmallow import Model
-                break
-            elif module_name.startswith('schematics.'):
-                from .types._schematics import Model
-                break
-        else:
-            raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
+                if module_name.startswith('marshmallow.'):
+                    from .types._marshmallow import Model
+                    break
+                elif module_name.startswith('schematics.'):
+                    from .types._schematics import Model
+                    break
+            else:
+                raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
-        SchemaClass = type(
-            '{name}Schema'.format(name=name),
-            (Model,),
-            dict(attrs['Schema'].__dict__),
-        )
-        attrs['Schema'] = SchemaClass
+            SchemaClass = type(
+                '{name}Schema'.format(name=name),
+                (Model,),
+                dict(attrs['Schema'].__dict__),
+            )
+            attrs['Schema'] = SchemaClass
 
         # transform the Table
-        TableClass = type(
-            '{name}Table'.format(name=name),
-            (DynamoTable3,),
-            dict(attrs['Table'].__dict__)
-        )
-        attrs['Table'] = TableClass(schema=attrs['Schema'])
+        if should_transform('Table'):
+            TableClass = type(
+                '{name}Table'.format(name=name),
+                (DynamoTable3,),
+                dict(attrs['Table'].__dict__)
+            )
+            attrs['Table'] = TableClass(schema=attrs['Schema'])
 
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
