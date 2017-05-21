@@ -34,6 +34,22 @@ def test_missing_inner_table_class():
                 pass
 
 
+def test_parent_inner_classes():
+    class Parent(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema:
+            foo = String(required=True)
+
+    class Child(Parent):
+        pass
+
+    assert Child.Table is Parent.Table
+
 def test_table_validation():
     """Defining a model with missing table attributes should raise exceptions"""
     with pytest.raises(MissingTableAttribute):
