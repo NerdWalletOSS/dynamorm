@@ -36,6 +36,12 @@ The project has two goals:
 .. _Schematics: https://schematics.readthedocs.io/en/latest/
 
 
+Supported Versions
+------------------
+
+* Schematics >= 2.0
+* Marshmallow >= 2.0
+
 Example
 -------
 

@@ -12,8 +12,8 @@ python:
   - pypy
 
 env:
-  - SERIALIZATION_PKG="marshmallow==2.7.0"
-  - SERIALIZATION_PKG="schematics==1.0.4"
+  - SERIALIZATION_PKG="marshmallow==2.13.5"
+  - SERIALIZATION_PKG="schematics==2.0.1"
 
 install: false
 script: ./build.sh
