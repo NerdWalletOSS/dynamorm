@@ -8,3 +8,7 @@ pytest==2.9.2
 python-dateutil==2.6.0    # via botocore
 s3transfer==0.1.10        # via boto3
 six==1.10.0
+
+# MANUALLY ADDED FOR TESTING
+schematics==2.0.1
+marshmallow==2.13.5
