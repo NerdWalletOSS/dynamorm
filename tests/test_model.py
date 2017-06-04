@@ -56,7 +56,6 @@ def test_table_validation():
         class Model(DynaModel):
             class Table:
                 name = 'table'
-                hash_key = 'foo'
 
             class Schema:
                 foo = String(required=True)

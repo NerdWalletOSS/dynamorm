@@ -33,7 +33,7 @@ def TestModel():
             class Schema:
                 foo = fields.String(required=True)
                 bar = fields.String(required=True)
-                baz = fields.String()
+                baz = fields.String(required=True)
                 count = fields.Integer()
                 child = fields.Dict()
 
@@ -63,7 +63,7 @@ def TestModel():
             class Schema:
                 foo = types.StringType(required=True)
                 bar = types.StringType(required=True)
-                baz = types.StringType()
+                baz = types.StringType(required=True)
                 count = types.IntType()
                 child = compound.DictType(types.StringType)
 

@@ -25,8 +25,8 @@ class Model(Schema, BaseModel):
         return cls._dynamorm_fields
 
     @classmethod
-    def dynamorm_validate(cls, obj):
-        data, errors = cls().load(obj)
+    def dynamorm_validate(cls, obj, partial=False):
+        data, errors = cls().load(obj, partial=partial)
         if errors:
             raise ValidationError(obj, cls.__name__, errors)
         return data

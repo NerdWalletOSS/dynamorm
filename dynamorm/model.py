@@ -229,6 +229,17 @@ class DynaModel(object):
         ], **batch_kwargs)
 
     @classmethod
+    def update(cls, conditions=None, update_item_kwargs=None, **kwargs):
+        """Update a item in the table
+
+        :params conditions: A dict of key/val pairs that should be applied as a condition to the update
+        :params update_item_kwargs: A dict of other kwargs that are passed through to update_item
+        :params \*\*kwargs: Includes your hash/range key/val to match on as well as any keys to update
+        """
+        cls.Schema.dynamorm_validate(kwargs, partial=True)
+        return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+
+    @classmethod
     def new_from_raw(cls, raw):
         """Return a new instance of this model from a raw (dict) of data that is loaded by our Schema
 

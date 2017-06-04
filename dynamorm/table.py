@@ -31,7 +31,7 @@ import botocore
 import six
 
 from boto3.dynamodb.conditions import Key, Attr
-from dynamorm.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists
+from dynamorm.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists, ConditionFailed
 
 log = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ class DynamoTable3(object):
     def __init__(self, schema):
         self.schema = schema
 
-        required_attrs = ('name', 'hash_key', 'read', 'write')
-        optional_attrs = ('range_key',)
+        required_attrs = ('name', 'hash_key')
+        optional_attrs = ('range_key', 'read', 'write')
 
         for attr in required_attrs:
             if not hasattr(self, attr):
@@ -145,6 +145,9 @@ class DynamoTable3(object):
 
         :param bool wait: If set to True, the default, this call will block until the table is created
         """
+        if not self.read or not self.write:
+            raise MissingTableAttribute("The read/write attributes are required to create a table")
+
         table = self.resource.create_table(
             TableName=self.name,
             KeySchema=self.key_schema,
@@ -184,10 +187,52 @@ class DynamoTable3(object):
                 raise HashKeyExists
             raise
 
-    def put_batch(self,  *items, **batch_kwargs):
+    def put_batch(self, *items, **batch_kwargs):
         with self.table.batch_writer(**batch_kwargs) as writer:
             for item in items:
                 writer.put_item(Item=remove_nones(item))
+
+    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+        update_item_kwargs = update_item_kwargs or {}
+        conditions = conditions or {}
+
+        update_key = {}
+        update_fields = []
+        condition_fields = []
+        expr_names = {}
+        expr_vals = {}
+        for k, v in six.iteritems(kwargs):
+            if k not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+
+            if k in (self.hash_key, self.range_key):
+                update_key[k] = v
+            else:
+                update_fields.append('#u_{0} = :u_{0}'.format(k))
+                expr_names['#u_{0}'.format(k)] = k
+                expr_vals[':u_{0}'.format(k)] = v
+
+        for k, v in six.iteritems(conditions):
+            if k not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+
+            condition_fields.append('#c_{0} = :c_{0}'.format(k))
+            expr_names['#c_{0}'.format(k)] = k
+            expr_vals[':c_{0}'.format(k)] = v
+
+        update_item_kwargs['Key'] = update_key
+        update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
+        if condition_fields:
+            update_item_kwargs['ConditionExpression'] = ' AND '.join(condition_fields)
+        update_item_kwargs['ExpressionAttributeNames'] = expr_names
+        update_item_kwargs['ExpressionAttributeValues'] = expr_vals
+
+        try:
+            return self.table.update_item(**update_item_kwargs)
+        except botocore.exceptions.ClientError as exc:
+            if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                raise ConditionFailed(exc)
+            raise
 
     def get(self, consistent=False, get_item_kwargs=None, **kwargs):
         get_item_kwargs = get_item_kwargs or {}

@@ -48,3 +48,7 @@ class InvalidKey(DynamoTableException):
 
 class HashKeyExists(DynamoTableException):
     """A operating requesting a unique hash key failed"""
+
+
+class ConditionFailed(DynamoTableException):
+    """A condition check failed"""
