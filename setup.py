@@ -17,10 +17,6 @@ setup(
         'boto3>=1.3,<2.0',
         'six',
     ],
-    tests_requires=[
-        'pytest>=2.9,<3.0',
-        'pytest-runner',
-    ],
     packages=find_packages('.', exclude=['tests', 'docs']),
     classifiers=[
         'Development Status :: 3 - Alpha',

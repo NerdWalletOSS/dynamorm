@@ -234,6 +234,7 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
             )
         )
 
+
 def test_yield_items(TestModel, mocker):
     # Mock out Dynamo responses as each having only one item to test auto-paging
     side_effects = [{

@@ -50,6 +50,7 @@ def test_parent_inner_classes():
 
     assert Child.Table is Parent.Table
 
+
 def test_table_validation():
     """Defining a model with missing table attributes should raise exceptions"""
     with pytest.raises(MissingTableAttribute):

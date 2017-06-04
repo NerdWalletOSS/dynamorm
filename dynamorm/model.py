@@ -6,7 +6,6 @@ schema that is used for validating and marshalling your data.
 
 """
 
-import inspect
 import logging
 
 import six
@@ -345,7 +344,6 @@ class DynaModel(object):
 
             # Update calling kwargs with offset key
             all_kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
-
 
     def to_dict(self):
         obj = {}
