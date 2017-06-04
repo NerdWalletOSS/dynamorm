@@ -61,6 +61,44 @@ def test_table_validation():
                 foo = String(required=True)
 
 
+def test_table_create_validation():
+    """You cannot create a table that is missing read/write attrs"""
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+                read = 5
+
+            class Schema:
+                foo = String(required=True)
+
+        Model.Table.create()
+
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+                write = 5
+
+            class Schema:
+                foo = String(required=True)
+
+        Model.Table.create()
+
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+
+            class Schema:
+                foo = String(required=True)
+
+        Model.Table.create()
+
+
 def test_invalid_hash_key():
     """Defining a model where ``hash_key`` in Table points to an invalid field should raise InvalidSchemaField"""
     with pytest.raises(InvalidSchemaField):

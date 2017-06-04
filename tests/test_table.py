@@ -208,6 +208,32 @@ def test_update_validation(TestModel, TestModel_entries, dynamo_local):
             baz=['not a list']
         )
 
+
+def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
+    with pytest.raises(InvalidSchemaField):
+        TestModel.update(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            unknown_attr='foo'
+        )
+
+    with pytest.raises(InvalidSchemaField):
+        TestModel.update(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            baz='foo',
+
+            conditions=dict(
+                unknown_attr='foo'
+            )
+        )
+
 def test_yield_items(TestModel, mocker):
     # Mock out Dynamo responses as each having only one item to test auto-paging
     side_effects = [{
