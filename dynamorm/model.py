@@ -55,7 +55,7 @@ class DynaModelMeta(type):
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation
         if should_transform('Schema'):
-            for _, schema_item in six.iteritems(attrs['Schema'].__dict__):
+            for schema_item in six.itervalues(attrs['Schema'].__dict__):
                 try:
                     module_name = schema_item.__module__
                 except AttributeError:
@@ -309,7 +309,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """
         method = getattr(cls.Table, method_name)
-        dynamo_kwargs_key  = '_'.join([method_name, 'kwargs'])
+        dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
         all_kwargs = {dynamo_kwargs_key: dynamo_kwargs or {}}
         all_kwargs.update(kwargs)
 
