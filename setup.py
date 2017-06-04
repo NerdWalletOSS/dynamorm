@@ -13,13 +13,13 @@ setup(
     url='https://github.com/NerdWalletOSS/DynamORM',
     license='Apache License Version 2.0',
 
-    setup_requires=[
-        'pytest-runner',
-    ],
     install_requires=[
         'boto3>=1.3,<2.0',
-        'pytest>=2.9,<3.0',
         'six',
+    ],
+    tests_requires=[
+        'pytest>=2.9,<3.0',
+        'pytest-runner',
     ],
     packages=find_packages('.', exclude=['tests', 'docs']),
     classifiers=[
