@@ -103,6 +103,49 @@ def TestModel_entries_xlarge(TestModel, TestModel_table):
 
 
 @pytest.fixture(scope='session')
+def TestModelTwo():
+    """Provides a test model without a range key"""
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        from marshmallow import fields
+
+        class TestModelTwo(DynaModel):
+            class Table:
+                name = 'peanut-butter'
+                hash_key = 'foo'
+                read = 5
+                write = 5
+
+            class Schema:
+                foo = fields.String(required=True)
+                bar = fields.String()
+                baz = fields.String()
+    else:
+        from schematics import types
+
+        class TestModelTwo(DynaModel):
+            class Table:
+                name = 'peanut-butter'
+                hash_key = 'foo'
+                read = 5
+                write = 5
+
+            class Schema:
+                foo = types.StringType(required=True)
+                bar = types.StringType()
+                baz = types.StringType()
+
+    return TestModelTwo
+
+
+@pytest.fixture(scope='function')
+def TestModelTwo_table(request, TestModelTwo, dynamo_local):
+    """Used with TestModel, creates and deletes the table around the test"""
+    TestModelTwo.Table.create()
+    request.addfinalizer(TestModelTwo.Table.delete)
+
+
+@pytest.fixture(scope='session')
 def dynamo_local(request, TestModel):
     """Connect to a local dynamo instance"""
     dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')

@@ -167,22 +167,24 @@ def test_update(TestModel, TestModel_entries, dynamo_local):
     two = TestModel.get(foo="first", bar="two")
     assert two.baz == 'wtf'
 
-    TestModel.update(
-        # our hash & range key -- matches current
-        foo='first',
-        bar='two',
-
-        # things to update
-        baz='yay'
-    )
+    two.update(baz='yay')
 
     two = TestModel.get(foo="first", bar="two", consistent=True)
     assert two.baz == 'yay'
 
 
+def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
+    TestModelTwo.put({'foo': 'foo', 'bar': 'bar'})
+    thing = TestModelTwo.get(foo='foo')
+    thing.update(baz='illion')
+
+    new = TestModelTwo.get(foo='foo', consistent=True)
+    assert new.baz == 'illion'
+
+
 def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
     with pytest.raises(ConditionFailed):
-        TestModel.update(
+        TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',
             bar='two',
@@ -199,7 +201,7 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
     with pytest.raises(ValidationError):
-        TestModel.update(
+        TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',
             bar='two',
@@ -211,7 +213,7 @@ def test_update_validation(TestModel, TestModel_entries, dynamo_local):
 
 def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
     with pytest.raises(InvalidSchemaField):
-        TestModel.update(
+        TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',
             bar='two',
@@ -221,7 +223,7 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
         )
 
     with pytest.raises(InvalidSchemaField):
-        TestModel.update(
+        TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',
             bar='two',

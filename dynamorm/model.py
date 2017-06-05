@@ -228,7 +228,7 @@ class DynaModel(object):
         ], **batch_kwargs)
 
     @classmethod
-    def update(cls, conditions=None, update_item_kwargs=None, **kwargs):
+    def update_item(cls, conditions=None, update_item_kwargs=None, **kwargs):
         """Update a item in the table
 
         :params conditions: A dict of key/val pairs that should be applied as a condition to the update
@@ -362,3 +362,13 @@ class DynaModel(object):
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
         # XXX TODO: item on every save
         return self.put(self.to_dict(), **kwargs)
+
+    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+        """Update this instance in the table"""
+        kwargs[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+        try:
+            kwargs[self.Table.range_key] = getattr(self, self.Table.range_key)
+        except (AttributeError, TypeError):
+            pass
+
+        return self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
