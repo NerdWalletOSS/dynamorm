@@ -49,7 +49,7 @@ Example
 
     from dynamorm import DynaModel
 
-    # In this example we'll use Marshmallow
+    # In this example we'll use Marshmallow, but you can also use Schematics too!
     # You can see that you have to import the schema library yourself, it is not abstracted at all
     from marshmallow import fields
 
@@ -96,7 +96,11 @@ Example
 
     # You can then fetch, query and scan your tables.
     # Get on the hash key, and/or range key
-    Book.get(isbn="12345678910")
+    book = Book.get(isbn="12345678910")
+
+    # Update items, with conditions
+    # Here our condition ensures we don't have a race condition where someone else updates the title first
+    book.update(title='Corrected Foo', conditions=(title=book.title))
 
     # Query based on the keys
     Book.query(isbn__begins_with="12345")
