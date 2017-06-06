@@ -364,11 +364,25 @@ class DynaModel(object):
         return self.put(self.to_dict(), **kwargs)
 
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
-        """Update this instance in the table"""
+        """Update this instance in the table
+
+        As long as the update succeeds the attrs on this instance will be updated to match their new values.
+        """
         kwargs[self.Table.hash_key] = getattr(self, self.Table.hash_key)
         try:
             kwargs[self.Table.range_key] = getattr(self, self.Table.range_key)
         except (AttributeError, TypeError):
             pass
 
-        return self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+        try:
+            update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
+        except TypeError:
+            update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
+
+        resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+
+        # update our local attrs to match what we updated
+        for key, val in six.iteritems(resp['Attributes']):
+            setattr(self, key, val)
+
+        return resp

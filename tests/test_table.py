@@ -166,8 +166,8 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
 def test_update(TestModel, TestModel_entries, dynamo_local):
     two = TestModel.get(foo="first", bar="two")
     assert two.baz == 'wtf'
-
     two.update(baz='yay')
+    assert two.baz == 'yay'
 
     two = TestModel.get(foo="first", bar="two", consistent=True)
     assert two.baz == 'yay'
