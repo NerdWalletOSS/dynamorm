@@ -50,8 +50,44 @@ def test_parent_inner_classes():
 
     assert Child.Table is Parent.Table
 
+
 def test_table_validation():
     """Defining a model with missing table attributes should raise exceptions"""
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+
+            class Schema:
+                foo = String(required=True)
+
+
+def test_table_create_validation():
+    """You cannot create a table that is missing read/write attrs"""
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+                read = 5
+
+            class Schema:
+                foo = String(required=True)
+
+        Model.Table.create()
+
+    with pytest.raises(MissingTableAttribute):
+        class Model(DynaModel):
+            class Table:
+                name = 'table'
+                hash_key = 'foo'
+                write = 5
+
+            class Schema:
+                foo = String(required=True)
+
+        Model.Table.create()
+
     with pytest.raises(MissingTableAttribute):
         class Model(DynaModel):
             class Table:
@@ -60,6 +96,8 @@ def test_table_validation():
 
             class Schema:
                 foo = String(required=True)
+
+        Model.Table.create()
 
 
 def test_invalid_hash_key():

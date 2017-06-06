@@ -33,7 +33,7 @@ def TestModel():
             class Schema:
                 foo = fields.String(required=True)
                 bar = fields.String(required=True)
-                baz = fields.String()
+                baz = fields.String(required=True)
                 count = fields.Integer()
                 child = fields.Dict()
 
@@ -63,7 +63,7 @@ def TestModel():
             class Schema:
                 foo = types.StringType(required=True)
                 bar = types.StringType(required=True)
-                baz = types.StringType()
+                baz = types.StringType(required=True)
                 count = types.IntType()
                 child = compound.DictType(types.StringType)
 
@@ -100,6 +100,49 @@ def TestModel_entries_xlarge(TestModel, TestModel_table):
         {"foo": str(i), "bar": "baz", "baz": "bat" * 100}
         for i in range(4000)  # 1mb page is roughly 3300 items, so 4000 will be two pages.
     ])
+
+
+@pytest.fixture(scope='session')
+def TestModelTwo():
+    """Provides a test model without a range key"""
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        from marshmallow import fields
+
+        class TestModelTwo(DynaModel):
+            class Table:
+                name = 'peanut-butter'
+                hash_key = 'foo'
+                read = 5
+                write = 5
+
+            class Schema:
+                foo = fields.String(required=True)
+                bar = fields.String()
+                baz = fields.String()
+    else:
+        from schematics import types
+
+        class TestModelTwo(DynaModel):
+            class Table:
+                name = 'peanut-butter'
+                hash_key = 'foo'
+                read = 5
+                write = 5
+
+            class Schema:
+                foo = types.StringType(required=True)
+                bar = types.StringType()
+                baz = types.StringType()
+
+    return TestModelTwo
+
+
+@pytest.fixture(scope='function')
+def TestModelTwo_table(request, TestModelTwo, dynamo_local):
+    """Used with TestModel, creates and deletes the table around the test"""
+    TestModelTwo.Table.create()
+    request.addfinalizer(TestModelTwo.Table.delete)
 
 
 @pytest.fixture(scope='session')

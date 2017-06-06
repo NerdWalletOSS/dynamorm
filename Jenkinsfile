@@ -1,5 +1,5 @@
 #!groovy
 
 indy {
-    type = 'python'
+    type = 'app-2017-05-23'
 }

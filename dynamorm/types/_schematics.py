@@ -21,8 +21,8 @@ class Model(SchematicsModel, BaseModel):
         return cls.fields
 
     @classmethod
-    def dynamorm_validate(cls, obj):
+    def dynamorm_validate(cls, obj, partial=False):
         try:
-            return cls(obj, strict=False).to_primitive()
+            return cls(obj, strict=False, partial=partial).to_primitive()
         except (SchematicsValidationError, ModelConversionError) as e:
             raise ValidationError(obj, cls.__name__, e.messages)

@@ -18,7 +18,7 @@ class BaseModel(object):
         raise NotImplementedError('{0} class must implement dynamallow_fields'.format(cls.__name__))
 
     @classmethod
-    def dynamallow_validate(cls, obj):
+    def dynamallow_validate(cls, obj, partial=False):
         """
         Given a dictionary representing a blob from dynamo, this method will validate the blob
         given the desired validation library.

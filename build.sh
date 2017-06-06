@@ -9,7 +9,7 @@ pip install -e .
 pip install codecov pytest pytest-mock
 pip install ${SERIALIZATION_PKG}
 
-SERIALIZATION_PKG=${SERIALIZATION_PKG} coverage run --source=dynamorm setup.py test
+SERIALIZATION_PKG=${SERIALIZATION_PKG} coverage run --source=dynamorm $(which py.test) -v tests/
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     if [ -z "`git diff origin/master setup.py | grep '\+.*version='`" ]; then

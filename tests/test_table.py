@@ -2,7 +2,7 @@
 from decimal import Decimal
 import pytest
 
-from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError
+from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
 def test_table_creation_deletion(TestModel, dynamo_local):
@@ -26,16 +26,16 @@ def test_put_remove_nones(TestModel, TestModel_table, dynamo_local, mocker):
     # mock out the underlying table resource, we have to reach deep in to find it...
     mocker.patch.object(TestModel.Table.__class__, '_table')
 
-    TestModel.put({'foo': 'first', 'bar': 'one'})
+    TestModel.put({'foo': 'first', 'bar': 'one', 'baz': 'baz'})
 
     TestModel.Table.__class__._table.put_item.assert_called_with(
-        Item={'foo': 'first', 'bar': 'one'}
+        Item={'foo': 'first', 'bar': 'one', 'baz': 'baz'}
     )
 
 
 def test_schema_change(TestModel, TestModel_table, dynamo_local):
     """Simulate a schema change and make sure we get the record correctly"""
-    data = {'foo': '1', 'bar': '2', 'bad_key': 10}
+    data = {'foo': '1', 'bar': '2', 'bad_key': 10, 'baz': 'baz'}
     TestModel.Table.put(data)
     item = TestModel.get(foo='1', bar='2')
     assert item._raw == data
@@ -153,14 +153,88 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 111
     assert results[1].count == 333
 
-    TestModel.put({"foo": "no_baz", "bar": "omg"})
-    results = list(TestModel.scan(baz__not_exists=True))
+    TestModel.put({"foo": "no_child", "bar": "omg", "baz": "baz"})
+    results = list(TestModel.scan(child__not_exists=True))
     assert len(results) == 1
-    assert results[0].foo == "no_baz"
+    assert results[0].foo == "no_child"
 
     with pytest.raises(TypeError):
         # Make sure we reject if the value isn't True
         list(TestModel.scan(baz__not_exists=False))
+
+
+def test_update(TestModel, TestModel_entries, dynamo_local):
+    two = TestModel.get(foo="first", bar="two")
+    assert two.baz == 'wtf'
+
+    two.update(baz='yay')
+
+    two = TestModel.get(foo="first", bar="two", consistent=True)
+    assert two.baz == 'yay'
+
+
+def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
+    TestModelTwo.put({'foo': 'foo', 'bar': 'bar'})
+    thing = TestModelTwo.get(foo='foo')
+    thing.update(baz='illion')
+
+    new = TestModelTwo.get(foo='foo', consistent=True)
+    assert new.baz == 'illion'
+
+
+def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
+    with pytest.raises(ConditionFailed):
+        TestModel.update_item(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            baz='yay',
+
+            # things to check
+            conditions=dict(
+                baz='nope',
+            )
+        )
+
+
+def test_update_validation(TestModel, TestModel_entries, dynamo_local):
+    with pytest.raises(ValidationError):
+        TestModel.update_item(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            baz=['not a list']
+        )
+
+
+def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
+    with pytest.raises(InvalidSchemaField):
+        TestModel.update_item(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            unknown_attr='foo'
+        )
+
+    with pytest.raises(InvalidSchemaField):
+        TestModel.update_item(
+            # our hash & range key -- matches current
+            foo='first',
+            bar='two',
+
+            # things to update
+            baz='foo',
+
+            conditions=dict(
+                unknown_attr='foo'
+            )
+        )
 
 
 def test_yield_items(TestModel, mocker):
@@ -216,7 +290,7 @@ def test_overwrite(TestModel, TestModel_entries, dynamo_local):
 
 
 def test_save(TestModel, TestModel_table, dynamo_local):
-    test_model = TestModel(foo='a', bar='b', count=100)
+    test_model = TestModel(foo='a', bar='b', baz='c', count=100)
     test_model.save()
     result = TestModel.get(foo='a', bar='b')
     assert result.foo == 'a'
@@ -244,13 +318,13 @@ def test_save_update(TestModel, TestModel_entries, dynamo_local):
 
 
 def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
-    test_model = TestModel(foo='a', bar='b', count=100)
+    test_model = TestModel(foo='a', bar='b', baz='c', count=100)
     test_model.save()
 
     test_model = TestModel.get(foo='a', bar='b')
     assert test_model.count == 100
 
-    TestModel(foo='a', bar='b', count=200).save()
+    TestModel(foo='a', bar='b', baz='c', count=200).save()
 
     test_model = TestModel.get(foo='a', bar='b', consistent=True)
     assert test_model.count == 200

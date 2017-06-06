@@ -6,7 +6,6 @@ schema that is used for validating and marshalling your data.
 
 """
 
-import inspect
 import logging
 
 import six
@@ -55,7 +54,7 @@ class DynaModelMeta(type):
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation
         if should_transform('Schema'):
-            for _, schema_item in six.iteritems(attrs['Schema'].__dict__):
+            for schema_item in six.itervalues(attrs['Schema'].__dict__):
                 try:
                     module_name = schema_item.__module__
                 except AttributeError:
@@ -229,6 +228,17 @@ class DynaModel(object):
         ], **batch_kwargs)
 
     @classmethod
+    def update_item(cls, conditions=None, update_item_kwargs=None, **kwargs):
+        """Update a item in the table
+
+        :params conditions: A dict of key/val pairs that should be applied as a condition to the update
+        :params update_item_kwargs: A dict of other kwargs that are passed through to update_item
+        :params \*\*kwargs: Includes your hash/range key/val to match on as well as any keys to update
+        """
+        cls.Schema.dynamorm_validate(kwargs, partial=True)
+        return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+
+    @classmethod
     def new_from_raw(cls, raw):
         """Return a new instance of this model from a raw (dict) of data that is loaded by our Schema
 
@@ -309,7 +319,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """
         method = getattr(cls.Table, method_name)
-        dynamo_kwargs_key  = '_'.join([method_name, 'kwargs'])
+        dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
         all_kwargs = {dynamo_kwargs_key: dynamo_kwargs or {}}
         all_kwargs.update(kwargs)
 
@@ -335,7 +345,6 @@ class DynaModel(object):
             # Update calling kwargs with offset key
             all_kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
 
-
     def to_dict(self):
         obj = {}
         for k in self.Schema.dynamorm_fields():
@@ -353,3 +362,13 @@ class DynaModel(object):
         # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
         # XXX TODO: item on every save
         return self.put(self.to_dict(), **kwargs)
+
+    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+        """Update this instance in the table"""
+        kwargs[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+        try:
+            kwargs[self.Table.range_key] = getattr(self, self.Table.range_key)
+        except (AttributeError, TypeError):
+            pass
+
+        return self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)

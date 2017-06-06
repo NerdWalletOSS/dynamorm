@@ -36,6 +36,12 @@ The project has two goals:
 .. _Schematics: https://schematics.readthedocs.io/en/latest/
 
 
+Supported Versions
+------------------
+
+* Schematics >= 2.0
+* Marshmallow >= 2.0
+
 Example
 -------
 
@@ -113,10 +119,13 @@ TODO
 
 These are broken down by milestone release.
 
-0.1.0
+0.2.0
+-----
+* Partial updates on ``save()``
+
+0.3.0
 -----
 * Indexes -- Currently there is no support for indexes.
-* Partial updates on ``save()``
 
 1.0.0
 -----
