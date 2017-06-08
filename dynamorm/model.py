@@ -246,7 +246,7 @@ class DynaModel(object):
         """
         if raw is None:
             return None
-        return cls(**raw, partial=partial)
+        return cls(partial=partial, **raw)
 
     @classmethod
     def get(cls, consistent=False, **kwargs):
