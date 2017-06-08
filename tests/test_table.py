@@ -63,8 +63,10 @@ def test_put_batch(TestModel, TestModel_table, dynamo_local):
 
 def test_get_batch(TestModel, TestModel_entries, dynamo_local):
     items = TestModel.get_batch(
-        {'foo': 'first', 'bar': 'one'},
-        {'foo': 'first', 'bar': 'three'},
+        keys=(
+            {'foo': 'first', 'bar': 'one'},
+            {'foo': 'first', 'bar': 'three'},
+        ),
         attrs='bar'
     )
 

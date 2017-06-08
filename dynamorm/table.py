@@ -234,7 +234,7 @@ class DynamoTable3(object):
                 raise ConditionFailed(exc)
             raise
 
-    def get_batch(self, *keys, consistent=False, attrs=None, batch_get_kwargs=None):
+    def get_batch(self, keys, consistent=False, attrs=None, batch_get_kwargs=None):
         batch_get_kwargs = batch_get_kwargs or {}
 
         batch_get_kwargs['Keys'] = []

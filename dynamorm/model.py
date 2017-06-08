@@ -263,14 +263,14 @@ class DynaModel(object):
         return cls.new_from_raw(item)
 
     @classmethod
-    def get_batch(cls, *keys, consistent=False, attrs=None):
+    def get_batch(cls, keys, consistent=False, attrs=None):
         """Generator to get more than one item from the table.
 
-        :param \*keys: One or more dicts containing the hash key, and range key if used
+        :param keys: One or more dicts containing the hash key, and range key if used
         :param bool consistent: If set to True then get_batch will be a consistent read
         :param str attrs: The projection expression of which attrs to fetch, if None all attrs will be fetched
         """
-        items = cls.Table.get_batch(*keys, consistent=consistent, attrs=attrs)
+        items = cls.Table.get_batch(keys, consistent=consistent, attrs=attrs)
         for item in items:
             yield cls.new_from_raw(item, partial=attrs is not None)
 
