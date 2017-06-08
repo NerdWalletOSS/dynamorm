@@ -61,6 +61,19 @@ def test_put_batch(TestModel, TestModel_table, dynamo_local):
     assert second_one.baz == 'bbq' and second_one.count == 456
 
 
+def test_get_batch(TestModel, TestModel_entries, dynamo_local):
+    items = TestModel.get_batch(
+        {'foo': 'first', 'bar': 'one'},
+        {'foo': 'first', 'bar': 'three'},
+        attrs='bar'
+    )
+
+    item_bars = [item.bar for item in items]
+    assert 'one' in item_bars
+    assert 'two' not in item_bars
+    assert 'three' in item_bars
+
+
 def test_get_non_existant(TestModel, TestModel_table, dynamo_local):
     """Getting a non-existant item should return None"""
     assert TestModel.get(foo="fifth", bar="derp") is None
