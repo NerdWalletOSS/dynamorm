@@ -234,6 +234,37 @@ class DynamoTable3(object):
                 raise ConditionFailed(exc)
             raise
 
+    def get_batch(self, keys, consistent=False, attrs=None, batch_get_kwargs=None):
+        batch_get_kwargs = batch_get_kwargs or {}
+
+        batch_get_kwargs['Keys'] = []
+        for kwargs in keys:
+            for k, v in six.iteritems(kwargs):
+                if k not in self.schema.dynamorm_fields():
+                    raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+
+            batch_get_kwargs['Keys'].append(kwargs)
+
+        if consistent:
+            batch_get_kwargs['ConsistentRead'] = True
+
+        if attrs:
+            batch_get_kwargs['ProjectionExpression'] = attrs
+
+        while True:
+            response = self.resource.batch_get_item(RequestItems={
+                self.name: batch_get_kwargs
+            })
+
+            for item in response['Responses'][self.name]:
+                yield item
+
+            try:
+                batch_get_kwargs = response['UnprocessedKeys'][self.name]
+            except KeyError:
+                # once our table is no longer listed in UnprocessedKeys we're done our while True loop
+                break
+
     def get(self, consistent=False, get_item_kwargs=None, **kwargs):
         get_item_kwargs = get_item_kwargs or {}
 

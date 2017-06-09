@@ -177,14 +177,14 @@ class DynaModel(object):
                 ))
     """
 
-    def __init__(self, **raw):
+    def __init__(self, partial=False, **raw):
         """Create a new instance of a DynaModel
 
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
         input will be put onto ``self`` as attributes.
         """
         self._raw = raw
-        data = self.Schema.dynamorm_validate(raw)
+        data = self.Schema.dynamorm_validate(raw, partial=partial)
         for k, v in six.iteritems(data):
             setattr(self, k, v)
 
@@ -239,14 +239,14 @@ class DynaModel(object):
         return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
     @classmethod
-    def new_from_raw(cls, raw):
+    def new_from_raw(cls, raw, partial=False):
         """Return a new instance of this model from a raw (dict) of data that is loaded by our Schema
 
         :param dict raw: The attributes to use when creating the instance
         """
         if raw is None:
             return None
-        return cls(**raw)
+        return cls(partial=partial, **raw)
 
     @classmethod
     def get(cls, consistent=False, **kwargs):
@@ -257,10 +257,22 @@ class DynaModel(object):
             Thing.get(hash_key="three")
 
         :param bool consistent: If set to True the get will be a consistent read
-        :param \*\*kwargs: You must supply your hash key, and range key if used, with the values to get
+        :param \*\*kwargs: You must supply your hash key, and range key if used
         """
         item = cls.Table.get(consistent=consistent, **kwargs)
         return cls.new_from_raw(item)
+
+    @classmethod
+    def get_batch(cls, keys, consistent=False, attrs=None):
+        """Generator to get more than one item from the table.
+
+        :param keys: One or more dicts containing the hash key, and range key if used
+        :param bool consistent: If set to True then get_batch will be a consistent read
+        :param str attrs: The projection expression of which attrs to fetch, if None all attrs will be fetched
+        """
+        items = cls.Table.get_batch(keys, consistent=consistent, attrs=attrs)
+        for item in items:
+            yield cls.new_from_raw(item, partial=attrs is not None)
 
     @classmethod
     def query(cls, query_kwargs=None, **kwargs):
