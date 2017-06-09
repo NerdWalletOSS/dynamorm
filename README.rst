@@ -100,7 +100,7 @@ Example
 
     # Update items, with conditions
     # Here our condition ensures we don't have a race condition where someone else updates the title first
-    book.update(title='Corrected Foo', conditions=(title=book.title))
+    book.update(title='Corrected Foo', conditions=(title=book.title,))
 
     # Query based on the keys
     Book.query(isbn__begins_with="12345")
