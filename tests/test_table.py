@@ -76,6 +76,14 @@ def test_get_batch(TestModel, TestModel_entries, dynamo_local):
     assert 'three' in item_bars
 
 
+def test_get_batch_invalid_field(TestModel):
+    """Calling .get_batch on an invalid field should result in an exception"""
+    with pytest.raises(InvalidSchemaField):
+        list(TestModel.get_batch(keys=(
+            {'invalid': 'nope'},
+        )))
+
+
 def test_get_non_existant(TestModel, TestModel_table, dynamo_local):
     """Getting a non-existant item should return None"""
     assert TestModel.get(foo="fifth", bar="derp") is None
