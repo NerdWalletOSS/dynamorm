@@ -1,5 +1,8 @@
 """These tests require dynamo local running"""
+import os
+
 from decimal import Decimal
+
 import pytest
 
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
@@ -278,7 +281,12 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     two.update(child={'foo': 'bar'})
     assert two.child == {'foo': 'bar'}
 
-    assert two.things is None
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        with pytest.raises(AttributeError):
+            assert two.things is None
+    else:
+        assert two.things is None
+
     two.update(things=['foo'])
     assert two.things == ['foo']
     two.update(things__append=[1])
@@ -295,7 +303,12 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
 
     six = TestModel(foo='sixth', bar='six', baz='baz')
     six.save()
-    assert six.count is None
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        with pytest.raises(AttributeError):
+            assert six.count is None
+    else:
+        assert six.count is None
     six.update(count__if_not_exists=6)
     assert six.count == 6
 
