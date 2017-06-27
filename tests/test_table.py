@@ -1,5 +1,8 @@
 """These tests require dynamo local running"""
+import os
+
 from decimal import Decimal
+
 import pytest
 
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
@@ -29,7 +32,7 @@ def test_put_remove_nones(TestModel, TestModel_table, dynamo_local, mocker):
     TestModel.put({'foo': 'first', 'bar': 'one', 'baz': 'baz'})
 
     TestModel.Table.__class__._table.put_item.assert_called_with(
-        Item={'foo': 'first', 'bar': 'one', 'baz': 'baz'}
+        Item={'foo': 'first', 'bar': 'one', 'baz': 'baz'},
     )
 
 
@@ -206,20 +209,32 @@ def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
 
 
 def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
-    with pytest.raises(ConditionFailed):
-        TestModel.update_item(
-            # our hash & range key -- matches current
-            foo='first',
-            bar='two',
+    def do_update(**kwargs):
+        with pytest.raises(ConditionFailed):
+            TestModel.update_item(
+                # our hash & range key -- matches current
+                foo='first',
+                bar='two',
 
-            # things to update
-            baz='yay',
+                # things to update
+                baz='yay',
 
-            # things to check
-            conditions=dict(
-                baz='nope',
+                # things to check
+                conditions=kwargs
             )
-        )
+
+    # all of these should fail
+    do_update(baz='nope')
+
+    do_update(count__ne=222)
+    do_update(count__gt=300)
+    do_update(count__gte=300)
+    do_update(count__lt=200)
+    do_update(count__lte=200)
+    # XXX TODO do_update(count__between=[10, 20])
+    # XXX TODO do_update(count__in='(221, 223)')
+    # XXX TODO do_update(count__not_exists=1)
+    # XXX TODO do_update(things__exists=1)
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
@@ -258,6 +273,49 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
                 unknown_attr='foo'
             )
         )
+
+
+def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
+    two = TestModel.get(foo='first', bar='two')
+    assert two.child == {'sub': 'two'}
+    two.update(child={'foo': 'bar'})
+    assert two.child == {'foo': 'bar'}
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        with pytest.raises(AttributeError):
+            assert two.things is None
+    else:
+        assert two.things is None
+
+    two.update(things=['foo'])
+    assert two.things == ['foo']
+    two.update(things__append=[1])
+    assert two.things == ['foo', 1]
+
+    assert two.count == 222
+    two.update(count__plus=10)
+    assert two.count == 232
+    two.update(count__minus=2)
+    assert two.count == 230
+
+    two.update(count__if_not_exists=1)
+    assert two.count == 230
+
+    six = TestModel(foo='sixth', bar='six', baz='baz')
+    six.save()
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        with pytest.raises(AttributeError):
+            assert six.count is None
+    else:
+        assert six.count is None
+    six.update(count__if_not_exists=6)
+    assert six.count == 6
+
+    # XXX TODO
+    # XXX two.update(child__foo__bar='thing')
+    # http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
+    # XXX support REMOVE in a different function
 
 
 def test_yield_items(TestModel, mocker):
