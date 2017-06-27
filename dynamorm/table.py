@@ -204,6 +204,24 @@ class DynamoTable3(object):
             None: '#uk_{0} = :uv_{0}'
         }
 
+        condition_function_templates = {
+            'ne': '#ck_{0} <> :cv_{0}',
+            'lt': '#ck_{0} < :cv_{0}',
+            'lte': '#ck_{0} <= :cv_{0}',
+            'gt': '#ck_{0} > :cv_{0}',
+            'gte': '#ck_{0} >= :cv_{0}',
+            # XXX TODO support these later
+            # 'between': '#ck_{0} BETWEEN :cv_{0[0]} AND :cv_{0[1]}',
+            # 'in': '#ck_{0} IN :cv_{0}',
+            # 'exists': 'attribute_exists(#ck_{0})',
+            # 'not_exists': 'attribute_not_exists (#ck_{0})',
+            # 'type': 'attribute_type(#ck_{0}, :cv_{0})',
+            # 'begins_with': 'begins_with(#ck_{0}, :cv_{0})',
+            # 'contains': 'contains(#ck_{0}, :cv_{0})',
+            # XXX TODO 'size' ??
+            None: '#ck_{0} = :cv_{0}'
+        }
+
         update_key = {}
         update_fields = []
         condition_fields = []
@@ -230,10 +248,15 @@ class DynamoTable3(object):
                 expr_vals[':uv_{0}'.format(k)] = v
 
         for k, v in six.iteritems(conditions):
+            try:
+                k, function = k.split('__', 1)
+            except ValueError:
+                function = None
+
             if k not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
 
-            condition_fields.append('#c_{0} = :c_{0}'.format(k))
+            condition_fields.append(condition_function_templates[function].format(k))
             expr_names['#ck_{0}'.format(k)] = k
             expr_vals[':cv_{0}'.format(k)] = v
 

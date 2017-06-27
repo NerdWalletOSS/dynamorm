@@ -29,7 +29,7 @@ def test_put_remove_nones(TestModel, TestModel_table, dynamo_local, mocker):
     TestModel.put({'foo': 'first', 'bar': 'one', 'baz': 'baz'})
 
     TestModel.Table.__class__._table.put_item.assert_called_with(
-        Item={'foo': 'first', 'bar': 'one', 'baz': 'baz'}
+        Item={'foo': 'first', 'bar': 'one', 'baz': 'baz'},
     )
 
 
@@ -206,20 +206,32 @@ def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
 
 
 def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
-    with pytest.raises(ConditionFailed):
-        TestModel.update_item(
-            # our hash & range key -- matches current
-            foo='first',
-            bar='two',
+    def do_update(**kwargs):
+        with pytest.raises(ConditionFailed):
+            TestModel.update_item(
+                # our hash & range key -- matches current
+                foo='first',
+                bar='two',
 
-            # things to update
-            baz='yay',
+                # things to update
+                baz='yay',
 
-            # things to check
-            conditions=dict(
-                baz='nope',
+                # things to check
+                conditions=kwargs
             )
-        )
+
+    # all of these should fail
+    do_update(baz='nope')
+
+    do_update(count__ne=222)
+    do_update(count__gt=300)
+    do_update(count__gte=300)
+    do_update(count__lt=200)
+    do_update(count__lte=200)
+    # XXX TODO do_update(count__between=[10, 20])
+    # XXX TODO do_update(count__in='(221, 223)')
+    # XXX TODO do_update(count__not_exists=1)
+    # XXX TODO do_update(things__exists=1)
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
@@ -266,8 +278,10 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     two.update(child={'foo': 'bar'})
     assert two.child == {'foo': 'bar'}
 
-    assert two.things == []
-    two.update(things__append=['foo', 1])
+    assert two.things is None
+    two.update(things=['foo'])
+    assert two.things == ['foo']
+    two.update(things__append=[1])
     assert two.things == ['foo', 1]
 
     assert two.count == 222

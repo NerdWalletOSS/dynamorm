@@ -66,8 +66,8 @@ def TestModel():
                 bar = types.StringType(required=True)
                 baz = types.StringType(required=True)
                 count = types.IntType()
-                child = compound.DictType(types.StringType, default=dict)
-                things = compound.ListType(types.BaseType, default=list)
+                child = compound.DictType(types.StringType)
+                things = compound.ListType(types.BaseType)
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
