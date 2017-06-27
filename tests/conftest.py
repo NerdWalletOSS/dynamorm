@@ -36,7 +36,7 @@ def TestModel():
                 baz = fields.String(required=True)
                 count = fields.Integer()
                 child = fields.Dict()
-                things = TODO
+                things = fields.List(fields.String())
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
