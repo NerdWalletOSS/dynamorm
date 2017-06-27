@@ -260,6 +260,37 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
         )
 
 
+def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
+    two = TestModel.get(foo='first', bar='two')
+    assert two.child == {'sub': 'two'}
+    two.update(child={'foo': 'bar'})
+    assert two.child == {'foo': 'bar'}
+
+    assert two.things == []
+    two.update(things__append=['foo', 1])
+    assert two.things == ['foo', 1]
+
+    assert two.count == 222
+    two.update(count__plus=10)
+    assert two.count == 232
+    two.update(count__minus=2)
+    assert two.count == 230
+
+    two.update(count__if_not_exists=1)
+    assert two.count == 230
+
+    six = TestModel(foo='sixth', bar='six', baz='baz')
+    six.save()
+    assert six.count is None
+    six.update(count__if_not_exists=6)
+    assert six.count == 6
+
+    # XXX TODO
+    # XXX two.update(child__foo__bar='thing')
+    # http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
+    # XXX support REMOVE in a different function
+
+
 def test_yield_items(TestModel, mocker):
     # Mock out Dynamo responses as each having only one item to test auto-paging
     side_effects = [{

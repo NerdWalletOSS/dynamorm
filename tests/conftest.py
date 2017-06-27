@@ -36,6 +36,7 @@ def TestModel():
                 baz = fields.String(required=True)
                 count = fields.Integer()
                 child = fields.Dict()
+                things = TODO
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
@@ -65,7 +66,8 @@ def TestModel():
                 bar = types.StringType(required=True)
                 baz = types.StringType(required=True)
                 count = types.IntType()
-                child = compound.DictType(types.StringType)
+                child = compound.DictType(types.StringType, default=dict)
+                things = compound.ListType(types.BaseType, default=list)
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(

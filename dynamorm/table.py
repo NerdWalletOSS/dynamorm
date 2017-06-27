@@ -196,29 +196,46 @@ class DynamoTable3(object):
         update_item_kwargs = update_item_kwargs or {}
         conditions = conditions or {}
 
+        update_function_templates = {
+            'append': '#uk_{0} = list_append(#uk_{0}, :uv_{0})',
+            'plus': '#uk_{0} = #uk_{0} + :uv_{0}',
+            'minus': '#uk_{0} = #uk_{0} - :uv_{0}',
+            'if_not_exists': '#uk_{0} = if_not_exists(#uk_{0}, :uv_{0})',
+            None: '#uk_{0} = :uv_{0}'
+        }
+
         update_key = {}
         update_fields = []
         condition_fields = []
         expr_names = {}
         expr_vals = {}
         for k, v in six.iteritems(kwargs):
+            try:
+                k, function = k.split('__', 1)
+            except ValueError:
+                function = None
+
+            # make sure the field (k) exists
             if k not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
 
+            # if the field is in our hash/range key use it for the Key value in our query
+            # you can't modify the primary key once an item has been set
             if k in (self.hash_key, self.range_key):
                 update_key[k] = v
             else:
-                update_fields.append('#u_{0} = :u_{0}'.format(k))
-                expr_names['#u_{0}'.format(k)] = k
-                expr_vals[':u_{0}'.format(k)] = v
+                # handle function
+                update_fields.append(update_function_templates[function].format(k))
+                expr_names['#uk_{0}'.format(k)] = k
+                expr_vals[':uv_{0}'.format(k)] = v
 
         for k, v in six.iteritems(conditions):
             if k not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
 
             condition_fields.append('#c_{0} = :c_{0}'.format(k))
-            expr_names['#c_{0}'.format(k)] = k
-            expr_vals[':c_{0}'.format(k)] = v
+            expr_names['#ck_{0}'.format(k)] = k
+            expr_vals[':cv_{0}'.format(k)] = v
 
         update_item_kwargs['Key'] = update_key
         update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
