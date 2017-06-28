@@ -211,9 +211,14 @@ class DynamoTable3(object):
     def _apply_update_conditions(self, key, function, value):
         """Given a key, function and a value return the field to be added to the update condition and a dict of names
         and vals to be bound to the expression"""
+
         def default_condition_formatter(template):
+            """Closure used for formatting most condition templates.  It expects a single key & value"""
             template = template.format(key)
             expr_names = {'#ck_{0}'.format(key): key}
+
+            # some of our conditions do not require values (exists/not_exists)
+            # if values are added to expr_values but there is not a corresponding placeholder then boto raises an error
             if ':cv_' in template:
                 expr_values = {':cv_{0}'.format(key): value}
             else:
@@ -226,6 +231,7 @@ class DynamoTable3(object):
             )
 
         def in_condition_formatter(template):
+            """Closure for formatting IN conditions.  It expects a single key and an iterable of values"""
             template_values = []
             expr_names = {'#ck_{0}'.format(key): key}
             expr_vals = {}
@@ -241,6 +247,7 @@ class DynamoTable3(object):
             )
 
         def between_condition_formatter(template):
+            """Closure for formatting BETWEEN conditions.  It expects a single key and an iterable of 2 values"""
             template = template.format(key)
             expr_names = {'#ck_{0}'.format(key): key}
             expr_vals = {
@@ -255,28 +262,23 @@ class DynamoTable3(object):
             )
 
         CONDITION_FUNCTION_TEMPLATES = {
-            'ne': '#ck_{0} <> :cv_{0}',
-            'lt': '#ck_{0} < :cv_{0}',
-            'lte': '#ck_{0} <= :cv_{0}',
-            'gt': '#ck_{0} > :cv_{0}',
-            'gte': '#ck_{0} >= :cv_{0}',
+            'ne': ('#ck_{0} <> :cv_{0}', default_condition_formatter),
+            'lt': ('#ck_{0} < :cv_{0}', default_condition_formatter),
+            'lte': ('#ck_{0} <= :cv_{0}', default_condition_formatter),
+            'gt': ('#ck_{0} > :cv_{0}', default_condition_formatter),
+            'gte': ('#ck_{0} >= :cv_{0}', default_condition_formatter),
             'between': ('#ck_{0} BETWEEN :cv_{0}_0 AND :cv_{0}_1', between_condition_formatter),
             'in': ('#ck_{0} IN ({1})', in_condition_formatter),
-            'exists': 'attribute_exists(#ck_{0})',
-            'not_exists': 'attribute_not_exists (#ck_{0})',
-            'type': 'attribute_type(#ck_{0}, :cv_{0})',
-            'begins_with': 'begins_with(#ck_{0}, :cv_{0})',
-            'contains': 'contains(#ck_{0}, :cv_{0})',
-            None: '#ck_{0} = :cv_{0}'
+            'exists': ('attribute_exists(#ck_{0})', default_condition_formatter),
+            'not_exists': ('attribute_not_exists (#ck_{0})', default_condition_formatter),
+            'type': ('attribute_type(#ck_{0}, :cv_{0})', default_condition_formatter),
+            'begins_with': ('begins_with(#ck_{0}, :cv_{0})', default_condition_formatter),
+            'contains': ('contains(#ck_{0}, :cv_{0})', default_condition_formatter),
+            None: ('#ck_{0} = :cv_{0}', default_condition_formatter),
             # XXX TODO 'size' ??
         }
 
-        try:
-            field, formatter = CONDITION_FUNCTION_TEMPLATES[function]
-        except ValueError:
-            field = CONDITION_FUNCTION_TEMPLATES[function]
-            formatter = default_condition_formatter
-
+        field, formatter = CONDITION_FUNCTION_TEMPLATES[function]
         return formatter(field)
 
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
