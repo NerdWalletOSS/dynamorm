@@ -211,10 +211,6 @@ class DynamoTable3(object):
     def _apply_update_conditions(self, key, function, value):
         """Given a key, function and a value return the field to be added to the update condition and a dict of names
         and vals to be bound to the expression"""
-        # Condition templates:
-        # Most of the condition syntax is fairly straight forward and easy to generalize, but 'IN' and 'BETWEEN' make
-        # things a little bit interesting since they require special syntax and have more than one value -- so this
-        # section bears some explaining.
         def default_condition_formatter(template):
             template = template.format(key)
             expr_names = {'#ck_{0}'.format(key): key}
@@ -320,9 +316,6 @@ class DynamoTable3(object):
             key, function = extract_function_and_validate(key)
 
             field, names, values = self._apply_update_conditions(key, function, value)
-            print("field: ", field)
-            print("names: ", names)
-            print("values: ", values)
             condition_fields.append(field)
             expr_names.update(names)
             expr_vals.update(values)

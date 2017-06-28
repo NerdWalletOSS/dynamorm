@@ -378,7 +378,31 @@ class DynaModel(object):
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
         """Update this instance in the table
 
+        You can supply a dictionary of conditions that influence the update.  Conditions are supplied as a direct match:
+
+        .. code-block:: python
+
+            thing.update(foo='bar', conditions=dict(foo='foo'))
+
+        This update would only succeed if foo was set to 'foo' at the time of the update.  You can also use the
+        `expressions supported by Dynamo`_ via a "double-under" syntax with the following mapping:
+
+        * ``<>``: ``foo__ne='bar'``
+        * ``<``: ``count__lt=10``
+        * ``<=``: ``count__lte=10``
+        * ``>``: ``count__gt=10``
+        * ``>=``: ``count__gte=10``
+        * ``BETWEEN``: ``count__between=[10, 20]``
+        * ``IN``: ``count__in=[11, 12, 13]``
+        * ``attribute_exists``: ``foo__exists=True``
+        * ``attribute_not_exists``: ``foo__not_exists=True``
+        * ``attribute_type``: ``foo__type='S'``
+        * ``begins_with``: ``foo__begins_with='f'``
+        * ``contains``: ``foo__contains='oo'``
+
         As long as the update succeeds the attrs on this instance will be updated to match their new values.
+
+        .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
         kwargs[self.Table.hash_key] = getattr(self, self.Table.hash_key)
         try:
