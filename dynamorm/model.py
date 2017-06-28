@@ -378,7 +378,17 @@ class DynaModel(object):
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
         """Update this instance in the table
 
-        You can supply a dictionary of conditions that influence the update.  Conditions are supplied as a direct match:
+        New values are set via kwargs to this function:
+
+        .. code-block:: python
+
+            thing.update(foo='bar')
+
+        This would set the ``foo`` attribute of the thing object to ``'bar'``.  You cannot change the Hash or Range key
+        via an update operation -- this is a property of DynamoDB.
+
+        You can supply a dictionary of conditions that influence the update.  In their simpliest form Conditions are
+        supplied as a direct match:
 
         .. code-block:: python
 
@@ -387,18 +397,20 @@ class DynaModel(object):
         This update would only succeed if foo was set to 'foo' at the time of the update.  You can also use the
         `expressions supported by Dynamo`_ via a "double-under" syntax with the following mapping:
 
-        * ``<>``: ``foo__ne='bar'``
-        * ``<``: ``count__lt=10``
-        * ``<=``: ``count__lte=10``
-        * ``>``: ``count__gt=10``
-        * ``>=``: ``count__gte=10``
-        * ``BETWEEN``: ``count__between=[10, 20]``
-        * ``IN``: ``count__in=[11, 12, 13]``
-        * ``attribute_exists``: ``foo__exists=True``
-        * ``attribute_not_exists``: ``foo__not_exists=True``
-        * ``attribute_type``: ``foo__type='S'``
-        * ``begins_with``: ``foo__begins_with='f'``
-        * ``contains``: ``foo__contains='oo'``
+        * ``<>``: ``thing.update(foo='bar', conditions=dict(foo__ne='bar'))``
+        * ``<``: ``thing.update(foo='bar', conditions=dict(count__lt=10))``
+        * ``<=``: ``thing.update(foo='bar', conditions=dict(count__lte=10))``
+        * ``>``: ``thing.update(foo='bar', conditions=dict(count__gt=10))``
+        * ``>=``: ``thing.update(foo='bar', conditions=dict(count__gte=10))``
+        * ``BETWEEN``: ``thing.update(foo='bar', conditions=dict(count__between=[10, 20]))``
+        * ``IN``: ``thing.update(foo='bar', conditions=dict(count__in=[11, 12, 13]))``
+        * ``attribute_exists``: ``thing.update(foo='bar', conditions=dict(foo__exists=True))``
+        * ``attribute_not_exists``: ``thing.update(foo='bar', conditions=dict(foo__not_exists=True))``
+        * ``attribute_type``: ``thing.update(foo='bar', conditions=dict(foo__type='S'))``
+        * ``begins_with``: ``thing.update(foo='bar', conditions=dict(foo__begins_with='f'))``
+        * ``contains``: ``thing.update(foo='bar', conditions=dict(foo__contains='oo'))``
+
+        If your update conditions do not match then a dynamorm.exceptions.ConditionFailed exception will be raised.
 
         As long as the update succeeds the attrs on this instance will be updated to match their new values.
 
