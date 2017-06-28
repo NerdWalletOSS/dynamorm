@@ -209,7 +209,7 @@ def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
 
 
 def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
-    def do_update(**kwargs):
+    def update_should_fail_with_condition(**kwargs):
         with pytest.raises(ConditionFailed):
             TestModel.update_item(
                 # our hash & range key -- matches current
@@ -224,17 +224,19 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
             )
 
     # all of these should fail
-    do_update(baz='nope')
-
-    do_update(count__ne=222)
-    do_update(count__gt=300)
-    do_update(count__gte=300)
-    do_update(count__lt=200)
-    do_update(count__lte=200)
-    # XXX TODO do_update(count__between=[10, 20])
-    # XXX TODO do_update(count__in='(221, 223)')
-    # XXX TODO do_update(count__not_exists=1)
-    # XXX TODO do_update(things__exists=1)
+    update_should_fail_with_condition(baz='nope')
+    update_should_fail_with_condition(count__ne=222)
+    update_should_fail_with_condition(count__gt=300)
+    update_should_fail_with_condition(count__gte=300)
+    update_should_fail_with_condition(count__lt=200)
+    update_should_fail_with_condition(count__lte=200)
+    update_should_fail_with_condition(count__between=[10, 20])
+    update_should_fail_with_condition(count__in=(221, 223))
+    update_should_fail_with_condition(count__not_exists=1)
+    update_should_fail_with_condition(things__exists=1)
+    update_should_fail_with_condition(count__type='S')
+    update_should_fail_with_condition(baz__begins_with='nope')
+    update_should_fail_with_condition(baz__contains='nope')
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):

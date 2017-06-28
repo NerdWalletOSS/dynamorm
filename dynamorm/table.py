@@ -192,11 +192,10 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=remove_nones(item))
 
-    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
-        update_item_kwargs = update_item_kwargs or {}
-        conditions = conditions or {}
-
-        update_function_templates = {
+    def _apply_update_functions(self, key, function, value):
+        """Given a key, function and a value return the field to be added to the update SET and a dict of names and vals
+        to be bound to the expression"""
+        UPDATE_FUNCTION_TEMPLATES = {
             'append': '#uk_{0} = list_append(#uk_{0}, :uv_{0})',
             'plus': '#uk_{0} = #uk_{0} + :uv_{0}',
             'minus': '#uk_{0} = #uk_{0} - :uv_{0}',
@@ -204,61 +203,129 @@ class DynamoTable3(object):
             None: '#uk_{0} = :uv_{0}'
         }
 
-        condition_function_templates = {
+        field = UPDATE_FUNCTION_TEMPLATES[function].format(key)
+        names = {'#uk_{0}'.format(key): key}
+        vals = {':uv_{0}'.format(key): value}
+        return (field, names, vals)
+
+    def _apply_update_conditions(self, key, function, value):
+        """Given a key, function and a value return the field to be added to the update condition and a dict of names
+        and vals to be bound to the expression"""
+        # Condition templates:
+        # Most of the condition syntax is fairly straight forward and easy to generalize, but 'IN' and 'BETWEEN' make
+        # things a little bit interesting since they require special syntax and have more than one value -- so this
+        # section bears some explaining.
+        def default_condition_formatter(template):
+            template = template.format(key)
+            expr_names = {'#ck_{0}'.format(key): key}
+            if ':cv_' in template:
+                expr_values = {':cv_{0}'.format(key): value}
+            else:
+                expr_values = {}
+
+            return (
+                template,
+                expr_names,
+                expr_values
+            )
+
+        def in_condition_formatter(template):
+            template_values = []
+            expr_names = {'#ck_{0}'.format(key): key}
+            expr_vals = {}
+            for i, val in enumerate(value):
+                expr_name = ':cv_{0}_{1}'.format(key, i)
+                template_values.append(expr_name)
+                expr_vals[expr_name] = val
+
+            return (
+                template.format(key, ','.join(template_values)),
+                expr_names,
+                expr_vals
+            )
+
+        def between_condition_formatter(template):
+            template = template.format(key)
+            expr_names = {'#ck_{0}'.format(key): key}
+            expr_vals = {
+                ':cv_{0}_0'.format(key): value[0],
+                ':cv_{0}_1'.format(key): value[1],
+            }
+
+            return (
+                template,
+                expr_names,
+                expr_vals
+            )
+
+        CONDITION_FUNCTION_TEMPLATES = {
             'ne': '#ck_{0} <> :cv_{0}',
             'lt': '#ck_{0} < :cv_{0}',
             'lte': '#ck_{0} <= :cv_{0}',
             'gt': '#ck_{0} > :cv_{0}',
             'gte': '#ck_{0} >= :cv_{0}',
-            # XXX TODO support these later
-            # 'between': '#ck_{0} BETWEEN :cv_{0[0]} AND :cv_{0[1]}',
-            # 'in': '#ck_{0} IN :cv_{0}',
-            # 'exists': 'attribute_exists(#ck_{0})',
-            # 'not_exists': 'attribute_not_exists (#ck_{0})',
-            # 'type': 'attribute_type(#ck_{0}, :cv_{0})',
-            # 'begins_with': 'begins_with(#ck_{0}, :cv_{0})',
-            # 'contains': 'contains(#ck_{0}, :cv_{0})',
-            # XXX TODO 'size' ??
+            'between': ('#ck_{0} BETWEEN :cv_{0}_0 AND :cv_{0}_1', between_condition_formatter),
+            'in': ('#ck_{0} IN ({1})', in_condition_formatter),
+            'exists': 'attribute_exists(#ck_{0})',
+            'not_exists': 'attribute_not_exists (#ck_{0})',
+            'type': 'attribute_type(#ck_{0}, :cv_{0})',
+            'begins_with': 'begins_with(#ck_{0}, :cv_{0})',
+            'contains': 'contains(#ck_{0}, :cv_{0})',
             None: '#ck_{0} = :cv_{0}'
+            # XXX TODO 'size' ??
         }
+
+        try:
+            field, formatter = CONDITION_FUNCTION_TEMPLATES[function]
+        except ValueError:
+            field = CONDITION_FUNCTION_TEMPLATES[function]
+            formatter = default_condition_formatter
+
+        return formatter(field)
+
+    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+        update_item_kwargs = update_item_kwargs or {}
+        conditions = conditions or {}
 
         update_key = {}
         update_fields = []
         condition_fields = []
         expr_names = {}
         expr_vals = {}
-        for k, v in six.iteritems(kwargs):
+
+        def extract_function_and_validate(key):
             try:
-                k, function = k.split('__', 1)
+                key, function = key.split('__', 1)
             except ValueError:
                 function = None
 
-            # make sure the field (k) exists
-            if k not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+            # make sure the field (key) exists
+            if key not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("{0} does not exist in the schema fields".format(key))
 
-            # if the field is in our hash/range key use it for the Key value in our query
-            # you can't modify the primary key once an item has been set
-            if k in (self.hash_key, self.range_key):
-                update_key[k] = v
+            return key, function
+
+        for key, value in six.iteritems(kwargs):
+            key, function = extract_function_and_validate(key)
+
+            if key in (self.hash_key, self.range_key):
+                update_key[key] = value
             else:
-                # handle function
-                update_fields.append(update_function_templates[function].format(k))
-                expr_names['#uk_{0}'.format(k)] = k
-                expr_vals[':uv_{0}'.format(k)] = v
+                field, names, values = self._apply_update_functions(key, function, value)
+                update_fields.append(field)
+                expr_names.update(names)
+                expr_vals.update(values)
 
-        for k, v in six.iteritems(conditions):
-            try:
-                k, function = k.split('__', 1)
-            except ValueError:
-                function = None
+        for key, value in six.iteritems(conditions):
+            key, function = extract_function_and_validate(key)
 
-            if k not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
-
-            condition_fields.append(condition_function_templates[function].format(k))
-            expr_names['#ck_{0}'.format(k)] = k
-            expr_vals[':cv_{0}'.format(k)] = v
+            field, names, values = self._apply_update_conditions(key, function, value)
+            print("field: ", field)
+            print("names: ", names)
+            print("values: ", values)
+            condition_fields.append(field)
+            expr_names.update(names)
+            expr_vals.update(values)
 
         update_item_kwargs['Key'] = update_key
         update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
