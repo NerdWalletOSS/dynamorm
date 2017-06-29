@@ -275,7 +275,7 @@ class DynaModel(object):
             yield cls.new_from_raw(item, partial=attrs is not None)
 
     @classmethod
-    def query(cls, query_kwargs=None, **kwargs):
+    def query(cls, **kwargs):
         """Execute a query on our table based on our keys
 
         You supply the key(s) to query based on as keyword arguments::
@@ -369,16 +369,21 @@ class DynaModel(object):
             if 'LastEvaluatedKey' not in resp:
                 break
 
-            if 'Limit' in all_kwargs[dynamo_kwargs_key]:
+            try:
                 # Reduce limit by amount scanned for subsequent calls
-                all_kwargs[dynamo_kwargs_key]['Limit'] -= resp['ScannedCount']
+                kwargs[dynamo_kwargs_key]['Limit'] -= resp['ScannedCount']
 
                 # Stop if we've reached the limit set by the caller
-                if all_kwargs[dynamo_kwargs_key]['Limit'] <= 0:
+                if kwargs[dynamo_kwargs_key]['Limit'] <= 0:
                     break
+            except KeyError:
+                pass
 
             # Update calling kwargs with offset key
-            all_kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+            try:
+                kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+            except KeyError:
+                kwargs[dynamo_kwargs_key] = {'ExclusiveStartKey': resp['LastEvaluatedKey']}
 
     def to_dict(self):
         obj = {}
