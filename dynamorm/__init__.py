@@ -6,3 +6,4 @@
 
 """
 from .model import DynaModel  # noqa
+from .table import Q  # noqa

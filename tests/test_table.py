@@ -231,9 +231,9 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
     update_should_fail_with_condition(count__lt=200)
     update_should_fail_with_condition(count__lte=200)
     update_should_fail_with_condition(count__between=[10, 20])
-    update_should_fail_with_condition(count__in=(221, 223))
-    update_should_fail_with_condition(count__not_exists=1)
-    update_should_fail_with_condition(things__exists=1)
+    update_should_fail_with_condition(count__in=[221, 223])
+    update_should_fail_with_condition(count__not_exists=True)
+    update_should_fail_with_condition(things__exists=True)
     update_should_fail_with_condition(count__type='S')
     update_should_fail_with_condition(baz__begins_with='nope')
     update_should_fail_with_condition(baz__contains='nope')
@@ -262,7 +262,7 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
             unknown_attr='foo'
         )
 
-    with pytest.raises(InvalidSchemaField):
+    with pytest.raises(ConditionFailed):
         TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',

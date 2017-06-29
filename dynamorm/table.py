@@ -24,6 +24,7 @@ write      True      int   The provisioned write throughput.
 
 """
 
+import collections
 import logging
 
 import boto3
@@ -192,9 +193,16 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=remove_nones(item))
 
-    def _apply_update_functions(self, key, function, value):
-        """Given a key, function and a value return the field to be added to the update SET and a dict of names and vals
-        to be bound to the expression"""
+    def update(self, *args, **kwargs):
+        update_item_kwargs = kwargs.pop('update_item_kwargs') or {}
+        conditions = kwargs.pop('conditions') or {}
+
+        update_key = {}
+        update_fields = []
+        condition_fields = []
+        expr_names = {}
+        expr_vals = {}
+
         UPDATE_FUNCTION_TEMPLATES = {
             'append': '#uk_{0} = list_append(#uk_{0}, :uv_{0})',
             'plus': '#uk_{0} = #uk_{0} + :uv_{0}',
@@ -203,95 +211,7 @@ class DynamoTable3(object):
             None: '#uk_{0} = :uv_{0}'
         }
 
-        field = UPDATE_FUNCTION_TEMPLATES[function].format(key)
-        names = {'#uk_{0}'.format(key): key}
-        vals = {':uv_{0}'.format(key): value}
-        return (field, names, vals)
-
-    def _apply_update_conditions(self, key, function, value):
-        """Given a key, function and a value return the field to be added to the update condition and a dict of names
-        and vals to be bound to the expression"""
-
-        def default_condition_formatter(template):
-            """Closure used for formatting most condition templates.  It expects a single key & value"""
-            template = template.format(key)
-            expr_names = {'#ck_{0}'.format(key): key}
-
-            # some of our conditions do not require values (exists/not_exists)
-            # if values are added to expr_values but there is not a corresponding placeholder then boto raises an error
-            if ':cv_' in template:
-                expr_values = {':cv_{0}'.format(key): value}
-            else:
-                expr_values = {}
-
-            return (
-                template,
-                expr_names,
-                expr_values
-            )
-
-        def in_condition_formatter(template):
-            """Closure for formatting IN conditions.  It expects a single key and an iterable of values"""
-            template_values = []
-            expr_names = {'#ck_{0}'.format(key): key}
-            expr_vals = {}
-            for i, val in enumerate(value):
-                expr_name = ':cv_{0}_{1}'.format(key, i)
-                template_values.append(expr_name)
-                expr_vals[expr_name] = val
-
-            return (
-                template.format(key, ','.join(template_values)),
-                expr_names,
-                expr_vals
-            )
-
-        def between_condition_formatter(template):
-            """Closure for formatting BETWEEN conditions.  It expects a single key and an iterable of 2 values"""
-            template = template.format(key)
-            expr_names = {'#ck_{0}'.format(key): key}
-            expr_vals = {
-                ':cv_{0}_0'.format(key): value[0],
-                ':cv_{0}_1'.format(key): value[1],
-            }
-
-            return (
-                template,
-                expr_names,
-                expr_vals
-            )
-
-        CONDITION_FUNCTION_TEMPLATES = {
-            'ne': ('#ck_{0} <> :cv_{0}', default_condition_formatter),
-            'lt': ('#ck_{0} < :cv_{0}', default_condition_formatter),
-            'lte': ('#ck_{0} <= :cv_{0}', default_condition_formatter),
-            'gt': ('#ck_{0} > :cv_{0}', default_condition_formatter),
-            'gte': ('#ck_{0} >= :cv_{0}', default_condition_formatter),
-            'between': ('#ck_{0} BETWEEN :cv_{0}_0 AND :cv_{0}_1', between_condition_formatter),
-            'in': ('#ck_{0} IN ({1})', in_condition_formatter),
-            'exists': ('attribute_exists(#ck_{0})', default_condition_formatter),
-            'not_exists': ('attribute_not_exists (#ck_{0})', default_condition_formatter),
-            'type': ('attribute_type(#ck_{0}, :cv_{0})', default_condition_formatter),
-            'begins_with': ('begins_with(#ck_{0}, :cv_{0})', default_condition_formatter),
-            'contains': ('contains(#ck_{0}, :cv_{0})', default_condition_formatter),
-            None: ('#ck_{0} = :cv_{0}', default_condition_formatter),
-            # XXX TODO 'size' ??
-        }
-
-        field, formatter = CONDITION_FUNCTION_TEMPLATES[function]
-        return formatter(field)
-
-    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
-        update_item_kwargs = update_item_kwargs or {}
-        conditions = conditions or {}
-
-        update_key = {}
-        update_fields = []
-        condition_fields = []
-        expr_names = {}
-        expr_vals = {}
-
-        def extract_function_and_validate(key):
+        for key, value in six.iteritems(kwargs):
             try:
                 key, function = key.split('__', 1)
             except ValueError:
@@ -301,33 +221,28 @@ class DynamoTable3(object):
             if key not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField("{0} does not exist in the schema fields".format(key))
 
-            return key, function
-
-        for key, value in six.iteritems(kwargs):
-            key, function = extract_function_and_validate(key)
-
             if key in (self.hash_key, self.range_key):
                 update_key[key] = value
             else:
-                field, names, values = self._apply_update_functions(key, function, value)
-                update_fields.append(field)
-                expr_names.update(names)
-                expr_vals.update(values)
-
-        for key, value in six.iteritems(conditions):
-            key, function = extract_function_and_validate(key)
-
-            field, names, values = self._apply_update_conditions(key, function, value)
-            condition_fields.append(field)
-            expr_names.update(names)
-            expr_vals.update(values)
+                update_fields.append(UPDATE_FUNCTION_TEMPLATES[function].format(key))
+                expr_names['#uk_{0}'.format(key)] = key
+                expr_vals[':uv_{0}'.format(key)] = value
 
         update_item_kwargs['Key'] = update_key
         update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
-        if condition_fields:
-            update_item_kwargs['ConditionExpression'] = ' AND '.join(condition_fields)
         update_item_kwargs['ExpressionAttributeNames'] = expr_names
         update_item_kwargs['ExpressionAttributeValues'] = expr_vals
+        
+        condition_expression = Q(**conditions)
+
+        for arg in args:
+            try:
+                condition_expression = condition_expression & arg
+            except TypeError:
+                condition_expression = arg
+
+        if condition_expression:
+            update_item_kwargs['ConditionExpression'] = condition_expression
 
         try:
             return self.table.update_item(**update_item_kwargs)
@@ -411,44 +326,18 @@ class DynamoTable3(object):
         log.debug("Query: %s", query_kwargs)
         return self.table.query(**query_kwargs)
 
-    def scan(self, scan_kwargs=None, **kwargs):
-        if scan_kwargs is None:
-            scan_kwargs = {}
+    def scan(self, *args, **kwargs):
+        scan_kwargs = kwargs.pop('scan_kwargs') or {}
 
-        while len(kwargs):
-            attr, value = kwargs.popitem()
-
-            parts = attr.split('__')
-            attr = Attr(parts.pop(0))
-            op = 'eq'
-
-            while len(parts):
-                if not hasattr(attr, parts[0]):
-                    # this is a nested field, extend the attr
-                    attr = Attr('.'.join([attr.name, parts.pop(0)]))
-                else:
-                    op = parts.pop(0)
-                    break
-
-            assert len(parts) == 0, "Left over parts after parsing query attr"
-
-            op = getattr(attr, op)
+        filter_expression = Q(**kwargs)
+        for arg in args:
             try:
-                filter_expression = op(value)
+                filter_expression = filter_expression & arg
             except TypeError:
-                # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
-                # doesn't take an arg. If our value is True then we try to re-call the op function without any
-                # arguments, otherwise we bubble it up.
-                if value is True:
-                    filter_expression = op()
-                else:
-                    raise
+                filter_expression = arg
 
-            if 'FilterExpression' in scan_kwargs:
-                # XXX TODO: support | (or) and ~ (not)
-                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & filter_expression
-            else:
-                scan_kwargs['FilterExpression'] = filter_expression
+        if filter_expression:
+            scan_kwargs['FilterExpression'] = filter_expression
 
         return self.table.scan(**scan_kwargs)
 
@@ -465,3 +354,51 @@ def remove_nones(in_dict):
         )
     except (ValueError, AttributeError):
         return in_dict
+
+
+def Q(**mapping):
+    """A Q object represents an AND'd together query using boto3's Attr object, based on a set of keyword arguments that
+    support the full access to the operations (eq, ne, between, etc) as well as nested attributes.
+    
+    It can be used input to both scan operations as well as update conditions.
+    """
+    expression = None
+
+    while len(mapping):
+        attr, value = mapping.popitem()
+
+        parts = attr.split('__')
+        attr = Attr(parts.pop(0))
+        op = 'eq'
+
+        while len(parts):
+            if not hasattr(attr, parts[0]):
+                # this is a nested field, extend the attr
+                attr = Attr('.'.join([attr.name, parts.pop(0)]))
+            else:
+                op = parts.pop(0)
+                break
+
+        assert len(parts) == 0, "Left over parts after parsing query attr"
+
+        op = getattr(attr, op)
+        try:
+            attr_expression = op(value)
+        except TypeError:
+            # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
+            # doesn't take an arg or takes multiple args. If our value is True then we try to re-call the op
+            # function without any arguments, if our value is a list we use it as the arguments for the function,
+            # otherwise we bubble it up.
+            if value is True:
+                attr_expression = op()
+            elif isinstance(value, collections.Iterable):
+                attr_expression = op(*value)
+            else:
+                raise
+
+        try:
+            expression = expression & attr_expression
+        except TypeError:
+            expression = attr_expression
+
+    return expression

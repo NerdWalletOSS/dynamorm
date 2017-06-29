@@ -303,9 +303,20 @@ class DynaModel(object):
             Thing.scan(age=10)
 
         By default the ``eq`` condition is used.  If you wish to use any of the other `valid conditions for attrs`_ use
-        a double underscore syntax following the key name.  For example::
+        a double underscore syntax following the key name.  For example:
 
-            Thing.scan(age__lte=10)
+        * ``<>``: ``Thing.scan(foo__ne='bar')``
+        * ``<``: ``Thing.scan(count__lt=10)``
+        * ``<=``: ``Thing.scan(count__lte=10)``
+        * ``>``: ``Thing.scan(count__gt=10)``
+        * ``>=``: ``Thing.scan(count__gte=10)``
+        * ``BETWEEN``: ``Thing.scan(count__between=[10, 20])``
+        * ``IN``: ``Thing.scan(count__in=[11, 12, 13])``
+        * ``attribute_exists``: ``Thing.scan(foo__exists=True)``
+        * ``attribute_not_exists``: ``Thing.scan(foo__not_exists=True)``
+        * ``attribute_type``: ``Thing.scan(foo__type='S')``
+        * ``begins_with``: ``Thing.scan(foo__begins_with='f')``
+        * ``contains``: ``Thing.scan(foo__contains='oo')``
 
         .. _valid conditions for attrs: http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Attr
 
@@ -313,6 +324,19 @@ class DynaModel(object):
 
             Thing.scan(address__state="CA")
             Thing.scan(address__state__begins_with="C")
+
+        Multiple attrs are combined with the AND (&) operator::
+
+            Thing.scan(address__state="CA", address__zip__begins_with="9")
+
+        If you want to combine them with the OR (|) operator, or negate them (~), then you can use the Q function and
+        pass them as arguments into scan where each argument is combined with AND::
+
+            from dynamorm import Q
+
+            Thing.scan(Q(address__state="CA") | Q(address__state="NY"), ~Q(address__zip__contains="5"))
+
+        The above would scan for all things with an address.state of (CA OR NY) AND address.zip does not contain 5.
 
         This returns a generator, which will continue to yield items until all matching the scan are produced,
         abstracting away pagination. More information on scan pagination: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination
@@ -388,27 +412,15 @@ class DynaModel(object):
         via an update operation -- this is a property of DynamoDB.
 
         You can supply a dictionary of conditions that influence the update.  In their simpliest form Conditions are
-        supplied as a direct match:
+        supplied as a direct match (eq)::
 
         .. code-block:: python
 
             thing.update(foo='bar', conditions=dict(foo='foo'))
 
-        This update would only succeed if foo was set to 'foo' at the time of the update.  You can also use the
-        `expressions supported by Dynamo`_ via a "double-under" syntax with the following mapping:
-
-        * ``<>``: ``thing.update(foo='bar', conditions=dict(foo__ne='bar'))``
-        * ``<``: ``thing.update(foo='bar', conditions=dict(count__lt=10))``
-        * ``<=``: ``thing.update(foo='bar', conditions=dict(count__lte=10))``
-        * ``>``: ``thing.update(foo='bar', conditions=dict(count__gt=10))``
-        * ``>=``: ``thing.update(foo='bar', conditions=dict(count__gte=10))``
-        * ``BETWEEN``: ``thing.update(foo='bar', conditions=dict(count__between=[10, 20]))``
-        * ``IN``: ``thing.update(foo='bar', conditions=dict(count__in=[11, 12, 13]))``
-        * ``attribute_exists``: ``thing.update(foo='bar', conditions=dict(foo__exists=True))``
-        * ``attribute_not_exists``: ``thing.update(foo='bar', conditions=dict(foo__not_exists=True))``
-        * ``attribute_type``: ``thing.update(foo='bar', conditions=dict(foo__type='S'))``
-        * ``begins_with``: ``thing.update(foo='bar', conditions=dict(foo__begins_with='f'))``
-        * ``contains``: ``thing.update(foo='bar', conditions=dict(foo__contains='oo'))``
+        This update would only succeed if foo was set to 'foo' at the time of the update.  If you wish to use any of the
+        other `valid conditions for attrs`_ use a double underscore syntax following the key name.  You can also access
+        nested attributes using the double underscore syntac.  See the scan method for examples of both.
 
         If your update conditions do not match then a dynamorm.exceptions.ConditionFailed exception will be raised.
 
