@@ -292,10 +292,10 @@ class DynaModel(object):
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
-        return cls._yield_items('query', dynamo_kwargs=query_kwargs, **kwargs)
+        return cls._yield_items('query', **kwargs)
 
     @classmethod
-    def scan(cls, scan_kwargs=None, **kwargs):
+    def scan(cls, *args, **kwargs):
         """Execute a scan on our table
 
         You supply the attr(s) to query based on as keyword arguments::
@@ -342,12 +342,13 @@ class DynaModel(object):
         abstracting away pagination. More information on scan pagination: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination
 
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
+        :param \*args: An optional list of Q objects that can be combined with or superseded the **kwargs values
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
-        return cls._yield_items('scan', dynamo_kwargs=scan_kwargs, **kwargs)
+        return cls._yield_items('scan', *args, **kwargs)
 
     @classmethod
-    def _yield_items(cls, method_name, dynamo_kwargs=None, **kwargs):
+    def _yield_items(cls, method_name, *args, **kwargs):
         """Private helper method to yield items from a scan or query response
 
         :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
@@ -356,12 +357,10 @@ class DynaModel(object):
         """
         method = getattr(cls.Table, method_name)
         dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
-        all_kwargs = {dynamo_kwargs_key: dynamo_kwargs or {}}
-        all_kwargs.update(kwargs)
 
         while True:
             # Fetch and yield values
-            resp = method(**all_kwargs)
+            resp = method(*args, **kwargs)
             for raw in resp['Items']:
                 if raw is not None:
                     yield cls.new_from_raw(raw)
@@ -414,13 +413,22 @@ class DynaModel(object):
         You can supply a dictionary of conditions that influence the update.  In their simpliest form Conditions are
         supplied as a direct match (eq)::
 
-        .. code-block:: python
-
             thing.update(foo='bar', conditions=dict(foo='foo'))
 
         This update would only succeed if foo was set to 'foo' at the time of the update.  If you wish to use any of the
         other `valid conditions for attrs`_ use a double underscore syntax following the key name.  You can also access
         nested attributes using the double underscore syntac.  See the scan method for examples of both.
+
+        You can also pass Q objects to conditions as either a complete expression, or a list of expressions that will be
+        AND'd together::
+
+            thing.update(foo='bar', conditions=Q(foo='foo'))
+
+            thing.update(foo='bar', conditions=Q(foo='foo') | Q(bar='bar'))
+
+            # the following two statements are equivalent
+            thing.update(foo='bar', conditions=Q(foo='foo') & ~Q(bar='bar'))
+            thing.update(foo='bar', conditions=[Q(foo='foo'), ~Q(bar='bar')])
 
         If your update conditions do not match then a dynamorm.exceptions.ConditionFailed exception will be raised.
 

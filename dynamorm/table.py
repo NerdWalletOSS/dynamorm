@@ -193,10 +193,9 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=remove_nones(item))
 
-    def update(self, *args, **kwargs):
-        update_item_kwargs = kwargs.pop('update_item_kwargs') or {}
-        conditions = kwargs.pop('conditions') or {}
-
+    def update(self, update_item_kwargs=None, conditions=None, **kwargs):
+        update_item_kwargs = update_item_kwargs or {}
+        conditions = conditions or {}
         update_key = {}
         update_fields = []
         expr_names = {}
@@ -232,13 +231,17 @@ class DynamoTable3(object):
         update_item_kwargs['ExpressionAttributeNames'] = expr_names
         update_item_kwargs['ExpressionAttributeValues'] = expr_vals
 
-        condition_expression = Q(**conditions)
-
-        for arg in args:
-            try:
-                condition_expression = condition_expression & arg
-            except TypeError:
-                condition_expression = arg
+        if isinstance(conditions, collections.Mapping):
+            condition_expression = Q(**conditions)
+        elif isinstance(conditions, collections.Iterable):
+            condition_expression = None
+            for condition in conditions:
+                try:
+                    condition_expression = condition_expression & condition
+                except TypeError:
+                    condition_expression = condition
+        else:
+            condition_expression = conditions
 
         if condition_expression:
             update_item_kwargs['ConditionExpression'] = condition_expression
@@ -326,7 +329,7 @@ class DynamoTable3(object):
         return self.table.query(**query_kwargs)
 
     def scan(self, *args, **kwargs):
-        scan_kwargs = kwargs.pop('scan_kwargs') or {}
+        scan_kwargs = kwargs.pop('scan_kwargs', None) or {}
 
         filter_expression = Q(**kwargs)
         for arg in args:
