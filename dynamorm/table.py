@@ -199,7 +199,6 @@ class DynamoTable3(object):
 
         update_key = {}
         update_fields = []
-        condition_fields = []
         expr_names = {}
         expr_vals = {}
 
@@ -232,7 +231,7 @@ class DynamoTable3(object):
         update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
         update_item_kwargs['ExpressionAttributeNames'] = expr_names
         update_item_kwargs['ExpressionAttributeValues'] = expr_vals
-        
+
         condition_expression = Q(**conditions)
 
         for arg in args:
@@ -359,7 +358,7 @@ def remove_nones(in_dict):
 def Q(**mapping):
     """A Q object represents an AND'd together query using boto3's Attr object, based on a set of keyword arguments that
     support the full access to the operations (eq, ne, between, etc) as well as nested attributes.
-    
+
     It can be used input to both scan operations as well as update conditions.
     """
     expression = None
