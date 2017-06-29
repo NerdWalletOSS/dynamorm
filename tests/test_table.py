@@ -252,6 +252,7 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
     update_should_fail_with_condition(Q(count__gt=200) & ~Q(count=222))
     update_should_fail_with_condition([Q(count__gt=200), ~Q(count=222)])
 
+
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
     with pytest.raises(ValidationError):
         TestModel.update_item(
@@ -424,4 +425,3 @@ def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
 
     test_model = TestModel.get(foo='a', bar='b', consistent=True)
     assert test_model.count == 200
-
