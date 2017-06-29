@@ -24,6 +24,7 @@ write      True      int   The provisioned write throughput.
 
 """
 
+import collections
 import logging
 
 import boto3
@@ -192,11 +193,15 @@ class DynamoTable3(object):
             for item in items:
                 writer.put_item(Item=remove_nones(item))
 
-    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+    def update(self, update_item_kwargs=None, conditions=None, **kwargs):
         update_item_kwargs = update_item_kwargs or {}
         conditions = conditions or {}
+        update_key = {}
+        update_fields = []
+        expr_names = {}
+        expr_vals = {}
 
-        update_function_templates = {
+        UPDATE_FUNCTION_TEMPLATES = {
             'append': '#uk_{0} = list_append(#uk_{0}, :uv_{0})',
             'plus': '#uk_{0} = #uk_{0} + :uv_{0}',
             'minus': '#uk_{0} = #uk_{0} - :uv_{0}',
@@ -204,68 +209,42 @@ class DynamoTable3(object):
             None: '#uk_{0} = :uv_{0}'
         }
 
-        condition_function_templates = {
-            'ne': '#ck_{0} <> :cv_{0}',
-            'lt': '#ck_{0} < :cv_{0}',
-            'lte': '#ck_{0} <= :cv_{0}',
-            'gt': '#ck_{0} > :cv_{0}',
-            'gte': '#ck_{0} >= :cv_{0}',
-            # XXX TODO support these later
-            # 'between': '#ck_{0} BETWEEN :cv_{0[0]} AND :cv_{0[1]}',
-            # 'in': '#ck_{0} IN :cv_{0}',
-            # 'exists': 'attribute_exists(#ck_{0})',
-            # 'not_exists': 'attribute_not_exists (#ck_{0})',
-            # 'type': 'attribute_type(#ck_{0}, :cv_{0})',
-            # 'begins_with': 'begins_with(#ck_{0}, :cv_{0})',
-            # 'contains': 'contains(#ck_{0}, :cv_{0})',
-            # XXX TODO 'size' ??
-            None: '#ck_{0} = :cv_{0}'
-        }
-
-        update_key = {}
-        update_fields = []
-        condition_fields = []
-        expr_names = {}
-        expr_vals = {}
-        for k, v in six.iteritems(kwargs):
+        for key, value in six.iteritems(kwargs):
             try:
-                k, function = k.split('__', 1)
+                key, function = key.split('__', 1)
             except ValueError:
                 function = None
 
-            # make sure the field (k) exists
-            if k not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+            # make sure the field (key) exists
+            if key not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("{0} does not exist in the schema fields".format(key))
 
-            # if the field is in our hash/range key use it for the Key value in our query
-            # you can't modify the primary key once an item has been set
-            if k in (self.hash_key, self.range_key):
-                update_key[k] = v
+            if key in (self.hash_key, self.range_key):
+                update_key[key] = value
             else:
-                # handle function
-                update_fields.append(update_function_templates[function].format(k))
-                expr_names['#uk_{0}'.format(k)] = k
-                expr_vals[':uv_{0}'.format(k)] = v
-
-        for k, v in six.iteritems(conditions):
-            try:
-                k, function = k.split('__', 1)
-            except ValueError:
-                function = None
-
-            if k not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
-
-            condition_fields.append(condition_function_templates[function].format(k))
-            expr_names['#ck_{0}'.format(k)] = k
-            expr_vals[':cv_{0}'.format(k)] = v
+                update_fields.append(UPDATE_FUNCTION_TEMPLATES[function].format(key))
+                expr_names['#uk_{0}'.format(key)] = key
+                expr_vals[':uv_{0}'.format(key)] = value
 
         update_item_kwargs['Key'] = update_key
         update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
-        if condition_fields:
-            update_item_kwargs['ConditionExpression'] = ' AND '.join(condition_fields)
         update_item_kwargs['ExpressionAttributeNames'] = expr_names
         update_item_kwargs['ExpressionAttributeValues'] = expr_vals
+
+        if isinstance(conditions, collections.Mapping):
+            condition_expression = Q(**conditions)
+        elif isinstance(conditions, collections.Iterable):
+            condition_expression = None
+            for condition in conditions:
+                try:
+                    condition_expression = condition_expression & condition
+                except TypeError:
+                    condition_expression = condition
+        else:
+            condition_expression = conditions
+
+        if condition_expression:
+            update_item_kwargs['ConditionExpression'] = condition_expression
 
         try:
             return self.table.update_item(**update_item_kwargs)
@@ -349,44 +328,18 @@ class DynamoTable3(object):
         log.debug("Query: %s", query_kwargs)
         return self.table.query(**query_kwargs)
 
-    def scan(self, scan_kwargs=None, **kwargs):
-        if scan_kwargs is None:
-            scan_kwargs = {}
+    def scan(self, *args, **kwargs):
+        scan_kwargs = kwargs.pop('scan_kwargs', None) or {}
 
-        while len(kwargs):
-            attr, value = kwargs.popitem()
-
-            parts = attr.split('__')
-            attr = Attr(parts.pop(0))
-            op = 'eq'
-
-            while len(parts):
-                if not hasattr(attr, parts[0]):
-                    # this is a nested field, extend the attr
-                    attr = Attr('.'.join([attr.name, parts.pop(0)]))
-                else:
-                    op = parts.pop(0)
-                    break
-
-            assert len(parts) == 0, "Left over parts after parsing query attr"
-
-            op = getattr(attr, op)
+        filter_expression = Q(**kwargs)
+        for arg in args:
             try:
-                filter_expression = op(value)
+                filter_expression = filter_expression & arg
             except TypeError:
-                # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
-                # doesn't take an arg. If our value is True then we try to re-call the op function without any
-                # arguments, otherwise we bubble it up.
-                if value is True:
-                    filter_expression = op()
-                else:
-                    raise
+                filter_expression = arg
 
-            if 'FilterExpression' in scan_kwargs:
-                # XXX TODO: support | (or) and ~ (not)
-                scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & filter_expression
-            else:
-                scan_kwargs['FilterExpression'] = filter_expression
+        if filter_expression:
+            scan_kwargs['FilterExpression'] = filter_expression
 
         return self.table.scan(**scan_kwargs)
 
@@ -403,3 +356,51 @@ def remove_nones(in_dict):
         )
     except (ValueError, AttributeError):
         return in_dict
+
+
+def Q(**mapping):
+    """A Q object represents an AND'd together query using boto3's Attr object, based on a set of keyword arguments that
+    support the full access to the operations (eq, ne, between, etc) as well as nested attributes.
+
+    It can be used input to both scan operations as well as update conditions.
+    """
+    expression = None
+
+    while len(mapping):
+        attr, value = mapping.popitem()
+
+        parts = attr.split('__')
+        attr = Attr(parts.pop(0))
+        op = 'eq'
+
+        while len(parts):
+            if not hasattr(attr, parts[0]):
+                # this is a nested field, extend the attr
+                attr = Attr('.'.join([attr.name, parts.pop(0)]))
+            else:
+                op = parts.pop(0)
+                break
+
+        assert len(parts) == 0, "Left over parts after parsing query attr"
+
+        op = getattr(attr, op)
+        try:
+            attr_expression = op(value)
+        except TypeError:
+            # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
+            # doesn't take an arg or takes multiple args. If our value is True then we try to re-call the op
+            # function without any arguments, if our value is a list we use it as the arguments for the function,
+            # otherwise we bubble it up.
+            if value is True:
+                attr_expression = op()
+            elif isinstance(value, collections.Iterable):
+                attr_expression = op(*value)
+            else:
+                raise
+
+        try:
+            expression = expression & attr_expression
+        except TypeError:
+            expression = attr_expression
+
+    return expression

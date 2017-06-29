@@ -5,6 +5,8 @@ from decimal import Decimal
 
 import pytest
 
+from dynamorm import Q
+
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
@@ -189,6 +191,14 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
         list(TestModel.scan(baz__not_exists=False))
 
 
+def test_scan_q(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.scan(Q(count__gt=222) | Q(count__lt=222)))
+    assert len(results) == 2
+
+    results = list(TestModel.scan(Q(count__gt=222) | Q(count__lt=222), ~Q(count=111)))
+    assert len(results) == 1
+
+
 def test_update(TestModel, TestModel_entries, dynamo_local):
     two = TestModel.get(foo="first", bar="two")
     assert two.baz == 'wtf'
@@ -209,7 +219,7 @@ def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
 
 
 def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
-    def do_update(**kwargs):
+    def update_should_fail_with_condition(conditions):
         with pytest.raises(ConditionFailed):
             TestModel.update_item(
                 # our hash & range key -- matches current
@@ -220,21 +230,27 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
                 baz='yay',
 
                 # things to check
-                conditions=kwargs
+                conditions=conditions
             )
 
     # all of these should fail
-    do_update(baz='nope')
+    update_should_fail_with_condition(dict(baz='nope'))
+    update_should_fail_with_condition(dict(count__ne=222))
+    update_should_fail_with_condition(dict(count__gt=300))
+    update_should_fail_with_condition(dict(count__gte=300))
+    update_should_fail_with_condition(dict(count__lt=200))
+    update_should_fail_with_condition(dict(count__lte=200))
+    update_should_fail_with_condition(dict(count__between=[10, 20]))
+    update_should_fail_with_condition(dict(count__in=[221, 223]))
+    update_should_fail_with_condition(dict(count__not_exists=True))
+    update_should_fail_with_condition(dict(things__exists=True))
+    update_should_fail_with_condition(dict(count__type='S'))
+    update_should_fail_with_condition(dict(baz__begins_with='nope'))
+    update_should_fail_with_condition(dict(baz__contains='nope'))
 
-    do_update(count__ne=222)
-    do_update(count__gt=300)
-    do_update(count__gte=300)
-    do_update(count__lt=200)
-    do_update(count__lte=200)
-    # XXX TODO do_update(count__between=[10, 20])
-    # XXX TODO do_update(count__in='(221, 223)')
-    # XXX TODO do_update(count__not_exists=1)
-    # XXX TODO do_update(things__exists=1)
+    update_should_fail_with_condition(Q(count__gt=300) | Q(count__lt=200))
+    update_should_fail_with_condition(Q(count__gt=200) & ~Q(count=222))
+    update_should_fail_with_condition([Q(count__gt=200), ~Q(count=222)])
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
@@ -260,7 +276,7 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
             unknown_attr='foo'
         )
 
-    with pytest.raises(InvalidSchemaField):
+    with pytest.raises(ConditionFailed):
         TestModel.update_item(
             # our hash & range key -- matches current
             foo='first',
