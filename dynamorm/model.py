@@ -184,7 +184,7 @@ class DynaModel(object):
         input will be put onto ``self`` as attributes.
         """
         self._raw = raw
-        data = self.Schema.dynamorm_validate(raw, partial=partial)
+        data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(data):
             setattr(self, k, v)
 
