@@ -342,7 +342,7 @@ class DynaModel(object):
         abstracting away pagination. More information on scan pagination: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination
 
         :param dict scan_kwargs: Extra parameters that should be passed through to the Table scan function
-        :param \*args: An optional list of Q objects that can be combined with or superseded the **kwargs values
+        :param \*args: An optional list of Q objects that can be combined with or superseded the \*\*kwargs values
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         return cls._yield_items('scan', *args, **kwargs)
