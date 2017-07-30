@@ -18,11 +18,11 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     fi
 fi
 
-# only build docs on py2.7, non-pr builds
-if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && \
-   [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ] && \
-   [ ! -z "${GH_TOKEN}" ]; then
+# only build docs on py3.6
+if [ "${TRAVIS_PYTHON_VERSION}" = "3.6" ]; then
     pip install travis-sphinx
     travis-sphinx --source=docs build
-    travis-sphinx deploy
+
+    # push if we have a token and this isn't a pr build
+    [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ] && travis-sphinx deploy
 fi
