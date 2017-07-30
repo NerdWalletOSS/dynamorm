@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 
@@ -37,6 +38,7 @@ def TestModel():
                 count = fields.Integer()
                 child = fields.Dict()
                 things = fields.List(fields.String())
+                when = fields.DateTime()
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
@@ -68,6 +70,7 @@ def TestModel():
                 count = types.IntType()
                 child = compound.DictType(types.StringType)
                 things = compound.ListType(types.BaseType)
+                when = types.DateTimeType()
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(

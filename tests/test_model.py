@@ -4,11 +4,9 @@ import pytest
 from dynamorm.model import DynaModel
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String
-    from marshmallow.fields import Number
+    from marshmallow.fields import String, Number, DateTime
 else:
-    from schematics.types import StringType as String
-    from schematics.types import IntType as Number
+    from schematics.types import StringType as String, IntType as Number, DateTimeType as DateTime
 
 
 def test_missing_inner_classes():

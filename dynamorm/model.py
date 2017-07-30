@@ -392,7 +392,7 @@ class DynaModel(object):
                 obj[k] = getattr(self, k)
             except AttributeError:
                 pass
-        return obj
+        return self.Schema.dynamorm_validate(obj)
 
     def save(self, **kwargs):
         """Save this instance to the table
