@@ -1,4 +1,6 @@
 """These tests require dynamo local running"""
+import datetime
+import dateutil.tz
 import os
 
 from decimal import Decimal
@@ -8,6 +10,10 @@ import pytest
 from dynamorm import Q
 
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
+
+
+def is_marshmallow():
+    return os.environ.get('SERIALIZATION_PKG', '').startswith('marshmallow')
 
 
 def test_table_creation_deletion(TestModel, dynamo_local):
@@ -51,6 +57,9 @@ def test_schema_change(TestModel, TestModel_table, dynamo_local):
 
 def test_put_invalid_schema(TestModel, TestModel_table, dynamo_local):
     """Putting an invalid schema should raise a ``ValidationError``."""
+    if is_marshmallow():
+        pytest.skip('Marshmallow does marshalling and not validation when serializing')
+
     with pytest.raises(ValidationError):
         TestModel.put({"foo": [1], "bar": '10'})
 
@@ -254,6 +263,9 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
+    if is_marshmallow():
+        pytest.skip('Marshmallow does marshalling and not validation when serializing')
+
     with pytest.raises(ValidationError):
         TestModel.update_item(
             # our hash & range key -- matches current
@@ -297,7 +309,7 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     two.update(child={'foo': 'bar'})
     assert two.child == {'foo': 'bar'}
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if is_marshmallow():
         with pytest.raises(AttributeError):
             assert two.things is None
     else:
@@ -320,7 +332,7 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     six = TestModel(foo='sixth', bar='six', baz='baz')
     six.save()
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if is_marshmallow():
         with pytest.raises(AttributeError):
             assert six.count is None
     else:
@@ -425,3 +437,14 @@ def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
 
     test_model = TestModel.get(foo='a', bar='b', consistent=True)
     assert test_model.count == 200
+
+
+def test_native_types(TestModel, TestModel_table, dynamo_local):
+    DT = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
+
+    TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": DT})
+    model = TestModel.get(foo='first', bar='one')
+    assert model.when == DT
+
+    with pytest.raises(ValidationError):
+        TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})

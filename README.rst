@@ -113,9 +113,13 @@ Example
 Documentation
 =============
 
-Full documentation can be found online at:
+Full documentation is built from the sources each build and can be found online at:
 
 https://nerdwalletoss.github.io/dynamorm/
+
+
+The ``tests/`` also contain the most complete documentation on how to actually use the library, so you are encouraged to
+read through them to really familiarize yourself with some of the more advanced concepts and use cases.
 
 
 TODO
