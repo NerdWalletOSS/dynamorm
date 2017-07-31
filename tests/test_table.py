@@ -53,6 +53,9 @@ def test_schema_change(TestModel, TestModel_table, dynamo_local):
 
 def test_put_invalid_schema(TestModel, TestModel_table, dynamo_local):
     """Putting an invalid schema should raise a ``ValidationError``."""
+    if os.environ['SERIALIZATION_PKG'] == 'marshmallow':
+        pytest.skip('Marshmallow does marshalling and not validation when serializing')
+
     with pytest.raises(ValidationError):
         TestModel.put({"foo": [1], "bar": '10'})
 
@@ -256,6 +259,9 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
+    if os.environ['SERIALIZATION_PKG'] == 'marshmallow':
+        pytest.skip('Marshmallow does marshalling and not validation when serializing')
+
     with pytest.raises(ValidationError):
         TestModel.update_item(
             # our hash & range key -- matches current
