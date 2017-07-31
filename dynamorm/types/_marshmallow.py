@@ -27,9 +27,9 @@ class Model(Schema, BaseModel):
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
         if native:
-            data, errors = cls(partial=partial).dump(obj)
-        else:
             data, errors = cls().load(obj, partial=partial)
+        else:
+            data, errors = cls(partial=partial).dump(obj)
         if errors:
             raise ValidationError(obj, cls.__name__, errors)
         return data

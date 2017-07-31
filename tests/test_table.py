@@ -432,8 +432,6 @@ def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
 def test_native_types(TestModel, TestModel_table, dynamo_local):
     DT = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
 
-    # XXX THIS IS NOT REALLY WHAT WE WANT, WE NEED SOME TESTS WITH OUR VERSIONTYPE
-
-    TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT})
+    TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": DT})
     model = TestModel.get(foo='first', bar='one')
     assert model.when == DT

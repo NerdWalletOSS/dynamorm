@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import time
 
 import pytest
 
@@ -16,6 +17,17 @@ def TestModel():
 
     if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
         from marshmallow import fields
+
+        class DynamoTimestamp(fields.DateTime):
+            def _serialize(self, value, attr, obj):
+                value = time.mktime(value.timetuple())
+                return int(value * 1000000)
+
+            def _deserialize(self, value, attr, data):
+                try:
+                    value = datetime.datetime.fromtimestamp(float(value) / 1000000)
+                except TypeError:
+                    return value
 
         class TestModel(DynaModel):
             class Table:
@@ -39,6 +51,7 @@ def TestModel():
                 child = fields.Dict()
                 things = fields.List(fields.String())
                 when = fields.DateTime()
+                created = DynamoTimestamp()
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
@@ -48,6 +61,21 @@ def TestModel():
     else:
         from schematics import types
         from schematics.types import compound
+        from schematics.exceptions import ConversionError
+
+        class DynamoTimestampType(types.TimestampType, types.NumberType):
+            primitive_type = int
+            native_type = datetime.datetime
+
+            def to_primitive(self, value, context=None):
+                value = time.mktime(value.timetuple())
+                return self.primitive_type(value * 1000000)
+
+            def to_native(self, value, context=None):
+                try:
+                    return datetime.datetime.fromtimestamp(float(value) / 1000000)
+                except TypeError:
+                    return value
 
         class TestModel(DynaModel):
             class Table:
@@ -71,6 +99,7 @@ def TestModel():
                 child = compound.DictType(types.StringType)
                 things = compound.ListType(types.BaseType)
                 when = types.DateTimeType()
+                created = DynamoTimestampType()
 
             def business_logic(self):
                 return 'http://art.lawver.net/funny/internet.jpg?foo={foo}&bar={bar}'.format(
