@@ -19,15 +19,24 @@ def TestModel():
         from marshmallow import fields
 
         class DynamoTimestamp(fields.DateTime):
+            default_error_messages = {
+                'invalid': 'Not a valid timestamp'
+            }
+
             def _serialize(self, value, attr, obj):
-                value = time.mktime(value.timetuple())
-                return int(value * 1000000)
+                try:
+                    value = time.mktime(value.timetuple())
+                    return int(value * 1000000)
+                except (ValueError, AttributeError):
+                    self.fail('invalid')
 
             def _deserialize(self, value, attr, data):
                 try:
-                    value = datetime.datetime.fromtimestamp(float(value) / 1000000)
+                    return datetime.datetime.fromtimestamp(float(value) / 1000000)
                 except TypeError:
-                    return value
+                    if isinstance(value, datetime.datetime):
+                        return value
+                    self.fail('invalid')
 
         class TestModel(DynaModel):
             class Table:
@@ -75,7 +84,9 @@ def TestModel():
                 try:
                     return datetime.datetime.fromtimestamp(float(value) / 1000000)
                 except TypeError:
-                    return value
+                    if isinstance(value, datetime.datetime):
+                        return value
+                    raise ConversionError('Not a valid timestamp')
 
         class TestModel(DynaModel):
             class Table:

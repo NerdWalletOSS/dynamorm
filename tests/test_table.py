@@ -435,3 +435,6 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
     TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": DT})
     model = TestModel.get(foo='first', bar='one')
     assert model.when == DT
+
+    with pytest.raises(ValidationError):
+        TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})
