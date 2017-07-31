@@ -12,6 +12,10 @@ from dynamorm import Q
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
+def is_marshmallow():
+    return os.environ.get('SERIALIZATION_PKG', '').startswith('marshmallow')
+
+
 def test_table_creation_deletion(TestModel, dynamo_local):
     """Creating, detecting and deleting tables should work"""
     assert not TestModel.Table.exists
@@ -53,7 +57,7 @@ def test_schema_change(TestModel, TestModel_table, dynamo_local):
 
 def test_put_invalid_schema(TestModel, TestModel_table, dynamo_local):
     """Putting an invalid schema should raise a ``ValidationError``."""
-    if os.environ.get('SERIALIZATION_PKG').startswith('marshmallow'):
+    if is_marshmallow():
         pytest.skip('Marshmallow does marshalling and not validation when serializing')
 
     with pytest.raises(ValidationError):
@@ -259,7 +263,7 @@ def test_update_conditions(TestModel, TestModel_entries, dynamo_local):
 
 
 def test_update_validation(TestModel, TestModel_entries, dynamo_local):
-    if os.environ.get('SERIALIZATION_PKG').startswith('marshmallow'):
+    if is_marshmallow():
         pytest.skip('Marshmallow does marshalling and not validation when serializing')
 
     with pytest.raises(ValidationError):
@@ -305,7 +309,7 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     two.update(child={'foo': 'bar'})
     assert two.child == {'foo': 'bar'}
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if is_marshmallow():
         with pytest.raises(AttributeError):
             assert two.things is None
     else:
@@ -328,7 +332,7 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     six = TestModel(foo='sixth', bar='six', baz='baz')
     six.save()
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if is_marshmallow():
         with pytest.raises(AttributeError):
             assert six.count is None
     else:

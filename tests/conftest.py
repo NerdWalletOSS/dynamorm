@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 def TestModel():
     """Provides a test model"""
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if os.environ.get('SERIALIZATION_PKG', '').startswith('marshmallow'):
         from marshmallow import fields
 
         class DynamoTimestamp(fields.DateTime):
