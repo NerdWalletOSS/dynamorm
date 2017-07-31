@@ -24,5 +24,7 @@ if [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ]; then
     travis-sphinx --source=docs build
 
     # push if we have a token and this isn't a pr build
-    [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ] && travis-sphinx deploy
+    if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ]; then
+        travis-sphinx deploy
+    fi
 fi
