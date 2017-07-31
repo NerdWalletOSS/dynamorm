@@ -445,7 +445,7 @@ def test_delete(TestModel, TestModel_entries, dynamo_local):
 
     get_result = TestModel.get(foo='d', bar='e')
     assert get_result is not None
-    test_model.delete_item()
+    test_model.delete()
 
     result = TestModel.get(foo='d', bar='e')
     assert result is None
