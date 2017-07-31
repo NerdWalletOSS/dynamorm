@@ -439,6 +439,30 @@ def test_consistent_read(TestModel, TestModel_entries, dynamo_local):
     assert test_model.count == 200
 
 
+def test_delete_with_hash_and_sort(TestModel, TestModel_table, dynamo_local):
+    test_model = TestModel(foo='d', bar='e', baz='f')
+    test_model.save()
+
+    get_result = TestModel.get(foo='d', bar='e')
+    assert get_result is not None
+    test_model.delete()
+
+    result = TestModel.get(foo='d', bar='e')
+    assert result is None
+
+
+def test_delete_with_hash(TestModelTwo, TestModelTwo_table, dynamo_local):
+    test_model = TestModelTwo(foo='q')
+    test_model.save()
+
+    get_result = TestModelTwo.get(foo='q')
+    assert get_result is not None
+    test_model.delete()
+
+    result = TestModelTwo.get(foo='q')
+    assert result is None
+
+
 def test_native_types(TestModel, TestModel_table, dynamo_local):
     DT = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
 

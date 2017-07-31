@@ -403,6 +403,15 @@ class DynaModel(object):
         # XXX TODO: item on every save
         return self.put(self.to_dict(), **kwargs)
 
+    def _add_hash_key_values(self, hash_dict):
+        """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
+        """
+        hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+        try:
+            hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
+        except (AttributeError, TypeError):
+            pass
+
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
         """Update this instance in the table
 
@@ -441,11 +450,7 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        kwargs[self.Table.hash_key] = getattr(self, self.Table.hash_key)
-        try:
-            kwargs[self.Table.range_key] = getattr(self, self.Table.range_key)
-        except (AttributeError, TypeError):
-            pass
+        self._add_hash_key_values(kwargs)
 
         try:
             update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
@@ -459,3 +464,10 @@ class DynaModel(object):
             setattr(self, key, val)
 
         return resp
+
+    def delete(self):
+        """Delete this record in the table."""
+        delete_item_kwargs = {}
+        self._add_hash_key_values(delete_item_kwargs)
+
+        return self.Table.delete_item(**delete_item_kwargs)
