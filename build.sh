@@ -18,8 +18,8 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     fi
 fi
 
-# only build docs on py3.6
-if [ "${TRAVIS_PYTHON_VERSION}" = "3.6" ]; then
+# only build docs on py2.7
+if [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ]; then
     pip install travis-sphinx
     travis-sphinx --source=docs build
 
