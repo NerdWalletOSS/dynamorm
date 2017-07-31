@@ -459,3 +459,13 @@ class DynaModel(object):
             setattr(self, key, val)
 
         return resp
+
+    def delete_item(self):
+        """Delete this record in the table."""
+        delete_item_kwargs = {self.Table.hash_key: getattr(self, self.Table.hash_key)}
+        try:
+            delete_item_kwargs[self.Table.range_key] = getattr(self, self.Table.range_key)
+        except (AttributeError, TypeError):
+            pass
+
+        return cls.Table.delete_record(**delete_item_kwargs)

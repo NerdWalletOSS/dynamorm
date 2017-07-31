@@ -343,6 +343,9 @@ class DynamoTable3(object):
 
         return self.table.scan(**scan_kwargs)
 
+    def delete_item(self, **kwargs):
+        return self.table.delete_item(Key=kwargs)
+
 
 def remove_nones(in_dict):
     """
