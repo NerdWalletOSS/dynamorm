@@ -4,7 +4,7 @@ import time
 
 from dynamorm.local import DynamoLocal
 
-DYNAMO_CONN_RETRIES = 10
+DYNAMO_CONN_RETRIES = 15
 DYNAMO_CONN_SLEEP = 1
 
 
