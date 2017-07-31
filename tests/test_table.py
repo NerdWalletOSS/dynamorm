@@ -448,3 +448,13 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
 
     with pytest.raises(ValidationError):
         TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})
+
+
+def test_delete(TestModel, TestModel_entries, dynamo_local):
+    test_model = TestModel(foo='d', bar='e', baz='f')
+    test_model.save()
+    test_model.delete_item()
+
+    result = TestModel.get(foo='e', bar='e')
+    assert result is None
+

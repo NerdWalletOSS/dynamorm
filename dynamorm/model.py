@@ -468,4 +468,4 @@ class DynaModel(object):
         except (AttributeError, TypeError):
             pass
 
-        return cls.Table.delete_record(**delete_item_kwargs)
+        return self.Table.delete_item(**delete_item_kwargs)
