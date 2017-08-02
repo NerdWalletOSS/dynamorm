@@ -189,6 +189,23 @@ class DynaModel(object):
             setattr(self, k, v)
 
     @classmethod
+    def _normalize_keys_in_kwargs(cls, kwargs):
+        """Helper method to pass kwargs that will be used as Key arguments in Table operations so that they are
+        validated against the Schema.  This is done so that if a field does transformation during validation or
+        marshalling we can accept the untransformed value and pass the transformed value through to the Dyanmo
+        operation.
+        """
+        def normalize(key):
+            try:
+                validated = cls.Schema.dynamorm_validate({key: kwargs[key]}, partial=True)
+                kwargs[key] = validated[key]
+            except KeyError:
+                pass
+        normalize(cls.Table.hash_key)
+        normalize(cls.Table.range_key)
+        return kwargs
+
+    @classmethod
     def put(cls, item, **kwargs):
         """Put a single item into the table for this model
 
@@ -236,6 +253,7 @@ class DynaModel(object):
         :params \*\*kwargs: Includes your hash/range key/val to match on as well as any keys to update
         """
         cls.Schema.dynamorm_validate(kwargs, partial=True)
+        kwargs = cls._normalize_keys_in_kwargs(kwargs)
         return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
     @classmethod
@@ -259,6 +277,7 @@ class DynaModel(object):
         :param bool consistent: If set to True the get will be a consistent read
         :param \*\*kwargs: You must supply your hash key, and range key if used
         """
+        kwargs = cls._normalize_keys_in_kwargs(kwargs)
         item = cls.Table.get(consistent=consistent, **kwargs)
         return cls.new_from_raw(item)
 
@@ -270,6 +289,10 @@ class DynaModel(object):
         :param bool consistent: If set to True then get_batch will be a consistent read
         :param str attrs: The projection expression of which attrs to fetch, if None all attrs will be fetched
         """
+        keys = (
+            cls._normalize_keys_in_kwargs(key)
+            for key in keys
+        )
         items = cls.Table.get_batch(keys, consistent=consistent, attrs=attrs)
         for item in items:
             yield cls.new_from_raw(item, partial=attrs is not None)
@@ -292,6 +315,7 @@ class DynaModel(object):
         :param dict query_kwargs: Extra parameters that should be passed through to the Table query function
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
+        kwargs = cls._normalize_keys_in_kwargs(kwargs)
         return cls._yield_items('query', **kwargs)
 
     @classmethod
@@ -345,6 +369,7 @@ class DynaModel(object):
         :param \*args: An optional list of Q objects that can be combined with or superseded the \*\*kwargs values
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
+        kwargs = cls._normalize_keys_in_kwargs(kwargs)
         return cls._yield_items('scan', *args, **kwargs)
 
     @classmethod
