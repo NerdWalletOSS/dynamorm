@@ -385,14 +385,14 @@ class DynaModel(object):
             except KeyError:
                 kwargs[dynamo_kwargs_key] = {'ExclusiveStartKey': resp['LastEvaluatedKey']}
 
-    def to_dict(self):
+    def to_dict(self, native=False):
         obj = {}
         for k in self.Schema.dynamorm_fields():
             try:
                 obj[k] = getattr(self, k)
             except AttributeError:
                 pass
-        return self.Schema.dynamorm_validate(obj)
+        return self.Schema.dynamorm_validate(obj, native=native)
 
     def save(self, **kwargs):
         """Save this instance to the table
