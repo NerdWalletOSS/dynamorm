@@ -496,3 +496,23 @@ class DynaModel(object):
         self._add_hash_key_values(delete_item_kwargs)
 
         return self.Table.delete_item(**delete_item_kwargs)
+
+
+class LocalIndex(object):
+    pass
+
+class GlobalIndex(object):
+    pass
+
+class Projection(object):
+    pass
+
+class ProjectAll(Projection):
+    pass
+
+class ProjectKeys(Projection):
+    pass
+
+class ProjectInclude(Projection):
+    def __init__(self, *include):
+        self.include = include

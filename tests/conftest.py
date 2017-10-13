@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from dynamorm import DynaModel  # , LocalIndex, GlobalIndex
+from dynamorm import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectKeys, ProjectInclude
 from dynamorm import local
 
 log = logging.getLogger(__name__)
@@ -45,12 +45,27 @@ def TestModel():
                 range_key = 'bar'
                 read = 5
                 write = 5
+            
+            class ByDate(LocalIndex):
+                name = 'by_date'
+                hash_key = 'foo'
+                range_key = 'when'
+                projection = ProjectKeys()
 
-                """
-                class Bazillions(LocalIndex):
-                    read = 5
-                    write = 5
-                """
+            class Bazzy(GlobalIndex):
+                name = 'bazzy'
+                hash_key = 'baz'
+                read = 5
+                write = 5
+                projection = ProjectAll()
+
+            class County(GlobalIndex):
+                name = 'county'
+                hash_key = 'count'
+                range_key = 'foo'
+                read = 5
+                write = 5
+                projection = ProjectInclude('bar')
 
             class Schema:
                 foo = fields.String(required=True)
@@ -96,11 +111,27 @@ def TestModel():
                 read = 5
                 write = 5
 
-                """
-                class Bazillions(LocalIndex):
-                    read = 5
-                    write = 5
-                """
+            class ByDate(LocalIndex):
+                name = 'by_date'
+                hash_key = 'foo'
+                range_key = 'when'
+                projection = ProjectKeys()
+
+            class Bazzy(GlobalIndex):
+                name = 'bazzy'
+                hash_key = 'baz'
+                read = 5
+                write = 5
+                projection = ProjectAll()
+
+            class County(GlobalIndex):
+                name = 'county'
+                hash_key = 'count'
+                range_key = 'foo'
+                read = 5
+                write = 5
+                projection = ProjectInclude('bar')
+
 
             class Schema:
                 foo = types.StringType(required=True)

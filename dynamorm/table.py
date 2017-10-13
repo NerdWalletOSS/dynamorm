@@ -26,6 +26,7 @@ write      True      int   The provisioned write throughput.
 
 import collections
 import logging
+import warnings
 
 import boto3
 import botocore
@@ -142,6 +143,12 @@ class DynamoTable3(object):
         )
 
     def create(self, wait=True):
+        """DEPRECATED -- shim"""
+        warnings.warn("DynamoTable3.create has been deprecated, please use DynamoTable3.create_table",
+                      DeprecationWarning)
+        return self.create_table(wait=wait)
+
+    def create_table(self, wait=True):
         """Create a new table based on our attributes
 
         :param bool wait: If set to True, the default, this call will block until the table is created
