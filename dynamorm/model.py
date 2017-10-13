@@ -77,15 +77,15 @@ class DynaModelMeta(type):
             )
             attrs['Schema'] = SchemaClass
 
-        # collect our indexes
-        indexes = dict(
-            (name, val)
-            for name, val in six.iteritems(attrs)
-            if inspect.isclass(val) and issubclass(val, Index)
-        )
-
         # transform the Table
         if should_transform('Table'):
+            # collect our indexes
+            indexes = dict(
+                (name, val)
+                for name, val in six.iteritems(attrs)
+                if inspect.isclass(val) and issubclass(val, Index)
+            )
+
             TableClass = type(
                 '{name}Table'.format(name=name),
                 (DynamoTable3,),
@@ -93,10 +93,12 @@ class DynaModelMeta(type):
             )
             attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)
 
-        # put the instantiated indexes back into our attrs
-        # if you had an index class named 'Foo', this would replace the class object with an instantiated copy of it
-        # this allows you to call Model.Index.get() instead of Model.Table.indexes['Index'].get()
-        attrs.update(attrs['Table'].indexes)
+            # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
+            # provide the actual Index object from our table as the parameter.
+            attrs.update(dict(
+                (name, val(attrs['Table'].indexes[name]))
+                for name, val in six.iteritems(indexes)
+            ))
 
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
@@ -512,8 +514,8 @@ class DynaModel(object):
 
 
 class Index(object):
-    def __init__(self, table):
-        self.table = table
+    def __init__(self, index):
+        self.index = index
 
 
 class LocalIndex(Index):

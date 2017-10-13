@@ -38,77 +38,44 @@ from dynamorm.exceptions import MissingTableAttribute, InvalidSchemaField, HashK
 log = logging.getLogger(__name__)
 
 
-class DynamoTable3(object):
-    """Represents a Table object in the Boto3 DynamoDB API
+class DynamoCommon3(object):
+    """Common properties & functions of Boto3 DynamORM objects -- i.e. Tables & Indexes"""
+    REQUIRED_ATTRS = ('name', 'hash_key')
+    OPTIONAL_ATTRS = ('range_key', 'read', 'write')
 
-    This is built in such a way that in the future, when Amazon releases future boto versions, a new DynamoTable class
-    can be authored that implements the same methods but maps through to the new semantics.
-    """
+    def validate_attrs(self, obj):
+        for attr in self.REQUIRED_ATTRS:
+            if not hasattr(obj, attr):
+                raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
 
-    _resource = None
-    _table = None
+        for attr in self.OPTIONAL_ATTRS:
+            if not hasattr(obj, attr):
+                setattr(obj, attr, None)
 
-    def __init__(self, schema, indexes=None):
-        self.schema = schema
+        if obj.hash_key not in self.schema.dynamorm_fields():
+            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(obj.hash_key))
 
-        required_attrs = ('name', 'hash_key')
-        optional_attrs = ('range_key', 'read', 'write')
+        if obj.range_key and obj.range_key not in self.schema.dynamorm_fields():
+            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(obj.range_key))
 
-        def validate_attrs(obj):
-            for attr in required_attrs:
-                if not hasattr(obj, attr):
-                    raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
-
-            for attr in optional_attrs:
-                if not hasattr(obj, attr):
-                    setattr(obj, attr, None)
-
-            if obj.hash_key not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(obj.hash_key))
-
-            if obj.range_key and obj.range_key not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(obj.range_key))
-
-        validate_attrs(self)
-
-        self.indexes = {}
-        if indexes:
-            for name, klass in six.iteritems(indexes):
-                index = klass(self)
-                validate_attrs(index)
-                self.indexes[name] = index
-
-    @classmethod
-    def get_resource(cls, **kwargs):
+    @staticmethod
+    def get_resource(**kwargs):
         """Return the boto3 dynamodb resource, create it if it doesn't exist
 
-        The resource is stored globally on the ``DynamoTable3`` class and is shared between all models. To influence
+        The resource is stored globally on the ``DynamoCommon3`` class and is shared between all models. To influence
         the connection parameters you just need to call ``get_resource`` on any model with the correct kwargs BEFORE you
         use any of the models.
         """
-        if DynamoTable3._resource is None:
-            DynamoTable3._resource = boto3.resource('dynamodb', **kwargs)
-        return DynamoTable3._resource
-
-    @classmethod
-    def get_table(cls, name):
-        """Return the boto3 Table object for this model, create it if it doesn't exist
-
-        The Table is stored on the class for each model, so it is shared between all instances of a given model.
-        """
-        if cls._table is None:
-            cls._table = cls.get_resource().Table(name)
-        return cls._table
+        try:
+            return DynamoCommon3._resource
+        except AttributeError:
+            DynamoCommon3._resource = boto3.resource('dynamodb', **kwargs)
+            return DynamoCommon3._resource
 
     @property
     def resource(self):
         """Return the boto3 resource"""
         return self.get_resource()
-
-    @property
-    def table(self):
-        """Return the boto3 table"""
-        return self.get_table(self.name)
 
     @property
     def key_schema(self):
@@ -144,6 +111,91 @@ class DynamoTable3(object):
             'WriteCapacityUnits': self.write
         }
 
+
+class DynamoIndex3(DynamoCommon3):
+    REQUIRED_ATTRS = DynamoCommon3.REQUIRED_ATTRS + ('projection',)
+    ARG_KEY = None
+
+    def __init__(self, attrs, table, schema):
+        self.table = table
+        self.schema = schema
+
+        self.validate_attrs(attrs)
+        self.attrs = attrs
+
+    @property
+    def projection(self):
+        if self.attrs.projection.__name__ == 'ProjectAll':
+            return {
+                'ProjectionType': 'ALL',
+            }
+        elif self.attrs.projection.__name__ == 'ProjectKeys':
+            return {
+                'ProjectionType': 'KEYS_ONLY',
+            }
+        elif self.attrs.projection.__name__ == 'ProjectInclude':
+            return {
+                'ProjectionType': 'INCLUDE',
+                'NonKeyAttributes': self.attrs.projection.include
+            }
+
+    def as_args(self):
+        args = {
+            'IndexName': self.attrs.name,
+            'KeySchema': self.key_schema,
+            'Projection': self.projection,
+        }
+        return args
+
+
+class DynamoLocalIndex3(DynamoIndex3):
+    ARG_KEY = 'LocalSecondaryIndexes'
+
+
+class DynamoGlobalIndex3(DynamoIndex3):
+    ARG_KEY = 'GlobalSecondaryIndexes'
+
+    def as_args(self):
+        args = super(DynamoGlobalIndex3, self).as_args()
+        args['ProvisionedThroughput'] = self.provisioned_throughput
+        return args
+
+class DynamoTable3(DynamoCommon3):
+    """Represents a Table object in the Boto3 DynamoDB API
+
+    This is built in such a way that in the future, when Amazon releases future boto versions, a new DynamoTable class
+    can be authored that implements the same methods but maps through to the new semantics.
+    """
+    def __init__(self, schema, indexes=None):
+        self.schema = schema
+        self.validate_attrs(self)
+
+        self.indexes = {}
+        if indexes:
+            for name, klass in six.iteritems(indexes):
+                if klass.__name__ == 'GlobalIndex':
+                    index = DynamoGlobalIndex3(klass, self, schema)
+                else:
+                    index = DynamoLocalIndex3(klass, self, schema)
+                self.indexes[name] = index
+
+    @classmethod
+    def get_table(cls, name):
+        """Return the boto3 Table object for this model, create it if it doesn't exist
+
+        The Table is stored on the class for each model, so it is shared between all instances of a given model.
+        """
+        try:
+            return cls._table
+        except AttributeError:
+            cls._table = cls.get_resource().Table(name)
+            return cls._table
+
+    @property
+    def table(self):
+        """Return the boto3 table"""
+        return self.get_table(self.name)
+
     @property
     def exists(self):
         """Return True or False based on the existance of this tables name in our resource"""
@@ -166,11 +218,16 @@ class DynamoTable3(object):
         if not self.read or not self.write:
             raise MissingTableAttribute("The read/write attributes are required to create a table")
 
+        index_args = collections.defaultdict(list)
+        # for index in six.itervalues(self.indexes):
+            # index_args[index.ARG_KEY].append(index.as_args())
+
         table = self.resource.create_table(
             TableName=self.name,
             KeySchema=self.key_schema,
             AttributeDefinitions=self.attribute_definitions,
-            ProvisionedThroughput=self.provisioned_throughput
+            ProvisionedThroughput=self.provisioned_throughput,
+            **index_args
         )
         if wait:
             table.meta.client.get_waiter('table_exists').wait(TableName=self.name)

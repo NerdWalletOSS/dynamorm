@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from dynamorm.model import DynaModel, GlobalIndex, LocalIndex
+from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
@@ -159,6 +159,7 @@ def test_index_setup():
             name = 'test-idx'
             hash_key = 'foo'
             range_key = 'bar'
+            projection = ProjectAll()
 
         class Schema:
             foo = String(required=True)
@@ -167,11 +168,17 @@ def test_index_setup():
     model = Model(foo='hi', bar='there')
 
     assert 'Index' in model.Table.indexes
-    assert model.Index is model.Table.indexes['Index']
-    assert model.Index.table is model.Table
+    assert model.Index.index is model.Table.indexes['Index']
+    assert model.Index.index.table is model.Table
+
+    assert model.Index.index.schema is model.Schema
+
+    # this gets automatically set during initialization, as an optional parameter
+    assert model.Index.read is None
 
 
 def test_invalid_indexes():
+    """Ensure validation happens for indexes"""
     for idx in (GlobalIndex, LocalIndex):
         with pytest.raises(MissingTableAttribute):
             class Model(DynaModel):
@@ -186,6 +193,26 @@ def test_invalid_indexes():
                     name = 'test-idx'
                     # missing hash_key
                     range_key = 'bar'
+                    projection = ProjectAll()
+
+                class Schema:
+                    foo = String(required=True)
+                    bar = String(required=True)
+
+        with pytest.raises(MissingTableAttribute):
+            class Model(DynaModel):
+                class Table:
+                    name = 'table'
+                    hash_key = 'foo'
+                    range_key = 'bar'
+                    read = 1
+                    write = 1
+
+                class Index(idx):
+                    name = 'test-idx'
+                    hash_key = 'foo'
+                    range_key = 'bar'
+                    # no projection
 
                 class Schema:
                     foo = String(required=True)
@@ -203,7 +230,9 @@ def test_invalid_indexes():
                 class Index(idx):
                     name = 'test-idx'
                     hash_key = 'foo'
+                    # no key named baz
                     range_key = 'baz'
+                    projection = ProjectAll()
 
                 class Schema:
                     foo = String(required=True)
@@ -220,8 +249,10 @@ def test_invalid_indexes():
 
                 class Index(idx):
                     name = 'test-idx'
+                    # no key named baz
                     hash_key = 'baz'
                     range_key = 'bar'
+                    projection = ProjectAll()
 
                 class Schema:
                     foo = String(required=True)
