@@ -181,7 +181,7 @@ def test_invalid_indexes():
     """Ensure validation happens for indexes"""
     for idx in (GlobalIndex, LocalIndex):
         with pytest.raises(MissingTableAttribute):
-            class Model(DynaModel):
+            class Model1(DynaModel):
                 class Table:
                     name = 'table'
                     hash_key = 'foo'
@@ -200,7 +200,7 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(MissingTableAttribute):
-            class Model(DynaModel):
+            class Model2(DynaModel):
                 class Table:
                     name = 'table'
                     hash_key = 'foo'
@@ -219,7 +219,7 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(InvalidSchemaField):
-            class Model(DynaModel):
+            class Model3(DynaModel):
                 class Table:
                     name = 'table'
                     hash_key = 'foo'
@@ -239,7 +239,7 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(InvalidSchemaField):
-            class Model(DynaModel):
+            class Model4(DynaModel):
                 class Table:
                     name = 'table'
                     hash_key = 'foo'

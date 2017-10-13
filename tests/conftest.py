@@ -52,17 +52,17 @@ def TestModel():
                 range_key = 'when'
                 projection = ProjectKeys()
 
-            class Bazzy(GlobalIndex):
-                name = 'bazzy'
-                hash_key = 'baz'
+            class ByBar(GlobalIndex):
+                name = 'bar'
+                hash_key = 'bar'
                 read = 5
                 write = 5
                 projection = ProjectAll()
 
-            class County(GlobalIndex):
+            class ByBaz(GlobalIndex):
                 name = 'county'
-                hash_key = 'count'
-                range_key = 'foo'
+                hash_key = 'baz'
+                range_key = 'bar'
                 read = 5
                 write = 5
                 projection = ProjectInclude('bar')
@@ -117,18 +117,17 @@ def TestModel():
                 range_key = 'when'
                 projection = ProjectKeys()
 
-            class Bazzy(GlobalIndex):
-                name = 'bazzy'
-                hash_key = 'baz'
-                range_key = 'bar'
+            class ByBar(GlobalIndex):
+                name = 'bar'
+                hash_key = 'bar'
                 read = 5
                 write = 5
                 projection = ProjectAll()
 
-            class County(GlobalIndex):
+            class ByBaz(GlobalIndex):
                 name = 'county'
-                hash_key = 'count'
-                range_key = 'foo'
+                hash_key = 'baz'
+                range_key = 'bar'
                 read = 5
                 write = 5
                 projection = ProjectInclude('bar')

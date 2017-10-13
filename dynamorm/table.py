@@ -206,6 +206,7 @@ class DynamoTable3(DynamoCommon3):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
         seen = []
         defs = []
+
         def add_to_defs(name):
             if name in seen:
                 return
