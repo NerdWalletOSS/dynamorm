@@ -43,20 +43,20 @@ class DynamoCommon3(object):
     REQUIRED_ATTRS = ('name', 'hash_key')
     OPTIONAL_ATTRS = ('range_key', 'read', 'write')
 
-    def validate_attrs(self, obj):
+    def validate_attrs(self):
         for attr in self.REQUIRED_ATTRS:
-            if not hasattr(obj, attr):
+            if not hasattr(self, attr):
                 raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
 
         for attr in self.OPTIONAL_ATTRS:
-            if not hasattr(obj, attr):
-                setattr(obj, attr, None)
+            if not hasattr(self, attr):
+                setattr(self, attr, None)
 
-        if obj.hash_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(obj.hash_key))
+        if self.hash_key not in self.schema.dynamorm_fields():
+            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
 
-        if obj.range_key and obj.range_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(obj.range_key))
+        if self.range_key and self.range_key not in self.schema.dynamorm_fields():
+            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
 
     @staticmethod
     def get_resource(**kwargs):
@@ -91,19 +91,6 @@ class DynamoCommon3(object):
         return schema
 
     @property
-    def attribute_definitions(self):
-        """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
-        def as_def(name, field):
-            return {
-                'AttributeName': name,
-                'AttributeType': self.schema.field_to_dynamo_type(field)
-            }
-        defs = [as_def(self.hash_key, self.schema.dynamorm_fields()[self.hash_key])]
-        if self.range_key:
-            defs.append(as_def(self.range_key, self.schema.dynamorm_fields()[self.range_key]))
-        return defs
-
-    @property
     def provisioned_throughput(self):
         """Return an appropriate ProvisionedThroughput, based on our attributes"""
         return {
@@ -116,34 +103,32 @@ class DynamoIndex3(DynamoCommon3):
     REQUIRED_ATTRS = DynamoCommon3.REQUIRED_ATTRS + ('projection',)
     ARG_KEY = None
 
-    def __init__(self, attrs, table, schema):
+    def __init__(self, table, schema):
         self.table = table
         self.schema = schema
-
-        self.validate_attrs(attrs)
-        self.attrs = attrs
-
-    @property
-    def projection(self):
-        if self.attrs.projection.__name__ == 'ProjectAll':
-            return {
-                'ProjectionType': 'ALL',
-            }
-        elif self.attrs.projection.__name__ == 'ProjectKeys':
-            return {
-                'ProjectionType': 'KEYS_ONLY',
-            }
-        elif self.attrs.projection.__name__ == 'ProjectInclude':
-            return {
-                'ProjectionType': 'INCLUDE',
-                'NonKeyAttributes': self.attrs.projection.include
-            }
+        self.validate_attrs()
 
     def as_args(self):
+        if self.projection.__class__.__name__ == 'ProjectAll':
+            projection = {
+                'ProjectionType': 'ALL',
+            }
+        elif self.projection.__class__.__name__ == 'ProjectKeys':
+            projection = {
+                'ProjectionType': 'KEYS_ONLY',
+            }
+        elif self.projection.__class__.__name__ == 'ProjectInclude':
+            projection = {
+                'ProjectionType': 'INCLUDE',
+                'NonKeyAttributes': self.projection.include
+            }
+        else:
+            raise RuntimeError("Unknown projection mode!")
+
         args = {
-            'IndexName': self.attrs.name,
+            'IndexName': self.name,
             'KeySchema': self.key_schema,
-            'Projection': self.projection,
+            'Projection': projection,
         }
         return args
 
@@ -160,6 +145,7 @@ class DynamoGlobalIndex3(DynamoIndex3):
         args['ProvisionedThroughput'] = self.provisioned_throughput
         return args
 
+
 class DynamoTable3(DynamoCommon3):
     """Represents a Table object in the Boto3 DynamoDB API
 
@@ -168,15 +154,26 @@ class DynamoTable3(DynamoCommon3):
     """
     def __init__(self, schema, indexes=None):
         self.schema = schema
-        self.validate_attrs(self)
+        self.validate_attrs()
 
         self.indexes = {}
         if indexes:
             for name, klass in six.iteritems(indexes):
-                if klass.__name__ == 'GlobalIndex':
-                    index = DynamoGlobalIndex3(klass, self, schema)
+                # Our indexes are just uninstantiated classes, but what we are interested in is what their parent class
+                # name is.  We can reach into the MRO to find that out, and then determine our own index type.
+                index_type = klass.__mro__[1].__name__
+                if index_type == 'GlobalIndex':
+                    index_class = DynamoGlobalIndex3
+                elif index_type == 'LocalIndex':
+                    index_class = DynamoLocalIndex3
                 else:
-                    index = DynamoLocalIndex3(klass, self, schema)
+                    raise RuntimeError('Unknown index type!')
+
+                # Now that we know which of our classes we want to use, we create a new class on the fly that uses our
+                # class with the attributes of the original class
+                new_class = type(name, (index_class,), dict(klass.__dict__))
+                index = new_class(self, schema)
+
                 self.indexes[name] = index
 
     @classmethod
@@ -204,6 +201,35 @@ class DynamoTable3(DynamoCommon3):
             for table in self.resource.tables.all()
         )
 
+    @property
+    def attribute_definitions(self):
+        """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
+        seen = []
+        defs = []
+        def add_to_defs(name):
+            if name in seen:
+                return
+            seen.append(name)
+
+            dynamorm_field = self.schema.dynamorm_fields()[name]
+            field_type = self.schema.field_to_dynamo_type(dynamorm_field)
+
+            defs.append({
+                'AttributeName': name,
+                'AttributeType': field_type,
+            })
+
+        add_to_defs(self.hash_key)
+        if self.range_key:
+            add_to_defs(self.range_key)
+
+        for index in six.itervalues(self.indexes):
+            add_to_defs(index.hash_key)
+            if index.range_key:
+                add_to_defs(index.range_key)
+
+        return defs
+
     def create(self, wait=True):
         """DEPRECATED -- shim"""
         warnings.warn("DynamoTable3.create has been deprecated, please use DynamoTable3.create_table",
@@ -219,8 +245,8 @@ class DynamoTable3(DynamoCommon3):
             raise MissingTableAttribute("The read/write attributes are required to create a table")
 
         index_args = collections.defaultdict(list)
-        # for index in six.itervalues(self.indexes):
-            # index_args[index.ARG_KEY].append(index.as_args())
+        for index in six.itervalues(self.indexes):
+            index_args[index.ARG_KEY].append(index.as_args())
 
         table = self.resource.create_table(
             TableName=self.name,

@@ -173,8 +173,8 @@ def test_index_setup():
 
     assert model.Index.index.schema is model.Schema
 
-    # this gets automatically set during initialization, as an optional parameter
-    assert model.Index.read is None
+    # this gets automatically set during initialization, since read is an optional parameter
+    assert model.Index.index.read is None
 
 
 def test_invalid_indexes():
