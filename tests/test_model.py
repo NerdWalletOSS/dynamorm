@@ -72,7 +72,7 @@ def test_table_create_validation():
             class Schema:
                 foo = String(required=True)
 
-        Model.Table.create()
+        Model.Table.create_table()
 
     with pytest.raises(MissingTableAttribute):
         class Model(DynaModel):
@@ -84,7 +84,7 @@ def test_table_create_validation():
             class Schema:
                 foo = String(required=True)
 
-        Model.Table.create()
+        Model.Table.create_table()
 
     with pytest.raises(MissingTableAttribute):
         class Model(DynaModel):
@@ -95,7 +95,7 @@ def test_table_create_validation():
             class Schema:
                 foo = String(required=True)
 
-        Model.Table.create()
+        Model.Table.create_table()
 
 
 def test_invalid_hash_key():

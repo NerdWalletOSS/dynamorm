@@ -19,7 +19,7 @@ def is_marshmallow():
 def test_table_creation_deletion(TestModel, dynamo_local):
     """Creating, detecting and deleting tables should work"""
     assert not TestModel.Table.exists
-    assert TestModel.Table.create()
+    assert TestModel.Table.create_table()
     assert TestModel.Table.exists
     assert TestModel.Table.delete()
     assert not TestModel.Table.exists
