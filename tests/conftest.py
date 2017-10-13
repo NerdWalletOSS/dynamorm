@@ -45,7 +45,7 @@ def TestModel():
                 range_key = 'bar'
                 read = 5
                 write = 5
-            
+
             class ByDate(LocalIndex):
                 name = 'by_date'
                 hash_key = 'foo'
@@ -120,6 +120,7 @@ def TestModel():
             class Bazzy(GlobalIndex):
                 name = 'bazzy'
                 hash_key = 'baz'
+                range_key = 'bar'
                 read = 5
                 write = 5
                 projection = ProjectAll()
@@ -131,7 +132,6 @@ def TestModel():
                 read = 5
                 write = 5
                 projection = ProjectInclude('bar')
-
 
             class Schema:
                 foo = types.StringType(required=True)

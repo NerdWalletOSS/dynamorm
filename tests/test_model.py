@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from dynamorm.model import DynaModel
+from dynamorm.model import DynaModel, GlobalIndex, LocalIndex
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
@@ -143,3 +143,86 @@ def test_number_hash_key():
 
     model = Model(foo=1, baz='foo')
     assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]
+
+
+def test_index_setup():
+    """Ensure our index objects are setup & transformed correctly by our meta class"""
+    class Model(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            range_key = 'bar'
+            read = 1
+            write = 1
+
+        class Index(GlobalIndex):
+            name = 'test-idx'
+            hash_key = 'foo'
+            range_key = 'bar'
+
+        class Schema:
+            foo = String(required=True)
+            bar = String(required=True)
+
+    model = Model(foo='hi', bar='there')
+
+    assert 'Index' in model.Table.indexes
+    assert model.Index is model.Table.indexes['Index']
+    assert model.Index.table is model.Table
+
+
+def test_invalid_indexes():
+    for idx in (GlobalIndex, LocalIndex):
+        with pytest.raises(MissingTableAttribute):
+            class Model(DynaModel):
+                class Table:
+                    name = 'table'
+                    hash_key = 'foo'
+                    range_key = 'bar'
+                    read = 1
+                    write = 1
+
+                class Index(idx):
+                    name = 'test-idx'
+                    # missing hash_key
+                    range_key = 'bar'
+
+                class Schema:
+                    foo = String(required=True)
+                    bar = String(required=True)
+
+        with pytest.raises(InvalidSchemaField):
+            class Model(DynaModel):
+                class Table:
+                    name = 'table'
+                    hash_key = 'foo'
+                    range_key = 'bar'
+                    read = 1
+                    write = 1
+
+                class Index(idx):
+                    name = 'test-idx'
+                    hash_key = 'foo'
+                    range_key = 'baz'
+
+                class Schema:
+                    foo = String(required=True)
+                    bar = String(required=True)
+
+        with pytest.raises(InvalidSchemaField):
+            class Model(DynaModel):
+                class Table:
+                    name = 'table'
+                    hash_key = 'foo'
+                    range_key = 'bar'
+                    read = 1
+                    write = 1
+
+                class Index(idx):
+                    name = 'test-idx'
+                    hash_key = 'baz'
+                    range_key = 'bar'
+
+                class Schema:
+                    foo = String(required=True)
+                    bar = String(required=True)

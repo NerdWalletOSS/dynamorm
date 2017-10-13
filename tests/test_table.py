@@ -472,3 +472,7 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
 
     with pytest.raises(ValidationError):
         TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})
+
+
+def test_indexes(TestModel, TestModel_entries, dynamo_local):
+    assert True

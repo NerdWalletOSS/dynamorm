@@ -48,25 +48,35 @@ class DynamoTable3(object):
     _resource = None
     _table = None
 
-    def __init__(self, schema):
+    def __init__(self, schema, indexes=None):
         self.schema = schema
 
         required_attrs = ('name', 'hash_key')
         optional_attrs = ('range_key', 'read', 'write')
 
-        for attr in required_attrs:
-            if not hasattr(self, attr):
-                raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
+        def validate_attrs(obj):
+            for attr in required_attrs:
+                if not hasattr(obj, attr):
+                    raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
 
-        for attr in optional_attrs:
-            if not hasattr(self, attr):
-                setattr(self, attr, None)
+            for attr in optional_attrs:
+                if not hasattr(obj, attr):
+                    setattr(obj, attr, None)
 
-        if self.hash_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
+            if obj.hash_key not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(obj.hash_key))
 
-        if self.range_key and self.range_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
+            if obj.range_key and obj.range_key not in self.schema.dynamorm_fields():
+                raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(obj.range_key))
+
+        validate_attrs(self)
+
+        self.indexes = {}
+        if indexes:
+            for name, klass in six.iteritems(indexes):
+                index = klass(self)
+                validate_attrs(index)
+                self.indexes[name] = index
 
     @classmethod
     def get_resource(cls, **kwargs):

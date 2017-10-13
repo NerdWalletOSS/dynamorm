@@ -6,6 +6,7 @@ schema that is used for validating and marshalling your data.
 
 """
 
+import inspect
 import logging
 
 import six
@@ -76,6 +77,13 @@ class DynaModelMeta(type):
             )
             attrs['Schema'] = SchemaClass
 
+        # collect our indexes
+        indexes = dict(
+            (name, val)
+            for name, val in six.iteritems(attrs)
+            if inspect.isclass(val) and issubclass(val, Index)
+        )
+
         # transform the Table
         if should_transform('Table'):
             TableClass = type(
@@ -83,7 +91,12 @@ class DynaModelMeta(type):
                 (DynamoTable3,),
                 dict(attrs['Table'].__dict__)
             )
-            attrs['Table'] = TableClass(schema=attrs['Schema'])
+            attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)
+
+        # put the instantiated indexes back into our attrs
+        # if you had an index class named 'Foo', this would replace the class object with an instantiated copy of it
+        # this allows you to call Model.Index.get() instead of Model.Table.indexes['Index'].get()
+        attrs.update(attrs['Table'].indexes)
 
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
@@ -498,20 +511,30 @@ class DynaModel(object):
         return self.Table.delete_item(**delete_item_kwargs)
 
 
-class LocalIndex(object):
+class Index(object):
+    def __init__(self, table):
+        self.table = table
+
+
+class LocalIndex(Index):
     pass
 
-class GlobalIndex(object):
+
+class GlobalIndex(Index):
     pass
+
 
 class Projection(object):
     pass
 
+
 class ProjectAll(Projection):
     pass
 
+
 class ProjectKeys(Projection):
     pass
+
 
 class ProjectInclude(Projection):
     def __init__(self, *include):

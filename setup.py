@@ -5,7 +5,7 @@ with open('README.rst', 'r') as readme_fd:
 
 setup(
     name='dynamorm',
-    version='0.2.5',
+    version='0.3.1',
     description='DynamORM is a Python object relation mapping library for Amazon\'s DynamoDB service.',
     long_description=long_description,
     author='Evan Borgstrom',
@@ -17,9 +17,9 @@ setup(
         'boto3>=1.3,<2.0',
         'six',
     ],
-    packages=find_packages('.', exclude=['tests', 'docs']),
+    packages=find_packages('.', exclude=['tests', 'docs', 'build']),
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
