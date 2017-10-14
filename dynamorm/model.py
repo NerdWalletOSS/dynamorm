@@ -1,5 +1,5 @@
 """Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
-schema that is used for validating and marshalling your data.
+or Schematics schema that is used for validating and marshalling your data.
 
 .. autoclass:: DynaModel
     :noindex:
@@ -122,6 +122,9 @@ class DynaModel(object):
     The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamorm.table` module for
     more information.
 
+    Any Local or Global Secondary Indexes you wish to create are defined as inner tables that extend from either the
+    :class:`~LocalIndex` or :class:`~GlobalIndex` classes.  See the :mod:`dynamorm.table` module for more information.
+
     The document schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
     out any other Marshmallow :class:`~marshmallow.Schema` or Schematics :class:`~schematics.Model`.
 
@@ -132,16 +135,23 @@ class DynaModel(object):
         # Marshmallow example
         import os
 
-        from dynamorm import DynaModel
+        from dynamorm import DynaModel, GlobalIndex, ProjectAll
 
         from marshmallow import fields, validate, validates, ValidationError
 
         class Thing(DynaModel):
             class Table:
-                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
+                name = 'things'
                 hash_key = 'id'
                 read = 5
                 write = 1
+
+            class ByColor(GlobalIndex):
+                name = 'by-color'
+                hash_key = 'color'
+                read = 5
+                write = 1
+                projection = ProjectAll()
 
             class Schema:
                 id = fields.String(required=True)
@@ -155,35 +165,6 @@ class DynaModel(object):
                     # inner Schema class just like any other Marshmallow class
                     if name.lower() == 'evan':
                         raise ValidationError("No Evan's allowed")
-
-            def say_hello(self):
-                print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
-                    id=self.id,
-                    name=self.name,
-                    color=self.color
-                ))
-
-    .. code-block:: python
-
-        # Schematics example
-        import os
-
-        from dynamorm import DynaModel
-
-        from schematics import types
-
-        class Thing(DynaModel):
-            class Table:
-                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
-                hash_key = 'id'
-                read = 5
-                write = 1
-
-            class Schema:
-                id = types.StringType(required=True, max_length=10)
-                name = types.StringType()
-                color = types.StringType()
-                compound = types.DictType(types.IntType, required=True)
 
             def say_hello(self):
                 print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
@@ -543,10 +524,12 @@ class Index(object):
 
 
 class LocalIndex(Index):
+    """Represents a Local Secondary Index on your table"""
     pass
 
 
 class GlobalIndex(Index):
+    """Represents a Local Secondary Index on your table"""
     pass
 
 

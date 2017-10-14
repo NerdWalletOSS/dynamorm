@@ -489,7 +489,14 @@ def test_indexes_query(TestModel, TestModel_entries, dynamo_local):
     else:
         assert results[0].when is None
 
+    # ByBar only has a hash_key not a range key
+    results = list(TestModel.ByBar.query(bar='three'))
+    assert len(results) == 1
+
 
 def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.ByBaz.scan())
+    assert len(results) == 3
+
     results = list(TestModel.ByBar.scan())
     assert len(results) == 3

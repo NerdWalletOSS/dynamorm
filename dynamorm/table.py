@@ -22,6 +22,20 @@ write      True      int   The provisioned write throughput.
 =========  ========  ====  ===========
 
 
+Indexes
+-------
+
+Like the ``Table`` definition, Indexes are also inner classes on ``DynaModel`` definitions, and they require the same
+data model with one extra field.
+
+==========  ========  ======  ===========
+Attribute   Required  Type    Description
+==========  ========  ======  ===========
+projection  True      object  An instance of of :class:`dynamorm.model.ProjectAll`, :class:`dynamorm.model.ProjectKeys`,
+                              or :class:`dynamorm.model.ProjectInclude`
+
+=========  ========  ====  ===========
+
 """
 
 import collections
