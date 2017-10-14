@@ -122,7 +122,8 @@ class DynamoIndex3(DynamoCommon3):
         self.schema = schema
         self.validate_attrs()
 
-    def as_args(self):
+    @property
+    def index_args(self):
         if self.projection.__class__.__name__ == 'ProjectAll':
             projection = {
                 'ProjectionType': 'ALL',
@@ -139,12 +140,11 @@ class DynamoIndex3(DynamoCommon3):
         else:
             raise RuntimeError("Unknown projection mode!")
 
-        args = {
+        return {
             'IndexName': self.name,
             'KeySchema': self.key_schema,
             'Projection': projection,
         }
-        return args
 
 
 class DynamoLocalIndex3(DynamoIndex3):
@@ -154,8 +154,9 @@ class DynamoLocalIndex3(DynamoIndex3):
 class DynamoGlobalIndex3(DynamoIndex3):
     ARG_KEY = 'GlobalSecondaryIndexes'
 
-    def as_args(self):
-        args = super(DynamoGlobalIndex3, self).as_args()
+    @property
+    def index_args(self):
+        args = super(DynamoGlobalIndex3, self).index_args
         args['ProvisionedThroughput'] = self.provisioned_throughput
         return args
 
@@ -278,7 +279,7 @@ class DynamoTable3(DynamoCommon3):
 
         index_args = collections.defaultdict(list)
         for index in six.itervalues(self.indexes):
-            index_args[index.ARG_KEY].append(index.as_args())
+            index_args[index.ARG_KEY].append(index.index_args)
 
         table = self.resource.create_table(
             TableName=self.name,
