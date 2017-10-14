@@ -137,9 +137,8 @@ TODO
 
 These are broken down by milestone release.
 
-0.3.0
+0.4.0
 -----
-* Indexes -- Currently there is no support for indexes.
 * Partial updates on ``save()``
 
 1.0.0
