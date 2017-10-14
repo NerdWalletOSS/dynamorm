@@ -140,6 +140,7 @@ These are broken down by milestone release.
 0.4.0
 -----
 * Partial updates on ``save()``
+* Auto-scaling capacity
 
 1.0.0
 -----

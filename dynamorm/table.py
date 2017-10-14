@@ -251,7 +251,7 @@ class DynamoTable3(DynamoCommon3):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
         defs = []
 
-        def add_to_defs(name):
+        for name in self.all_attribute_fields:
             dynamorm_field = self.schema.dynamorm_fields()[name]
             field_type = self.schema.field_to_dynamo_type(dynamorm_field)
 
@@ -259,9 +259,6 @@ class DynamoTable3(DynamoCommon3):
                 'AttributeName': name,
                 'AttributeType': field_type,
             })
-
-        for field in self.all_attribute_fields:
-            add_to_defs(field)
 
         return defs
 
