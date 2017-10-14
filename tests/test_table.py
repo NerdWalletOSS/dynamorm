@@ -483,7 +483,11 @@ def test_indexes_query(TestModel, TestModel_entries, dynamo_local):
 
     # we project count into the ByBaz index, but not when
     assert results[0].count == 111
-    assert not hasattr(results[0], 'when')
+
+    if is_marshmallow():
+        assert not hasattr(results[0], 'when')
+    else:
+        assert results[0].when is None
 
 
 def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
