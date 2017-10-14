@@ -474,9 +474,18 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
         TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})
 
 
-def test_indexes(TestModel, TestModel_entries, dynamo_local):
+def test_indexes_query(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.ByBaz.query(baz='bbq'))
+    assert len(results) == 2
+
     results = list(TestModel.ByBaz.query(baz='bbq', bar='one'))
     assert len(results) == 1
 
-    results = list(TestModel.ByBaz.query(baz='bbq'))
-    assert len(results) == 2
+    # we project count into the ByBaz index, but not when
+    assert results[0].count == 111
+    assert not hasattr(results[0], 'when')
+
+
+def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.ByBar.scan())
+    assert len(results) == 3

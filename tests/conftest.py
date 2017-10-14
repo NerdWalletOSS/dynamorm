@@ -60,12 +60,12 @@ def TestModel():
                 projection = ProjectAll()
 
             class ByBaz(GlobalIndex):
-                name = 'county'
+                name = 'baz'
                 hash_key = 'baz'
                 range_key = 'bar'
                 read = 5
                 write = 5
-                projection = ProjectInclude('bar')
+                projection = ProjectInclude('count')
 
             class Schema:
                 foo = fields.String(required=True)
@@ -125,12 +125,12 @@ def TestModel():
                 projection = ProjectAll()
 
             class ByBaz(GlobalIndex):
-                name = 'county'
+                name = 'baz'
                 hash_key = 'baz'
                 range_key = 'bar'
                 read = 5
                 write = 5
-                projection = ProjectInclude('bar')
+                projection = ProjectInclude('count')
 
             class Schema:
                 foo = types.StringType(required=True)

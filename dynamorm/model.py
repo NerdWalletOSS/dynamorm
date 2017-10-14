@@ -519,17 +519,27 @@ class Index(object):
         self.model = model
         self.index = index
 
-    def query(self, **kwargs):
-        """Execute a query on our index based on our keys
+    def query(self, query_kwargs=None, **kwargs):
+        """Execute a query on this index
 
         See DynaModel.query for documentation on how to pass query arguments.
         """
-        return self.model.query(
-            query_kwargs={
-                'IndexName': self.index.name,
-            },
-            **kwargs
-        )
+        try:
+            query_kwargs['IndexName'] = self.index.name
+        except TypeError:
+            query_kwargs = {'IndexName': self.index.name}
+        return self.model.query(query_kwargs=query_kwargs, **kwargs)
+
+    def scan(self, scan_kwargs=None, **kwargs):
+        """Execute a scan on this index
+
+        See DynaModel.scan for documentation on how to pass scan arguments.
+        """
+        try:
+            scan_kwargs['IndexName'] = self.index.name
+        except TypeError:
+            scan_kwargs = {'IndexName': self.index.name}
+        return self.model.scan(scan_kwargs=scan_kwargs, **kwargs)
 
 
 class LocalIndex(Index):
