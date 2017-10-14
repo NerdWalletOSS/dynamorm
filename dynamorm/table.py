@@ -205,13 +205,27 @@ class DynamoTable3(DynamoCommon3):
         )
 
     @property
-    def attribute_fields(self):
-        """Returns a list with the names of all the attribute fields (hash or range key on the table or indexes)"""
+    def table_attribute_fields(self):
+        """Returns a list with the names of the table attribute fields (hash or range key)"""
         fields = set([self.hash_key])
         if self.range_key:
             fields.add(self.range_key)
 
+        return fields
+
+    @property
+    def all_attribute_fields(self):
+        """Returns a list with the names of all the attribute fields (hash or range key on the table or indexes)"""
+        return self.table_attribute_fields.union(self.index_attribute_fields())
+
+    def index_attribute_fields(self, index_name=None):
+        """Return the attribute fields for a given index, or all indexes if omitted"""
+        fields = set()
+
         for index in six.itervalues(self.indexes):
+            if index_name and index.name != index_name:
+                continue
+
             fields.add(index.hash_key)
             if index.range_key:
                 fields.add(index.range_key)
@@ -232,7 +246,7 @@ class DynamoTable3(DynamoCommon3):
                 'AttributeType': field_type,
             })
 
-        for field in self.attribute_fields:
+        for field in self.all_attribute_fields:
             add_to_defs(field)
 
         return defs
@@ -421,7 +435,12 @@ class DynamoTable3(DynamoCommon3):
             except ValueError:
                 op = 'eq'
 
-            if key not in self.attribute_fields:
+            if 'IndexName' in query_kwargs:
+                attr_fields = self.index_attribute_fields(index_name=query_kwargs['IndexName'])
+            else:
+                attr_fields = self.table_attribute_fields
+
+            if key not in attr_fields:
                 raise InvalidSchemaField("{0} is not a valid hash or range key".format(key))
 
             key = Key(key)
