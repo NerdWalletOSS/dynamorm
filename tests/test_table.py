@@ -475,4 +475,8 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
 
 
 def test_indexes(TestModel, TestModel_entries, dynamo_local):
-    assert True
+    results = list(TestModel.ByBaz.query(baz='bbq', bar='one'))
+    assert len(results) == 1
+
+    results = list(TestModel.ByBaz.query(baz='bbq'))
+    assert len(results) == 2

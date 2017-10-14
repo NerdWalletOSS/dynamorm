@@ -36,7 +36,7 @@ class ValidationError(DynaModelException):
 
 # --- Table exceptions ---
 
-class DynamoTableException(Exception):
+class DynamoTableException(DynamoException):
     """Base exception class for all DynamoTable errors"""
 
 

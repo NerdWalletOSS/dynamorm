@@ -171,10 +171,13 @@ class DynamoTable3(DynamoCommon3):
 
                 # Now that we know which of our classes we want to use, we create a new class on the fly that uses our
                 # class with the attributes of the original class
-                new_class = type(name, (index_class,), dict(klass.__dict__))
-                index = new_class(self, schema)
+                new_class = type(name, (index_class,), dict(
+                    (k, v)
+                    for k, v in six.iteritems(klass.__dict__)
+                    if k[0] != '_'
+                ))
 
-                self.indexes[name] = index
+                self.indexes[name] = new_class(self, schema)
 
     @classmethod
     def get_table(cls, name):
@@ -202,16 +205,25 @@ class DynamoTable3(DynamoCommon3):
         )
 
     @property
+    def attribute_fields(self):
+        """Returns a list with the names of all the attribute fields (hash or range key on the table or indexes)"""
+        fields = set([self.hash_key])
+        if self.range_key:
+            fields.add(self.range_key)
+
+        for index in six.itervalues(self.indexes):
+            fields.add(index.hash_key)
+            if index.range_key:
+                fields.add(index.range_key)
+
+        return fields
+
+    @property
     def attribute_definitions(self):
         """Return an appropriate AttributeDefinitions, based on our key attributes and the schema object"""
-        seen = []
         defs = []
 
         def add_to_defs(name):
-            if name in seen:
-                return
-            seen.append(name)
-
             dynamorm_field = self.schema.dynamorm_fields()[name]
             field_type = self.schema.field_to_dynamo_type(dynamorm_field)
 
@@ -220,14 +232,8 @@ class DynamoTable3(DynamoCommon3):
                 'AttributeType': field_type,
             })
 
-        add_to_defs(self.hash_key)
-        if self.range_key:
-            add_to_defs(self.range_key)
-
-        for index in six.itervalues(self.indexes):
-            add_to_defs(index.hash_key)
-            if index.range_key:
-                add_to_defs(index.range_key)
+        for field in self.attribute_fields:
+            add_to_defs(field)
 
         return defs
 
@@ -415,8 +421,8 @@ class DynamoTable3(DynamoCommon3):
             except ValueError:
                 op = 'eq'
 
-            if key not in (self.hash_key, self.range_key):
-                raise InvalidSchemaField("{0} is not our hash or range key".format(key))
+            if key not in self.attribute_fields:
+                raise InvalidSchemaField("{0} is not a valid hash or range key".format(key))
 
             key = Key(key)
             op = getattr(key, op)

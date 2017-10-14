@@ -77,6 +77,8 @@ class DynaModelMeta(type):
             )
             attrs['Schema'] = SchemaClass
 
+        indexes = {}
+
         # transform the Table
         if should_transform('Table'):
             # collect our indexes
@@ -93,15 +95,14 @@ class DynaModelMeta(type):
             )
             attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)
 
-            # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
-            # provide the actual Index object from our table as the parameter.
-            attrs.update(dict(
-                (name, val(attrs['Table'].indexes[name]))
-                for name, val in six.iteritems(indexes)
-            ))
-
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
+
+        # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
+        # provide the actual Index object from our table as the parameter.
+        for name, klass in six.iteritems(indexes):
+            index = klass(model, model.Table.indexes[name])
+            setattr(model, name, index)
 
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
@@ -514,8 +515,21 @@ class DynaModel(object):
 
 
 class Index(object):
-    def __init__(self, index):
+    def __init__(self, model, index):
+        self.model = model
         self.index = index
+
+    def query(self, **kwargs):
+        """Execute a query on our index based on our keys
+
+        See DynaModel.query for documentation on how to pass query arguments.
+        """
+        return self.model.query(
+            query_kwargs={
+                'IndexName': self.index.name,
+            },
+            **kwargs
+        )
 
 
 class LocalIndex(Index):
