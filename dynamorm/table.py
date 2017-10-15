@@ -40,6 +40,7 @@ projection  True      object  An instance of of :class:`dynamorm.model.ProjectAl
 
 import collections
 import logging
+import time
 import warnings
 
 import boto3
@@ -47,7 +48,10 @@ import botocore
 import six
 
 from boto3.dynamodb.conditions import Key, Attr
-from dynamorm.exceptions import MissingTableAttribute, InvalidSchemaField, HashKeyExists, ConditionFailed
+from dynamorm.exceptions import (
+    MissingTableAttribute, TableNotActive,
+    InvalidSchemaField, HashKeyExists, ConditionFailed,
+)
 
 log = logging.getLogger(__name__)
 
@@ -281,6 +285,7 @@ class DynamoTable3(DynamoCommon3):
         for index in six.itervalues(self.indexes):
             index_args[index.ARG_KEY].append(index.index_args)
 
+        log.info("Creating table %s", self.name)
         table = self.resource.create_table(
             TableName=self.name,
             KeySchema=self.key_schema,
@@ -289,8 +294,102 @@ class DynamoTable3(DynamoCommon3):
             **index_args
         )
         if wait:
+            log.info("Waiting for table creation...")
             table.meta.client.get_waiter('table_exists').wait(TableName=self.name)
         return table
+
+    def update_table(self, wait=True):
+        """Updates an existing table
+
+        Per the AWS documentation:
+
+        You can only perform one of the following operations at once:
+
+         * Modify the provisioned throughput settings of the table.
+         * Enable or disable Streams on the table.
+         * Remove a global secondary index from the table.
+         * Create a new global secondary index on the table.
+
+        Thus, with wait=true (the default) this will recursively call itself to perform each of these operations in
+        turn, waiting for the table to return to 'ACTIVE' status before performing the next.  With wait=False, this will
+        raise the TableNotActive exception.
+        """
+        desc = {'Table': {'TableStatus': 'FAKE'}}
+        while desc['Table']['TableStatus'] != 'ACTIVE':
+            desc = self.resource.describe_table(
+                TableName=self.name
+            )
+
+            if desc['Table']['TableStatus'] in ('CREATING', 'UPDATING'):
+                if not wait:
+                    raise TableNotActive("User specified not to wait")
+                time.sleep(5)
+                continue
+            elif desc['Table']['TableStatus'] == 'DELETING':
+                raise TableNotActive("Table is deleting")
+
+        def do_update(**kwargs):
+            kwargs.update(dict(
+                TableName=self.name,
+                AttributeDefinitions=self.attribute_definitions,
+            ))
+            return self.resource.update_table(**kwargs)
+
+        # check if we're going to change our capacity
+        if (self.read and self.write) and \
+                (self.read != desc['Table']['ProvisionedThroughput']['ReadCapacityUnits'] or \
+                 self.write != desc['Table']['ProvisionedThroughput']['WriteCapacityUnits']):
+
+            log.info("Updating capacity on table %s (%s)", self.name, self.provisioned_throughput)
+            do_update(ProvisionedThroughput=self.provisioned_throughput)
+            return self.update_table()
+
+        # Now for the global indexes, turn the data strucutre into a real dictionary so we can look things up by name
+        # Along the way we'll delete any indexes that are no longer defined
+        existing_indexes = {}
+        for index in desc['Table']['GlobalSecondaryIndexes']:
+            if index['IndexName'] not in self.indexes:
+                log.info("Deleting global secondary index %s on table %s", index['IndexName'], self.name)
+                do_update({
+                    'GlobalSecondaryIndexUpdates': {
+                        'Delete': {
+                            'IndexName': index['IndexName']
+                        }
+                    }
+                })
+                return self.update_table()
+
+            existing_indexes[index['IndexName']] = index
+
+        for index in six.itervalues(self.indexes):
+            if index.name in existing_indexes:
+                current_capacity = existing_indexes[index.name]['ProvisionedThroughput']
+                if (index.read and index.write) and \
+                        (index.read != existing_indexes[index.name]['ProvisionedThroughput']['ReadCapacityUnits'] or \
+                         index.write != existing_indexes[index.name]['ProvisionedThroughput']['WriteCapacityUnits']):
+
+                    log.info("Updating capacity on global secondary index %s on table %s (%s)", index.name, self.name,
+                             index.provisioned_throughput)
+
+                    do_update({
+                        'GlobalSecondaryIndexUpdates': {
+                            'Update': {
+                                'IndexName': index['IndexName'],
+                                'ProvisionedThroughput': index.provisioned_throughput
+                            }
+                        }
+                    })
+                    return self.update_table()
+            else:
+                # create the index
+                log.info("Creating global secondary index %s on table %s", index.name, self.name)
+                do_update({
+                    'AttributeDefinitions': self.attribute_definitions,
+                    'GlobalSecondaryIndexUpdates': {
+                        'Create': index.index_args
+                    }
+                })
+                return self.update_table()
 
     def delete(self, wait=True):
         """Delete this existing table

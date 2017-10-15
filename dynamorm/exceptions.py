@@ -58,3 +58,7 @@ class HashKeyExists(DynamoTableException):
 
 class ConditionFailed(DynamoTableException):
     """A condition check failed"""
+
+
+class TableNotActive(DynamoTableException):
+    """The table is not ACTIVE, and you do not want to wait"""

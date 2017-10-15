@@ -130,18 +130,3 @@ https://nerdwalletoss.github.io/dynamorm/
 
 The ``tests/`` also contain the most complete documentation on how to actually use the library, so you are encouraged to
 read through them to really familiarize yourself with some of the more advanced concepts and use cases.
-
-
-TODO
-====
-
-These are broken down by milestone release.
-
-0.4.0
------
-* Partial updates on ``save()``
-* Auto-scaling capacity
-
-1.0.0
------
-* Schema Migrations
