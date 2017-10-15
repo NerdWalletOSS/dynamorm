@@ -59,16 +59,17 @@ log = logging.getLogger(__name__)
 class DynamoCommon3(object):
     """Common properties & functions of Boto3 DynamORM objects -- i.e. Tables & Indexes"""
     REQUIRED_ATTRS = ('name', 'hash_key')
-    OPTIONAL_ATTRS = ('range_key', 'read', 'write')
 
-    def validate_attrs(self):
+    def __init__(self):
+        self.name = None
+        self.hash_key = None
+        self.range_key = None
+        self.read = None
+        self.write = None
+
         for attr in self.REQUIRED_ATTRS:
-            if not hasattr(self, attr):
+            if getattr(self, attr) is None:
                 raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
-
-        for attr in self.OPTIONAL_ATTRS:
-            if not hasattr(self, attr):
-                setattr(self, attr, None)
 
         if self.hash_key not in self.schema.dynamorm_fields():
             raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
@@ -120,11 +121,21 @@ class DynamoCommon3(object):
 class DynamoIndex3(DynamoCommon3):
     REQUIRED_ATTRS = DynamoCommon3.REQUIRED_ATTRS + ('projection',)
     ARG_KEY = None
+    INDEX_TYPE = None
+
+    @classmethod
+    def lookup_by_type(cls, index_type):
+        for klass in cls.__subclasses__():
+            if klass.INDEX_TYPE == index_type:
+                return klass
+        raise RuntimeError("Unknown index type: %s" % index_type)
 
     def __init__(self, table, schema):
         self.table = table
         self.schema = schema
-        self.validate_attrs()
+        self.projection = None
+
+        super(DynamoIndex3, self).__init__()
 
     @property
     def index_args(self):
@@ -152,10 +163,12 @@ class DynamoIndex3(DynamoCommon3):
 
 
 class DynamoLocalIndex3(DynamoIndex3):
+    INDEX_TYPE = 'LocalIndex'
     ARG_KEY = 'LocalSecondaryIndexes'
 
 
 class DynamoGlobalIndex3(DynamoIndex3):
+    INDEX_TYPE = 'GlobalIndex'
     ARG_KEY = 'GlobalSecondaryIndexes'
 
     @property
@@ -173,7 +186,8 @@ class DynamoTable3(DynamoCommon3):
     """
     def __init__(self, schema, indexes=None):
         self.schema = schema
-        self.validate_attrs()
+
+        super(DynamoTable3, self).__init__()
 
         self.indexes = {}
         if indexes:
@@ -181,12 +195,7 @@ class DynamoTable3(DynamoCommon3):
                 # Our indexes are just uninstantiated classes, but what we are interested in is what their parent class
                 # name is.  We can reach into the MRO to find that out, and then determine our own index type.
                 index_type = klass.__mro__[1].__name__
-                if index_type == 'GlobalIndex':
-                    index_class = DynamoGlobalIndex3
-                elif index_type == 'LocalIndex':
-                    index_class = DynamoLocalIndex3
-                else:
-                    raise RuntimeError('Unknown index type!')
+                index_class = DynamoIndex3.lookup_by_type(index_type)
 
                 # Now that we know which of our classes we want to use, we create a new class on the fly that uses our
                 # class with the attributes of the original class
@@ -337,7 +346,7 @@ class DynamoTable3(DynamoCommon3):
 
         # check if we're going to change our capacity
         if (self.read and self.write) and \
-                (self.read != desc['Table']['ProvisionedThroughput']['ReadCapacityUnits'] or \
+                (self.read != desc['Table']['ProvisionedThroughput']['ReadCapacityUnits'] or
                  self.write != desc['Table']['ProvisionedThroughput']['WriteCapacityUnits']):
 
             log.info("Updating capacity on table %s (%s)", self.name, self.provisioned_throughput)
@@ -365,8 +374,8 @@ class DynamoTable3(DynamoCommon3):
             if index.name in existing_indexes:
                 current_capacity = existing_indexes[index.name]['ProvisionedThroughput']
                 if (index.read and index.write) and \
-                        (index.read != existing_indexes[index.name]['ProvisionedThroughput']['ReadCapacityUnits'] or \
-                         index.write != existing_indexes[index.name]['ProvisionedThroughput']['WriteCapacityUnits']):
+                        (index.read != current_capacity['ReadCapacityUnits'] or
+                         index.write != current_capacity['WriteCapacityUnits']):
 
                     log.info("Updating capacity on global secondary index %s on table %s (%s)", index.name, self.name,
                              index.provisioned_throughput)
