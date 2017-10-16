@@ -5,10 +5,15 @@ import time
 
 import pytest
 
-from dynamorm import DynaModel  # , LocalIndex, GlobalIndex
+from dynamorm import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectKeys, ProjectInclude
 from dynamorm import local
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def setup_logging():
+    logging.basicConfig(level=logging.INFO)
 
 
 @pytest.fixture(scope='session')
@@ -46,11 +51,26 @@ def TestModel():
                 read = 5
                 write = 5
 
-                """
-                class Bazillions(LocalIndex):
-                    read = 5
-                    write = 5
-                """
+            class ByDate(LocalIndex):
+                name = 'by_date'
+                hash_key = 'foo'
+                range_key = 'when'
+                projection = ProjectKeys()
+
+            class ByBar(GlobalIndex):
+                name = 'bar'
+                hash_key = 'bar'
+                read = 5
+                write = 5
+                projection = ProjectAll()
+
+            class ByBaz(GlobalIndex):
+                name = 'baz'
+                hash_key = 'baz'
+                range_key = 'bar'
+                read = 5
+                write = 5
+                projection = ProjectInclude('count')
 
             class Schema:
                 foo = fields.String(required=True)
@@ -96,11 +116,26 @@ def TestModel():
                 read = 5
                 write = 5
 
-                """
-                class Bazillions(LocalIndex):
-                    read = 5
-                    write = 5
-                """
+            class ByDate(LocalIndex):
+                name = 'by_date'
+                hash_key = 'foo'
+                range_key = 'when'
+                projection = ProjectKeys()
+
+            class ByBar(GlobalIndex):
+                name = 'bar'
+                hash_key = 'bar'
+                read = 5
+                write = 5
+                projection = ProjectAll()
+
+            class ByBaz(GlobalIndex):
+                name = 'baz'
+                hash_key = 'baz'
+                range_key = 'bar'
+                read = 5
+                write = 5
+                projection = ProjectInclude('count')
 
             class Schema:
                 foo = types.StringType(required=True)

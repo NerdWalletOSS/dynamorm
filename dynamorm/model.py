@@ -1,11 +1,12 @@
 """Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
-schema that is used for validating and marshalling your data.
+or Schematics schema that is used for validating and marshalling your data.
 
 .. autoclass:: DynaModel
     :noindex:
 
 """
 
+import inspect
 import logging
 
 import six
@@ -76,17 +77,32 @@ class DynaModelMeta(type):
             )
             attrs['Schema'] = SchemaClass
 
+        indexes = {}
+
         # transform the Table
         if should_transform('Table'):
+            # collect our indexes
+            indexes = dict(
+                (name, val)
+                for name, val in six.iteritems(attrs)
+                if inspect.isclass(val) and issubclass(val, Index)
+            )
+
             TableClass = type(
                 '{name}Table'.format(name=name),
                 (DynamoTable3,),
                 dict(attrs['Table'].__dict__)
             )
-            attrs['Table'] = TableClass(schema=attrs['Schema'])
+            attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)
 
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
+
+        # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
+        # provide the actual Index object from our table as the parameter.
+        for name, klass in six.iteritems(indexes):
+            index = klass(model, model.Table.indexes[klass.name])
+            setattr(model, name, index)
 
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
@@ -106,6 +122,9 @@ class DynaModel(object):
     The Dynamo Table options are defined in a class named ``Table``.  See the :mod:`dynamorm.table` module for
     more information.
 
+    Any Local or Global Secondary Indexes you wish to create are defined as inner tables that extend from either the
+    :class:`~LocalIndex` or :class:`~GlobalIndex` classes.  See the :mod:`dynamorm.table` module for more information.
+
     The document schema is defined in a class named ``Schema``, which should be filled out exactly as you would fill
     out any other Marshmallow :class:`~marshmallow.Schema` or Schematics :class:`~schematics.Model`.
 
@@ -116,16 +135,23 @@ class DynaModel(object):
         # Marshmallow example
         import os
 
-        from dynamorm import DynaModel
+        from dynamorm import DynaModel, GlobalIndex, ProjectAll
 
         from marshmallow import fields, validate, validates, ValidationError
 
         class Thing(DynaModel):
             class Table:
-                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
+                name = 'things'
                 hash_key = 'id'
                 read = 5
                 write = 1
+
+            class ByColor(GlobalIndex):
+                name = 'by-color'
+                hash_key = 'color'
+                read = 5
+                write = 1
+                projection = ProjectAll()
 
             class Schema:
                 id = fields.String(required=True)
@@ -139,35 +165,6 @@ class DynaModel(object):
                     # inner Schema class just like any other Marshmallow class
                     if name.lower() == 'evan':
                         raise ValidationError("No Evan's allowed")
-
-            def say_hello(self):
-                print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
-                    id=self.id,
-                    name=self.name,
-                    color=self.color
-                ))
-
-    .. code-block:: python
-
-        # Schematics example
-        import os
-
-        from dynamorm import DynaModel
-
-        from schematics import types
-
-        class Thing(DynaModel):
-            class Table:
-                name = '{env}-things'.format(env=os.environ.get('ENVIRONMENT', 'dev'))
-                hash_key = 'id'
-                read = 5
-                write = 1
-
-            class Schema:
-                id = types.StringType(required=True, max_length=10)
-                name = types.StringType()
-                color = types.StringType()
-                compound = types.DictType(types.IntType, required=True)
 
             def say_hello(self):
                 print("Hello.  {name} here.  My ID is {id} and I'm colored {color}".format(
@@ -496,3 +493,58 @@ class DynaModel(object):
         self._add_hash_key_values(delete_item_kwargs)
 
         return self.Table.delete_item(**delete_item_kwargs)
+
+
+class Index(object):
+    def __init__(self, model, index):
+        self.model = model
+        self.index = index
+
+    def query(self, query_kwargs=None, **kwargs):
+        """Execute a query on this index
+
+        See DynaModel.query for documentation on how to pass query arguments.
+        """
+        try:
+            query_kwargs['IndexName'] = self.index.name
+        except TypeError:
+            query_kwargs = {'IndexName': self.index.name}
+        return self.model.query(query_kwargs=query_kwargs, **kwargs)
+
+    def scan(self, scan_kwargs=None, **kwargs):
+        """Execute a scan on this index
+
+        See DynaModel.scan for documentation on how to pass scan arguments.
+        """
+        try:
+            scan_kwargs['IndexName'] = self.index.name
+        except TypeError:
+            scan_kwargs = {'IndexName': self.index.name}
+        return self.model.scan(scan_kwargs=scan_kwargs, **kwargs)
+
+
+class LocalIndex(Index):
+    """Represents a Local Secondary Index on your table"""
+    pass
+
+
+class GlobalIndex(Index):
+    """Represents a Local Secondary Index on your table"""
+    pass
+
+
+class Projection(object):
+    pass
+
+
+class ProjectAll(Projection):
+    pass
+
+
+class ProjectKeys(Projection):
+    pass
+
+
+class ProjectInclude(Projection):
+    def __init__(self, *include):
+        self.include = include

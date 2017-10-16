@@ -19,7 +19,7 @@ def is_marshmallow():
 def test_table_creation_deletion(TestModel, dynamo_local):
     """Creating, detecting and deleting tables should work"""
     assert not TestModel.Table.exists
-    assert TestModel.Table.create()
+    assert TestModel.Table.create_table()
     assert TestModel.Table.exists
     assert TestModel.Table.delete()
     assert not TestModel.Table.exists
@@ -472,3 +472,31 @@ def test_native_types(TestModel, TestModel_table, dynamo_local):
 
     with pytest.raises(ValidationError):
         TestModel.put({"foo": "first", "bar": "one", "baz": "lol", "count": 123, "when": DT, "created": {'foo': 1}})
+
+
+def test_indexes_query(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.ByBaz.query(baz='bbq'))
+    assert len(results) == 2
+
+    results = list(TestModel.ByBaz.query(baz='bbq', bar='one'))
+    assert len(results) == 1
+
+    # we project count into the ByBaz index, but not when
+    assert results[0].count == 111
+
+    if is_marshmallow():
+        assert not hasattr(results[0], 'when')
+    else:
+        assert results[0].when is None
+
+    # ByBar only has a hash_key not a range key
+    results = list(TestModel.ByBar.query(bar='three'))
+    assert len(results) == 1
+
+
+def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.ByBaz.scan())
+    assert len(results) == 3
+
+    results = list(TestModel.ByBar.scan())
+    assert len(results) == 3

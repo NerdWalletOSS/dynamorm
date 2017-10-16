@@ -162,3 +162,7 @@ Scanning works exactly the same as querying: comparison operators are specified 
     # Scan based on attributes
     Book.scan(author="Mr. Bar")
     Book.scan(author__ne="Mr. Bar")
+
+
+Indexes
+~~~~~~~

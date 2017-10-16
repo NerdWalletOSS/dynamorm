@@ -144,7 +144,7 @@ html_theme = 'alabaster'
 #
 html_theme_options = {
     'description': u'Python object relation mapping library for Amazon\'s DynamoDB service.<br />',
-    'github_user': 'NerdWallet',
+    'github_user': 'NerdWalletOSS',
     'github_repo': 'DynamORM',
     'github_banner': True,
     'github_type': 'star',

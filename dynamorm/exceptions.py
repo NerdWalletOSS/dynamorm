@@ -3,8 +3,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
+# --- Base exception ---
+class DynamoException(Exception):
+    """Base exception for all DynamORM raised exceptions"""
+
+
 # --- Schema exceptions ---
-class DynaModelException(Exception):
+class DynaModelException(DynamoException):
     """Base exception for DynaModel problems"""
 
 
@@ -30,7 +35,8 @@ class ValidationError(DynaModelException):
 
 
 # --- Table exceptions ---
-class DynamoTableException(Exception):
+
+class DynamoTableException(DynamoException):
     """Base exception class for all DynamoTable errors"""
 
 
@@ -52,3 +58,7 @@ class HashKeyExists(DynamoTableException):
 
 class ConditionFailed(DynamoTableException):
     """A condition check failed"""
+
+
+class TableNotActive(DynamoTableException):
+    """The table is not ACTIVE, and you do not want to wait"""

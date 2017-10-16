@@ -27,7 +27,7 @@ Example
 
 .. code-block:: python
 
-    from dynamorm import DynaModel
+    from dynamorm import DynaModel, GlobalIndex, ProjectAll
 
     # In this example we'll use Marshmallow
     # You can see that you have to import the schema library yourself, it is not abstracted at all
@@ -41,6 +41,13 @@ Example
             hash_key = 'isbn'
             read = 25
             write = 5
+
+        class ByAuthor(GlobalIndex):
+            name = 'by-author'
+            hash_key = 'author'
+            read = 25
+            write = 5
+            projection = ProjectAll()
 
         # Define our data schema, each property here will become a property on instances of the Book class
         class Schema:
@@ -85,6 +92,8 @@ Example
     Book.scan(author="Mr. Bar")
     Book.scan(author__ne="Mr. Bar")
 
+    # Query based on indexes
+    Book.ByAuthor.query(author="Mr. Bar")
 
 Contents
 --------
