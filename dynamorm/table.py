@@ -393,7 +393,6 @@ class DynamoTable3(DynamoCommon3):
             do_update(ProvisionedThroughput=self.provisioned_throughput)
             return self.update_table()
 
-
         # Now for the global indexes, turn the data strucutre into a real dictionary so we can look things up by name
         # Along the way we'll delete any indexes that are no longer defined
         existing_indexes = {}
