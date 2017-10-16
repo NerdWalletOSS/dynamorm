@@ -167,8 +167,8 @@ def test_index_setup():
 
     model = Model(foo='hi', bar='there')
 
-    assert 'Index' in model.Table.indexes
-    assert model.Index.index is model.Table.indexes['Index']
+    assert 'test-idx' in model.Table.indexes
+    assert model.Index.index is model.Table.indexes['test-idx']
     assert model.Index.index.table is model.Table
 
     assert model.Index.index.schema is model.Schema
