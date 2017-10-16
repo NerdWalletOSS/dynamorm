@@ -101,7 +101,7 @@ class DynaModelMeta(type):
         # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
         # provide the actual Index object from our table as the parameter.
         for name, klass in six.iteritems(indexes):
-            index = klass(model, model.Table.indexes[name])
+            index = klass(model, model.Table.indexes[klass.name])
             setattr(model, name, index)
 
         # give the Schema and Table objects a reference back to the model

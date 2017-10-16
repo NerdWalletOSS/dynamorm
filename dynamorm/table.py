@@ -60,13 +60,13 @@ class DynamoCommon3(object):
     """Common properties & functions of Boto3 DynamORM objects -- i.e. Tables & Indexes"""
     REQUIRED_ATTRS = ('name', 'hash_key')
 
-    def __init__(self):
-        self.name = None
-        self.hash_key = None
-        self.range_key = None
-        self.read = None
-        self.write = None
+    name = None
+    hash_key = None
+    range_key = None
+    read = None
+    write = None
 
+    def __init__(self):
         for attr in self.REQUIRED_ATTRS:
             if getattr(self, attr) is None:
                 raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
@@ -123,6 +123,8 @@ class DynamoIndex3(DynamoCommon3):
     ARG_KEY = None
     INDEX_TYPE = None
 
+    projection = None
+
     @classmethod
     def lookup_by_type(cls, index_type):
         for klass in cls.__subclasses__():
@@ -133,7 +135,6 @@ class DynamoIndex3(DynamoCommon3):
     def __init__(self, table, schema):
         self.table = table
         self.schema = schema
-        self.projection = None
 
         super(DynamoIndex3, self).__init__()
 
@@ -205,7 +206,7 @@ class DynamoTable3(DynamoCommon3):
                     if k[0] != '_'
                 ))
 
-                self.indexes[name] = new_class(self, schema)
+                self.indexes[klass.name] = new_class(self, schema)
 
     @classmethod
     def get_table(cls, name):
@@ -307,7 +308,9 @@ class DynamoTable3(DynamoCommon3):
             table.meta.client.get_waiter('table_exists').wait(TableName=self.name)
         return table
 
-    def update_table(self, wait=True):
+    _update_table_ops = None
+
+    def update_table(self):
         """Updates an existing table
 
         Per the AWS documentation:
@@ -319,53 +322,89 @@ class DynamoTable3(DynamoCommon3):
          * Remove a global secondary index from the table.
          * Create a new global secondary index on the table.
 
-        Thus, with wait=true (the default) this will recursively call itself to perform each of these operations in
-        turn, waiting for the table to return to 'ACTIVE' status before performing the next.  With wait=False, this will
-        raise the TableNotActive exception.
-        """
-        desc = {'Table': {'TableStatus': 'FAKE'}}
-        while desc['Table']['TableStatus'] != 'ACTIVE':
-            desc = self.resource.describe_table(
-                TableName=self.name
-            )
+        Thus, this will recursively call itself to perform each of these operations in turn, waiting for the table to
+        return to 'ACTIVE' status before performing the next.
 
-            if desc['Table']['TableStatus'] in ('CREATING', 'UPDATING'):
-                if not wait:
-                    raise TableNotActive("User specified not to wait")
-                time.sleep(5)
-                continue
-            elif desc['Table']['TableStatus'] == 'DELETING':
-                raise TableNotActive("Table is deleting")
+        This returns the number of update operations performed.
+        """
+        try:
+            self._update_table_ops += 1
+        except TypeError:
+            self._update_table_ops = 0
+
+        table = self.resource.Table(self.name)
+
+        def wait_for_active():
+            def _wait(thing_type, thing_name, thing_status_callback):
+                wait_duration = 0.5
+                if thing_status_callback(table) != 'ACTIVE':
+                    log.info("Waiting for %s %s to become active before performing update...", thing_type, thing_name)
+
+                    while thing_status_callback(table) != 'ACTIVE':
+                        if thing_type == 'index':
+                            if thing_status_callback(table) is None:
+                                # once the index status is None then the index is gone
+                                break
+
+                            ok_statuses = ('CREATING', 'UPDATING', 'DELETING')
+                        else:
+                            ok_statuses = ('CREATING', 'UPDATING')
+
+                        thing_status = thing_status_callback(table)
+                        if thing_status in ok_statuses:
+                            time.sleep(wait_duration)
+                            if wait_duration < 20:
+                                wait_duration = min(20, wait_duration * 2)
+                            table.load()
+                            continue
+
+                        raise TableNotActive("{0} {1} is {2}".format(thing_type, thing_name, thing_status))
+
+            def _index_status(table, index_name):
+                for index in (table.global_secondary_indexes or []):
+                    if index['IndexName'] == index_name:
+                        return index['IndexStatus']
+
+            _wait('table', table.table_name, lambda table: table.table_status)
+            for index in (table.global_secondary_indexes or []):
+                _wait('index', index['IndexName'], lambda table: _index_status(table, index['IndexName']))
 
         def do_update(**kwargs):
             kwargs.update(dict(
-                TableName=self.name,
                 AttributeDefinitions=self.attribute_definitions,
             ))
-            return self.resource.update_table(**kwargs)
+            return table.update(**kwargs)
+
+        wait_for_active()
 
         # check if we're going to change our capacity
         if (self.read and self.write) and \
-                (self.read != desc['Table']['ProvisionedThroughput']['ReadCapacityUnits'] or
-                 self.write != desc['Table']['ProvisionedThroughput']['WriteCapacityUnits']):
+                (self.read != table.provisioned_throughput['ReadCapacityUnits'] or
+                 self.write != table.provisioned_throughput['WriteCapacityUnits']):
 
-            log.info("Updating capacity on table %s (%s)", self.name, self.provisioned_throughput)
+            log.info("Updating capacity on table %s (%s -> %s)",
+                     self.name,
+                     dict(
+                         (k, v)
+                         for k, v in six.iteritems(table.provisioned_throughput)
+                         if k.endswith('Units')
+                     ),
+                     self.provisioned_throughput)
             do_update(ProvisionedThroughput=self.provisioned_throughput)
             return self.update_table()
+
 
         # Now for the global indexes, turn the data strucutre into a real dictionary so we can look things up by name
         # Along the way we'll delete any indexes that are no longer defined
         existing_indexes = {}
-        for index in desc['Table']['GlobalSecondaryIndexes']:
+        for index in (table.global_secondary_indexes or []):
             if index['IndexName'] not in self.indexes:
                 log.info("Deleting global secondary index %s on table %s", index['IndexName'], self.name)
-                do_update({
-                    'GlobalSecondaryIndexUpdates': {
-                        'Delete': {
-                            'IndexName': index['IndexName']
-                        }
+                do_update(GlobalSecondaryIndexUpdates=[{
+                    'Delete': {
+                        'IndexName': index['IndexName']
                     }
-                })
+                }])
                 return self.update_table()
 
             existing_indexes[index['IndexName']] = index
@@ -380,25 +419,27 @@ class DynamoTable3(DynamoCommon3):
                     log.info("Updating capacity on global secondary index %s on table %s (%s)", index.name, self.name,
                              index.provisioned_throughput)
 
-                    do_update({
-                        'GlobalSecondaryIndexUpdates': {
-                            'Update': {
-                                'IndexName': index['IndexName'],
-                                'ProvisionedThroughput': index.provisioned_throughput
-                            }
+                    do_update(GlobalSecondaryIndexUpdates=[{
+                        'Update': {
+                            'IndexName': index['IndexName'],
+                            'ProvisionedThroughput': index.provisioned_throughput
                         }
-                    })
+                    }])
                     return self.update_table()
             else:
                 # create the index
                 log.info("Creating global secondary index %s on table %s", index.name, self.name)
-                do_update({
-                    'AttributeDefinitions': self.attribute_definitions,
-                    'GlobalSecondaryIndexUpdates': {
+                do_update(
+                    AttributeDefinitions=self.attribute_definitions,
+                    GlobalSecondaryIndexUpdates=[{
                         'Create': index.index_args
-                    }
-                })
+                    }]
+                )
                 return self.update_table()
+
+        update_ops = self._update_table_ops
+        self._update_table_ops = None
+        return update_ops
 
     def delete(self, wait=True):
         """Delete this existing table

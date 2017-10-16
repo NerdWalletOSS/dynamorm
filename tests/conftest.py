@@ -11,6 +11,11 @@ from dynamorm import local
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope='session', autouse=True)
+def setup_logging():
+    logging.basicConfig(level=logging.INFO)
+
+
 @pytest.fixture(scope='session')
 def TestModel():
     """Provides a test model"""

@@ -257,3 +257,83 @@ def test_invalid_indexes():
                 class Schema:
                     foo = String(required=True)
                     bar = String(required=True)
+
+
+def test_update_table(dynamo_local):
+    class TableV1(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            range_key = 'bar'
+            read = 5
+            write = 5
+
+        class Schema:
+            foo = String(required=True)
+            bar = String(required=True)
+            baz = String(required=True)
+            bbq = String(required=True)
+
+    class TableV2(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            range_key = 'bar'
+            read = 10
+            write = 10
+
+        class Index1(GlobalIndex):
+            name = 'index1'
+            hash_key = 'baz'
+            range_key = 'bar'
+            projection = ProjectAll()
+            read = 5
+            write = 5
+
+        class Index2(GlobalIndex):
+            name = 'index2'
+            hash_key = 'bbq'
+            range_key = 'bar'
+            projection = ProjectAll()
+            read = 5
+            write = 5
+
+        class Schema:
+            foo = String(required=True)
+            bar = String(required=True)
+            baz = String(required=True)
+            bbq = String(required=True)
+
+    class TableV3(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            range_key = 'bar'
+            read = 10
+            write = 10
+
+        class Index2(GlobalIndex):
+            name = 'index2'
+            hash_key = 'bbq'
+            range_key = 'bar'
+            projection = ProjectAll()
+            read = 5
+            write = 5
+
+        class Schema:
+            foo = String(required=True)
+            bar = String(required=True)
+            baz = String(required=True)
+            bbq = String(required=True)
+
+    TableV1.Table.create_table()
+
+    # updating to v2 should result in 3 changes
+    # * changing throughput
+    # * adding index1
+    # * adding index2
+    assert TableV2.Table.update_table() == 3
+
+    # updating to v2 result in 1 change
+    # * deleting index 1
+    assert TableV3.Table.update_table() == 1
