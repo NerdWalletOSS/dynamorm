@@ -337,3 +337,6 @@ def test_update_table(dynamo_local):
     # updating to v2 result in 1 change
     # * deleting index 1
     assert TableV3.Table.update_table() == 1
+
+    # should now be a no-op
+    assert TableV3.Table.update_table() == 0
