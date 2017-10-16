@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll
+from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
@@ -340,3 +340,35 @@ def test_update_table(dynamo_local):
 
     # should now be a no-op
     assert TableV3.Table.update_table() == 0
+
+
+def test_sparse_indexes(dynamo_local):
+    class MyModel(DynaModel):
+        class Table:
+            name = 'mymodel'
+            hash_key = 'foo'
+            read = 10
+            write = 10
+
+        class Index1(GlobalIndex):
+            name = 'index1'
+            hash_key = 'bar'
+            read = 10
+            write = 10
+            projection = ProjectInclude('foo', 'bar')
+
+        class Schema:
+            foo = String(required=True)
+            bar = String(required=True)
+            baz = String(required=True)
+            bbq = String(required=True)
+
+    MyModel.Table.create_table()
+    MyModel.put_batch(
+        {'foo': '1', 'bar': '1', 'baz': '1', 'bbq': '1'},
+        {'foo': '2', 'bar': '2', 'baz': '2', 'bbq': '2'},
+    )
+
+    items = list(MyModel.Index1.query(bar='2'))
+    assert len(items) == 1
+    assert items[0].foo == '2'

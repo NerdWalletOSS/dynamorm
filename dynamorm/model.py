@@ -377,6 +377,7 @@ class DynaModel(object):
         :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """
+        partial = kwargs.pop('partial', False)
         method = getattr(cls.Table, method_name)
         dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
 
@@ -385,7 +386,7 @@ class DynaModel(object):
             resp = method(*args, **kwargs)
             for raw in resp['Items']:
                 if raw is not None:
-                    yield cls.new_from_raw(raw)
+                    yield cls.new_from_raw(raw, partial=partial)
 
             # Stop if no further pages
             if 'LastEvaluatedKey' not in resp:
@@ -509,7 +510,8 @@ class Index(object):
             query_kwargs['IndexName'] = self.index.name
         except TypeError:
             query_kwargs = {'IndexName': self.index.name}
-        return self.model.query(query_kwargs=query_kwargs, **kwargs)
+
+        return self.model.query(query_kwargs=query_kwargs, partial=self.projection.partial, **kwargs)
 
     def scan(self, scan_kwargs=None, **kwargs):
         """Execute a scan on this index
@@ -520,7 +522,8 @@ class Index(object):
             scan_kwargs['IndexName'] = self.index.name
         except TypeError:
             scan_kwargs = {'IndexName': self.index.name}
-        return self.model.scan(scan_kwargs=scan_kwargs, **kwargs)
+
+        return self.model.scan(scan_kwargs=scan_kwargs, partial=self.projection.partial, **kwargs)
 
 
 class LocalIndex(Index):
@@ -538,13 +541,15 @@ class Projection(object):
 
 
 class ProjectAll(Projection):
-    pass
+    partial = False
 
 
 class ProjectKeys(Projection):
-    pass
+    partial = True
 
 
 class ProjectInclude(Projection):
+    partial = True
+
     def __init__(self, *include):
         self.include = include
