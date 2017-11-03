@@ -8,6 +8,11 @@ if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
 else:
     from schematics.types import StringType as String, IntType as Number
 
+try:
+    from unittest.mock import MagicMock, call
+except ImportError:
+    from mock import MagicMock, call
+
 
 def test_missing_inner_classes():
     """Classes must have both a Table and Schema inner class"""
@@ -372,3 +377,28 @@ def test_sparse_indexes(dynamo_local):
     items = list(MyModel.Index1.query(bar='2'))
     assert len(items) == 1
     assert items[0].foo == '2'
+
+
+def test_partial_save(TestModel, TestModel_entries, dynamo_local):
+    def get_first():
+        first = TestModel.get(foo='first', bar='one')
+        first.Table.put = MagicMock()
+        first.Table.update = MagicMock()
+        return first
+
+    # the first time to a non-partial save and put should be called
+    first = get_first()
+    first.save()
+    assert first.Table.put.called_once()
+    assert first.Table.update.not_called()
+
+    # next do a partial save without any changed and again with a change
+    # put should not be called, and update should only be called once dispite save being called twice
+    first = get_first()
+    first.save(partial=True)
+    first.baz = 'changed'
+    first.save(partial=True)
+    assert first.Table.put.not_called()
+    assert first.Table.update.called_with(
+        call(conditions=None, update_item_kwargs=None, baz='changed'),
+    )
