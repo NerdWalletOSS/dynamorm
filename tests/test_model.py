@@ -382,8 +382,9 @@ def test_sparse_indexes(dynamo_local):
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo='first', bar='one')
-        first.Table.put = MagicMock()
-        first.Table.update = MagicMock()
+        first.Table = MagicMock()
+        first.Table.hash_key = 'foo'
+        first.Table.range_key = 'bar'
         return first
 
     # the first time to a non-partial save and put should be called
