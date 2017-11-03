@@ -78,9 +78,9 @@ Example
             author = fields.String()
             publisher = fields.String()
 
-            # NOTE: Marshmallow uses the `missing` keyword during deserialization, which occurs when we save an object
-            # to Dynamo and the attr has no value, versus the `default` keyword, which is used when we load a document
-            # from Dynamo and the value doesn't exist or is null.
+            # NOTE: Marshmallow uses the `missing` keyword during deserialization, which occurs when we save
+            # an object to Dynamo and the attr has no value, versus the `default` keyword, which is used when
+            # we load a document from Dynamo and the value doesn't exist or is null.
             year = fields.Number(missing=lambda: datetime.datetime.utcnow().year)
 
 
