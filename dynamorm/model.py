@@ -181,8 +181,8 @@ class DynaModel(object):
         input will be put onto ``self`` as attributes.
         """
         self._raw = raw
-        data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
-        for k, v in six.iteritems(data):
+        self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
+        for k, v in six.iteritems(self._validated_data):
             setattr(self, k, v)
 
     @classmethod
@@ -417,14 +417,34 @@ class DynaModel(object):
                 pass
         return self.Schema.dynamorm_validate(obj, native=native)
 
-    def save(self, **kwargs):
+    def save(self, partial=False, **kwargs):
         """Save this instance to the table
+
+        :param bool partial: When False the whole document will be ``.put`` to the table.  When True only values that
+                             have changed since the document was loaded will sent to the table via an ``.update``.
+        :param \*\*kwargs: When partial is False these are passed through to the put method on the table.  When partial
+                           is True these become the kwargs for update_item.  See ``.put`` & ``.update`` for more
+                           details.
 
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
-        # XXX TODO: do partial updates if we know the item already exists, right now we just blindly put the whole
-        # XXX TODO: item on every save
-        return self.put(self.to_dict(), **kwargs)
+        if not partial:
+            return self.put(self.to_dict(), **kwargs)
+
+        # Collect the fields to updated based on what's changed
+        # XXX: Deeply nested data will still put the whole top-most object that has changed
+        # TODO: Support the __ syntax to do deeply nested updates
+        updates = dict(
+            (k, v)
+            for k, v in six.iteritems(self._validated_data)
+            if getattr(self, k) != v
+        )
+
+        if not updates:
+            log.warn("Partial save on %s produced nothing to update", self)
+            return
+
+        return self.update(update_item_kwargs=kwargs, **updates)
 
     def _add_hash_key_values(self, hash_dict):
         """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
@@ -541,14 +561,32 @@ class Projection(object):
 
 
 class ProjectAll(Projection):
+    """Project all attributes from the Table into the Index
+
+    Documents loaded using this projection will be fully validated by the schema.
+    """
     partial = False
 
 
 class ProjectKeys(Projection):
+    """Project the keys from the Table into the Index.
+
+    Documents loaded using this projection will be partially validated by the schema.
+    """
     partial = True
 
 
 class ProjectInclude(Projection):
+    """Project the specified attributes into the Index.
+
+    Documents loaded using this projection will be partially validated by the schema.
+
+    .. code-block:: python
+
+        class ByAuthor(GlobalIndex):
+            ...
+            projection = ProjectInclude('some_attr', 'other_attr')
+    """
     partial = True
 
     def __init__(self, *include):
