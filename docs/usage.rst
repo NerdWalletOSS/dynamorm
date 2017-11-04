@@ -89,7 +89,7 @@ Using raw documents:
         "color": "purple"
     })
 
-In all cases, the attributes go through validation against the Schema.  
+In all cases, the attributes go through validation against the Schema.
 
 .. code-block:: python
 
@@ -166,3 +166,39 @@ Scanning works exactly the same as querying: comparison operators are specified 
 
 Indexes
 ~~~~~~~
+
+Indexes provide different ways to query & scan your data.  They are defined on your Model alongside the main Table
+definition as inner classes inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+
+Here's an excerpt from the model used in the readme:
+
+.. code-block:: python
+
+    class Book(DynaModel):
+        # Define our DynamoDB properties
+        class Table:
+            name = 'prod-books'
+            hash_key = 'isbn'
+            read = 25
+            write = 5
+
+        class ByAuthor(GlobalIndex):
+            name = 'by-author'
+            hash_key = 'author'
+            read = 25
+            write = 5
+            projection = ProjectAll()
+
+With the index defined we can now call ``Book.ByAuthor.query`` or ``Book.ByAuthor.scan`` to query or scan the index.
+The query & scan semantics on the Index are the same as on the main table.
+
+.. code-block:: python
+
+    Book.ByAuthor.query(author='Some Author')
+
+Indexes uses "projection" to determine which attributes of your documents are available in the index.  Using the
+``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't have all
+of the require attributes.
+
+A common pattern is to define a "sparse index" with just the keys (``ProjectKeys``), load the keys of the documents you
+want from the index and then do a batch get to fetch them all from the main table.

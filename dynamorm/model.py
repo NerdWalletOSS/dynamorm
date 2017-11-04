@@ -420,6 +420,12 @@ class DynaModel(object):
     def save(self, partial=False, **kwargs):
         """Save this instance to the table
 
+        :param bool partial: When False the whole document will be ``.put`` to the table.  When True only values that
+                             have changed since the document was loaded will sent to the table via an ``.update``.
+        :param \*\*kwargs: When partial is False these are passed through to the put method on the table.  When partial
+                           is True these become the kwargs for update_item.  See ``.put`` & ``.update`` for more
+                           details.
+
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         if not partial:
@@ -555,14 +561,32 @@ class Projection(object):
 
 
 class ProjectAll(Projection):
+    """Project all attributes from the Table into the Index
+
+    Documents loaded using this projection will be fully validated by the schema.
+    """
     partial = False
 
 
 class ProjectKeys(Projection):
+    """Project the keys from the Table into the Index.
+
+    Documents loaded using this projection will be partially validated by the schema.
+    """
     partial = True
 
 
 class ProjectInclude(Projection):
+    """Project the specified attributes into the Index.
+
+    Documents loaded using this projection will be partially validated by the schema.
+
+    .. code-block:: python
+
+        class ByAuthor(GlobalIndex):
+            ...
+            projection = ProjectInclude('some_attr', 'other_attr')
+    """
     partial = True
 
     def __init__(self, *include):
