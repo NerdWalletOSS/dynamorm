@@ -2,12 +2,13 @@ from schematics.models import Model as SchematicsModel
 from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
 from schematics import types
 
-from .base import BaseModel
+from .base import DynamORMSchema
 from ..exceptions import ValidationError
 
 
-class Model(SchematicsModel, BaseModel):
-    """``Model`` is the base class for schematics based schemas """
+class Schema(SchematicsModel, DynamORMSchema):
+    """This is the base class for schematics based schemas"""
+
     @staticmethod
     def field_to_dynamo_type(field):
         """Given a schematics field object return the appropriate Dynamo type character"""

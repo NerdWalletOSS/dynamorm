@@ -403,3 +403,32 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     assert first.Table.update.called_with(
         call(conditions=None, update_item_kwargs=None, baz='changed'),
     )
+
+    class Model(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema:
+            foo = Number(required=True)
+            baz = String(required=True)
+
+def test_explicit_schema_parents():
+    class Mixin(object):
+        is_mixin = True
+
+    class Model(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema(Mixin):
+            foo = Number(required=True)
+            baz = String(required=True)
+
+
+    assert Model.Schema.is_mixin is True
