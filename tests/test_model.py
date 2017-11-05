@@ -404,6 +404,7 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
         call(conditions=None, update_item_kwargs=None, baz='changed'),
     )
 
+
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
     class Mixin(object):
@@ -419,7 +420,6 @@ def test_explicit_schema_parents():
         class Schema(Mixin):
             foo = Number(required=True)
             baz = String(required=True)
-
 
     assert Model.Schema.is_mixin is True
     assert Model.Schema.dynamorm_fields()
