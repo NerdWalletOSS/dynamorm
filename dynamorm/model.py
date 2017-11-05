@@ -62,10 +62,10 @@ class DynaModelMeta(type):
                     continue
 
                 if module_name.startswith('marshmallow.'):
-                    from .types.marshmallow import Schema
+                    from .types._marshmallow import Schema
                     break
                 elif module_name.startswith('schematics.'):
-                    from .types.schematics import Schema
+                    from .types._schematics import Schema
                     break
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
