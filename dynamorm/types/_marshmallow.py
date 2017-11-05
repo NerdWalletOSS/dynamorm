@@ -1,13 +1,12 @@
-from marshmallow import Schema
+from marshmallow import Schema as MarshmallowSchema
 from marshmallow import fields
 
-from .base import BaseModel
+from .base import DynamORMSchema
 from ..exceptions import ValidationError
 
 
-class Model(Schema, BaseModel):
-    """``Model`` is the base class for marshmallow based schemas """
-    _dynamorm_fields = None
+class Schema(MarshmallowSchema, DynamORMSchema):
+    """This is the base class for marshmallow based schemas"""
 
     @staticmethod
     def field_to_dynamo_type(field):
@@ -20,9 +19,7 @@ class Model(Schema, BaseModel):
 
     @classmethod
     def dynamorm_fields(cls):
-        if cls._dynamorm_fields is None:
-            cls._dynamorm_fields = cls().fields
-        return cls._dynamorm_fields
+        return cls().fields
 
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
