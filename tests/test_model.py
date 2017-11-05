@@ -3,6 +3,8 @@ import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
+from dynamorm.types import ManyToMany, ManyToOne, OneToMany, OneToOne
+
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
 else:
@@ -423,3 +425,95 @@ def test_explicit_schema_parents():
 
     assert Model.Schema.is_mixin is True
     assert Model.Schema.dynamorm_fields()
+
+
+def test_relationship_one_to_many():
+    """A Parent has many Child(ren)"""
+    class Child(DynaModel):
+        class Table:
+            name = 'child'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+    class Parent(DynaModel):
+        class Table:
+            name = 'parent'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+            children = OneToMany(Child, reference='parent')
+
+    Child.put_batch(
+        {'name': 'kearney'},
+        {'name': 'dolph'},
+        {'name': 'jimbo'},
+    )
+
+    Parent.put_batch(
+        {'name': 'mom1', 'children': ['kearney', 'dolph']},
+        {'name': 'mom2', 'children': ['jimbo']},
+    )
+
+    kearney = Child.get(name='kearney')
+    dolph = Child.get(name='dolph')
+    jimbo = Child.get(name='jimbo')
+
+    mom1 = Parent.get(name='mom1')
+    mom2 = Parent.get(name='mom2')
+
+    assert kearney.parent == dolph.parent == mom1
+    assert jimbo.parent == mom2
+
+    assert list(mom1.children) == [kearney, dolph]
+    assert list(mom2.children) == [jimbo]
+
+
+def test_relationship_one_to_one():
+    class Child(DynaModel):
+        class Table:
+            name = 'child'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+    class Parent(DynaModel):
+        class Table:
+            name = 'parent'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+            child = OneToOne(Child, reference='parent')
+
+    Child.put_batch(
+        {'name': 'kearney'},
+        {'name': 'dolph'},
+    )
+
+    Parent.put_batch(
+        {'name': 'mom1', 'child': 'kearney'},
+        {'name': 'mom2', 'child': 'dolph'},
+    )
+    kearney = Child.get(name='kearney')
+    dolph = Child.get(name='dolph')
+
+    mom1 = Parent.get(name='mom1')
+    mom2 = Parent.get(name='mom2')
+
+    assert kearney.parent == mom1
+    assert dolph.parent == mom2
+
+    assert mom1.child == kearney
+    assert mom2.child == jimbo
