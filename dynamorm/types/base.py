@@ -1,10 +1,6 @@
 class DynamORMSchema(object):
-    """This is the base class for the inner ``Schema`` class on Tables.
+    """This is the base class for the inner ``Schema`` class on Tables"""
 
-    It must define ``dynamorm_validate`` which runs validation in your desired serialization library,
-    ``dynamorm_fields`` which returns a dictionary of key value pairs where keys are attributes and values are the
-    type of the attribute, and ``field_to_dynamo_type`` which returns the dynamo type character for the input type.
-    """
     @staticmethod
     def field_to_dynamo_type(field):
         """Returns the dynamo type character given the field."""

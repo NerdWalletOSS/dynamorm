@@ -11,8 +11,9 @@ import logging
 
 import six
 
-from .table import DynamoTable3
 from .exceptions import DynaModelException
+from .table import DynamoTable3
+from .types.relationships import BaseRelationship
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +74,13 @@ class DynaModelMeta(type):
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-                dict(attrs['Schema'].__dict__),
+
+                # Our attrs come from the original schema definition
+                # We prepare any relationships, and just pass through all other attrs
+                dict(
+                    (k, v.prepare(Schema) if isinstance(v, BaseRelationship) else v)
+                    for k, v in six.iteritems(attrs['Schema'].__dict__)
+                )
             )
             attrs['Schema'] = SchemaClass
 

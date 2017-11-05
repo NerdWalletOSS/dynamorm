@@ -6,9 +6,10 @@ from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaM
 from dynamorm.types import ManyToMany, ManyToOne, OneToMany, OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String, Number
+    from marshmallow.fields import String, Number, List
 else:
     from schematics.types import StringType as String, IntType as Number
+    from schematics.types.compound import ListType as List
 
 try:
     from unittest.mock import MagicMock, call
@@ -427,7 +428,7 @@ def test_explicit_schema_parents():
     assert Model.Schema.dynamorm_fields()
 
 
-def test_relationship_one_to_many():
+def test_relationship_one_to_many(request, dynamo_local):
     """A Parent has many Child(ren)"""
     class Child(DynaModel):
         class Table:
@@ -448,7 +449,13 @@ def test_relationship_one_to_many():
 
         class Schema:
             name = String(required=True)
-            children = OneToMany(Child, reference='parent')
+            child_ids = List(String)
+            children = OneToMany(Child, 'child_ids', reference='parent')
+
+    Child.Table.create()
+    Parent.Table.create()
+    request.addfinalizer(Child.Table.delete)
+    request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
         {'name': 'kearney'},
@@ -495,7 +502,13 @@ def test_relationship_one_to_one():
 
         class Schema:
             name = String(required=True)
-            child = OneToOne(Child, reference='parent')
+            child_id = Number()
+            child = OneToOne(Child, 'child_id', reference='parent')
+
+    Child.Table.create()
+    Parent.Table.create()
+    request.addfinalizer(Child.Table.delete)
+    request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
         {'name': 'kearney'},
