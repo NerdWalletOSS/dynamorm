@@ -3,7 +3,7 @@ import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
-from dynamorm.types import ManyToMany, ManyToOne, OneToMany, OneToOne
+from dynamorm.types import ManyToOne, OneToMany, OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number, List
@@ -469,14 +469,6 @@ def test_relationship_one_to_many(request, dynamo_local):
         {'name': 'mom1', 'children': ['kearney', 'dolph']},
         {'name': 'mom2', 'children': ['jimbo']},
     )
-
-    kearney = Child.get(name='kearney')
-    dolph = Child.get(name='dolph')
-    jimbo = Child.get(name='jimbo')
-
-    mom1 = Parent.get(name='mom1')
-    mom2 = Parent.get(name='mom2')
-
 
 
 def test_relationship_one_to_one(request, dynamo_local):
