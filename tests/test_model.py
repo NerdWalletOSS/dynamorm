@@ -477,11 +477,6 @@ def test_relationship_one_to_many(request, dynamo_local):
     mom1 = Parent.get(name='mom1')
     mom2 = Parent.get(name='mom2')
 
-    assert kearney.parent == dolph.parent == mom1
-    assert jimbo.parent == mom2
-
-    assert list(mom1.children) == [kearney, dolph]
-    assert list(mom2.children) == [jimbo]
 
 
 def test_relationship_one_to_one(request, dynamo_local):
@@ -515,13 +510,13 @@ def test_relationship_one_to_one(request, dynamo_local):
     request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
-        {'name': 'kearney'},
-        {'name': 'dolph'},
+        {'name': 'kearney', 'parent_id': 'mom1'},
+        {'name': 'dolph', 'parent_id': 'mom2'},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'child': 'kearney'},
-        {'name': 'mom2', 'child': 'dolph'},
+        {'name': 'mom1', 'child_id': 'kearney'},
+        {'name': 'mom2', 'child_id': 'dolph'},
     )
     kearney = Child.get(name='kearney')
     dolph = Child.get(name='dolph')
@@ -529,11 +524,8 @@ def test_relationship_one_to_one(request, dynamo_local):
     mom1 = Parent.get(name='mom1')
     mom2 = Parent.get(name='mom2')
 
-    # The proxy should not have loaded yet
-    assert not hasattr(kearney.relationships['parent'], '_proxy')
-
     assert kearney.parent.name == mom1.name
     assert dolph.parent.name == mom2.name
 
-    assert mom1.child == kearney
-    assert mom2.child == jimbo
+    assert mom1.child.name == kearney.name
+    assert mom2.child.name == dolph.name

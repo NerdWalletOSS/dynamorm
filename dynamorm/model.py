@@ -11,7 +11,7 @@ import logging
 
 import six
 
-from .exceptions import DynaModelException, InvalidRelationshipAttribute
+from .exceptions import DynaModelException, InvalidRelationshipAttribute, InvalidOtherModel
 from .table import DynamoTable3
 from .types.relationships import BaseRelationship
 
@@ -86,8 +86,15 @@ class DynaModelMeta(type):
                             name
                         ))
 
+                    relationships[key] = value
+
+                    # We leverage the python data model here to add the lazy closure proxy, above, to the final model
+                    # attrs.  Since it's added as a property it means that when the model instance accesses the property
+                    # it will be called with "self" as the first positional argument, which we then use to load the
+                    # relations for this relationship
+
                     def relationship_proxy(model, relationship):
-                        if not isinstance(relationship.other, DynaModel):
+                        if isinstance(relationship.other, six.string_types):
                             try:
                                 relationship.other = DynaModelMeta.REGISTRY[relationship.other]
                             except KeyError:
@@ -96,15 +103,10 @@ class DynaModelMeta(type):
                         return relationship.load_relations(model)
 
                     def make_proxy(relationship):
-                        """Closure to ensure we bind the current value to relationship_proxy scope"""
+                        """Closure to ensure we bind the correct value to relationship_proxy scope"""
                         return property(lambda model: relationship_proxy(model, relationship))
 
-                    # We leverage the python data model here to add the lazy closure proxy, above, to the final model
-                    # attrs.  Since it's added as a property it means that when the model instance accesses the property
-                    # it will be called with "self" as the first positional argument, which we then use to load the
-                    # relations for this relationship
                     attrs[key] = make_proxy(value)
-                    relationships[key] = value
                 else:
                     schema_attrs[key] = value
 

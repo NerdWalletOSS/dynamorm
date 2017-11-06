@@ -1,6 +1,3 @@
-from dynamorm.exceptions import InvalidRelationshipAttribute, InvalidOtherModel
-
-
 class BaseRelationship(object):
     def __init__(self, other, attr):
         self.other = other
@@ -16,7 +13,18 @@ class ManyToMany(BaseRelationship):
 
 class OneToOne(BaseRelationship):
     def load_relations(self, model):
-        pass
+        if self.other.Table.range_key:
+            hash_key, range_key = getattr(model, self.attr).split()
+            get_kwargs = {
+                self.other.Table.hash_key: hash_key,
+                self.other.Table.range_key: range_key
+            }
+        else:
+            get_kwargs = {
+                self.other.Table.hash_key: getattr(model, self.attr)
+            }
+
+        return self.other.get(**get_kwargs)
 
 
 class OneToMany(BaseRelationship):
