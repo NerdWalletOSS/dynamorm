@@ -88,11 +88,6 @@ class DynaModelMeta(type):
 
                     relationships[key] = value
 
-                    # We leverage the python data model here to add the lazy closure proxy, above, to the final model
-                    # attrs.  Since it's added as a property it means that when the model instance accesses the property
-                    # it will be called with "self" as the first positional argument, which we then use to load the
-                    # relations for this relationship
-
                     def relationship_proxy(model, relationship):
                         if isinstance(relationship.other, six.string_types):
                             try:
@@ -104,7 +99,9 @@ class DynaModelMeta(type):
 
                     def make_proxy(relationship):
                         """Closure to ensure we bind the correct value to relationship_proxy scope"""
-                        return property(lambda model: relationship_proxy(model, relationship))
+                        return property(
+                            fget=lambda model: relationship_proxy(model, relationship)
+                        )
 
                     attrs[key] = make_proxy(value)
                 else:

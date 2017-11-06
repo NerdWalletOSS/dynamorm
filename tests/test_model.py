@@ -459,6 +459,7 @@ def test_relationship_one_to_many(request, dynamo_local):
     request.addfinalizer(Child.Table.delete)
     request.addfinalizer(Parent.Table.delete)
 
+    # first do some "raw" testing by inserting the correct values by hand
     Child.put_batch(
         {'name': 'kearney', 'parent_id': 'mom1'},
         {'name': 'dolph', 'parent_id': 'mom1'},
@@ -483,17 +484,22 @@ def test_relationship_one_to_many(request, dynamo_local):
     assert [kid.name for kid in mom1.children] == [kearney.name, dolph.name]
     assert [kid.name for kid in mom2.children] == [jimbo.name]
 
+    # next, test mutating objects
+    martin = Child(name='martin')
+
 
 def test_relationship_one_to_one(request, dynamo_local):
     class Child(DynaModel):
         class Table:
             name = 'child'
             hash_key = 'name'
+            range_key = 'age'
             read = 1
             write = 1
 
         class Schema:
             name = String(required=True)
+            age = Number(required=True)
             parent_id = String()
             parent = OneToOne('Parent', 'parent_id')
 
@@ -515,16 +521,16 @@ def test_relationship_one_to_one(request, dynamo_local):
     request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
-        {'name': 'kearney', 'parent_id': 'mom1'},
-        {'name': 'dolph', 'parent_id': 'mom2'},
+        {'name': 'kearney', 'age': 13, 'parent_id': 'mom1'},
+        {'name': 'dolph', 'age': 14, 'parent_id': 'mom2'},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'child_id': 'kearney'},
-        {'name': 'mom2', 'child_id': 'dolph'},
+        {'name': 'mom1', 'child_id': 'kearney 13'},
+        {'name': 'mom2', 'child_id': 'dolph 14'},
     )
-    kearney = Child.get(name='kearney')
-    dolph = Child.get(name='dolph')
+    kearney = Child.get(name='kearney', age=13)
+    dolph = Child.get(name='dolph', age=14)
 
     mom1 = Parent.get(name='mom1')
     mom2 = Parent.get(name='mom2')
