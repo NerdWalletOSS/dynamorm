@@ -6,6 +6,19 @@ class BaseRelationship(object):
     def load_relations(self, model):
         raise NotImplementedError
 
+    def get_kwargs(self, value):
+        """Return a dict suitable for ``**`` use when calling ``.get`` to load the other side of a relationship"""
+        if self.other.Table.range_key:
+            hash_key, range_key = value.split()
+            return {
+                self.other.Table.hash_key: hash_key,
+                self.other.Table.range_key: range_key
+            }
+
+        return {
+            self.other.Table.hash_key: value
+        }
+
 
 class ManyToMany(BaseRelationship):
     pass
@@ -13,17 +26,8 @@ class ManyToMany(BaseRelationship):
 
 class OneToOne(BaseRelationship):
     def load_relations(self, model):
-        if self.other.Table.range_key:
-            hash_key, range_key = getattr(model, self.attr).split()
-            get_kwargs = {
-                self.other.Table.hash_key: hash_key,
-                self.other.Table.range_key: range_key
-            }
-        else:
-            get_kwargs = {
-                self.other.Table.hash_key: getattr(model, self.attr)
-            }
-
+        attr_value = getattr(model, self.attr)
+        get_kwargs = self.get_kwargs(attr_value)
         return self.other.get(**get_kwargs)
 
 
@@ -32,6 +36,11 @@ class OneToMany(BaseRelationship):
 
     It is represented as a list in the parent document and a string in the child document.
     """
+    def load_relations(self, model):
+        attr_values = getattr(model, self.attr)
+        for attr_value in attr_values:
+            get_kwargs = self.get_kwargs(attr_value)
+            yield self.other.get(**get_kwargs)
 
 
 class ManyToOne(BaseRelationship):

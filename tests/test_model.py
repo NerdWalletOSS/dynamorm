@@ -3,7 +3,7 @@ import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
-from dynamorm.types import ManyToOne, OneToMany, OneToOne
+from dynamorm.types import ManyToMany, ManyToOne, OneToMany, OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number, List
@@ -440,7 +440,7 @@ def test_relationship_one_to_many(request, dynamo_local):
         class Schema:
             name = String(required=True)
             parent_id = String()
-            parent = ManyToOne('Parent', 'parent_id')
+            parent = OneToOne('Parent', 'parent_id')
 
     class Parent(DynaModel):
         class Table:
@@ -460,15 +460,28 @@ def test_relationship_one_to_many(request, dynamo_local):
     request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
-        {'name': 'kearney'},
-        {'name': 'dolph'},
-        {'name': 'jimbo'},
+        {'name': 'kearney', 'parent_id': 'mom1'},
+        {'name': 'dolph', 'parent_id': 'mom1'},
+        {'name': 'jimbo', 'parent_id': 'mom2'},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'children': ['kearney', 'dolph']},
-        {'name': 'mom2', 'children': ['jimbo']},
+        {'name': 'mom1', 'child_ids': ['kearney', 'dolph']},
+        {'name': 'mom2', 'child_ids': ['jimbo']},
     )
+
+    kearney = Child.get(name='kearney')
+    dolph = Child.get(name='dolph')
+    jimbo = Child.get(name='jimbo')
+
+    mom1 = Parent.get(name='mom1')
+    mom2 = Parent.get(name='mom2')
+
+    assert kearney.parent.name == dolph.parent.name == mom1.name
+    assert jimbo.parent.name == mom2.name
+
+    assert [kid.name for kid in mom1.children] == [kearney.name, dolph.name]
+    assert [kid.name for kid in mom2.children] == [jimbo.name]
 
 
 def test_relationship_one_to_one(request, dynamo_local):
