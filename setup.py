@@ -6,7 +6,7 @@ with open('README.rst', 'r') as readme_fd:
 setup(
     name='dynamorm',
     version='0.4.1',
-    description='DynamORM is a Python object relation mapping library for Amazon\'s DynamoDB service.',
+    description='DynamORM is a Python object and relation mapping library for Amazon\'s DynamoDB',
     long_description=long_description,
     author='Evan Borgstrom',
     author_email='evan@borgstrom.ca',
