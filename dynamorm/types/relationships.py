@@ -1,13 +1,22 @@
+from dynamorm.exceptions import InvalidRelationshipAttribute, InvalidOtherModel
+
+
 class BaseRelationship(object):
-    def __init__(self, other, attr, reference=None):
-        # XXX TODO: support other as a string
+    def __init__(self, other, attr):
         self.other = other
         self.attr = attr
-        self.reference = reference
 
-    def prepare(self, schema):
-        # XXX TODO: return the correct field type for our document and setup other
-        return 'foo'
+    def load_relations(self, model):
+        raise NotImplementedError
+
+
+class ManyToMany(BaseRelationship):
+    pass
+
+
+class OneToOne(BaseRelationship):
+    def load_relations(self, model):
+        pass
 
 
 class OneToMany(BaseRelationship):
@@ -17,16 +26,7 @@ class OneToMany(BaseRelationship):
     """
 
 
-class OneToOne(BaseRelationship):
-    pass
-
-
-class ManyToMany(BaseRelationship):
-    pass
-
-
 class ManyToOne(BaseRelationship):
     """A Many To One relationship is an inverse One To Many relationship, which can be used when the semantics of the
     relationship are better expressed on the child rather than the parent.
     """
-    pass

@@ -62,3 +62,17 @@ class ConditionFailed(DynamoTableException):
 
 class TableNotActive(DynamoTableException):
     """The table is not ACTIVE, and you do not want to wait"""
+
+
+# --- Relationship exceptions ---
+
+class BaseRelationshipException(DynamoException):
+    """All relationship exceptions inherit from this"""
+
+
+class InvalidRelationshipAttribute(BaseRelationshipException):
+    """The attribute provided for the relationship is not valid"""
+
+
+class InvalidOtherModel(BaseRelationshipException):
+    """The Other model provided is not valid"""

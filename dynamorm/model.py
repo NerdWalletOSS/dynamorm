@@ -11,7 +11,7 @@ import logging
 
 import six
 
-from .exceptions import DynaModelException
+from .exceptions import DynaModelException, InvalidRelationshipAttribute
 from .table import DynamoTable3
 from .types.relationships import BaseRelationship
 
@@ -29,6 +29,8 @@ class DynaModelMeta(type):
     model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
     than a class named ``Schema``
     """
+    REGISTRY = {}
+
     def __new__(cls, name, parents, attrs):
         if name in ('DynaModel', 'DynaModelMeta'):
             return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
@@ -52,6 +54,8 @@ class DynaModelMeta(type):
                 name=name
             ))
 
+        relationships = {}
+
         # transform the Schema
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation
@@ -71,18 +75,46 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
+            # Go through the original schema attrs.  Any relationships are added to our model attrs, and we just pass
+            # through all other attrs to the transformed schema.
+            schema_attrs = {}
+            for key, value in six.iteritems(attrs['Schema'].__dict__):
+                if isinstance(value, BaseRelationship):
+                    if value.attr not in attrs['Schema'].__dict__:
+                        raise InvalidRelationshipAttribute("{0} does not exist in the Schema for {1}".format(
+                            key,
+                            name
+                        ))
+
+                    def relationship_proxy(model, relationship):
+                        if not isinstance(relationship.other, DynaModel):
+                            try:
+                                relationship.other = DynaModelMeta.REGISTRY[relationship.other]
+                            except KeyError:
+                                raise InvalidOtherModel("{0} is not a valid other model".format(relationship.other))
+
+                        return relationship.load_relations(model)
+
+                    def make_proxy(relationship):
+                        """Closure to ensure we bind the current value to relationship_proxy scope"""
+                        return property(lambda model: relationship_proxy(model, relationship))
+
+                    # We leverage the python data model here to add the lazy closure proxy, above, to the final model
+                    # attrs.  Since it's added as a property it means that when the model instance accesses the property
+                    # it will be called with "self" as the first positional argument, which we then use to load the
+                    # relations for this relationship
+                    attrs[key] = make_proxy(value)
+                    relationships[key] = value
+                else:
+                    schema_attrs[key] = value
+
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-
-                # Our attrs come from the original schema definition
-                # We prepare any relationships, and just pass through all other attrs
-                dict(
-                    (k, v.prepare(Schema) if isinstance(v, BaseRelationship) else v)
-                    for k, v in six.iteritems(attrs['Schema'].__dict__)
-                )
+                schema_attrs
             )
             attrs['Schema'] = SchemaClass
+            attrs['relationships'] = relationships
 
         indexes = {}
 
@@ -114,6 +146,9 @@ class DynaModelMeta(type):
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
         model.Table._model = model
+
+        # Store it in our registry
+        DynaModelMeta.REGISTRY[name] = model
 
         return model
 
@@ -185,8 +220,9 @@ class DynaModel(object):
         """Create a new instance of a DynaModel
 
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
-        input will be put onto ``self`` as attributes.
+        input will be set on ``self`` as attributes.
         """
+        # Validate the data
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):

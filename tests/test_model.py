@@ -439,6 +439,8 @@ def test_relationship_one_to_many(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
+            parent_id = String()
+            parent = ManyToOne('Parent', 'parent_id')
 
     class Parent(DynaModel):
         class Table:
@@ -450,7 +452,7 @@ def test_relationship_one_to_many(request, dynamo_local):
         class Schema:
             name = String(required=True)
             child_ids = List(String)
-            children = OneToMany(Child, 'child_ids', reference='parent')
+            children = OneToMany('Child', 'child_ids')
 
     Child.Table.create()
     Parent.Table.create()
@@ -482,7 +484,7 @@ def test_relationship_one_to_many(request, dynamo_local):
     assert list(mom2.children) == [jimbo]
 
 
-def test_relationship_one_to_one():
+def test_relationship_one_to_one(request, dynamo_local):
     class Child(DynaModel):
         class Table:
             name = 'child'
@@ -492,6 +494,8 @@ def test_relationship_one_to_one():
 
         class Schema:
             name = String(required=True)
+            parent_id = String()
+            parent = OneToOne('Parent', 'parent_id')
 
     class Parent(DynaModel):
         class Table:
@@ -502,8 +506,8 @@ def test_relationship_one_to_one():
 
         class Schema:
             name = String(required=True)
-            child_id = Number()
-            child = OneToOne(Child, 'child_id', reference='parent')
+            child_id = String()
+            child = OneToOne('Child', 'child_id')
 
     Child.Table.create()
     Parent.Table.create()
@@ -525,8 +529,11 @@ def test_relationship_one_to_one():
     mom1 = Parent.get(name='mom1')
     mom2 = Parent.get(name='mom2')
 
-    assert kearney.parent == mom1
-    assert dolph.parent == mom2
+    # The proxy should not have loaded yet
+    assert not hasattr(kearney.relationships['parent'], '_proxy')
+
+    assert kearney.parent.name == mom1.name
+    assert dolph.parent.name == mom2.name
 
     assert mom1.child == kearney
     assert mom2.child == jimbo
