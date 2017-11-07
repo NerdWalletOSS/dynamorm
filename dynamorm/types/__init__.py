@@ -1,1 +1,1 @@
-from .relationships import ManyToMany, ManyToOne, OneToMany, OneToOne  # noqa
+from .relationships import ManyToMany, OneToMany, OneToOne  # noqa

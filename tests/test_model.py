@@ -3,10 +3,10 @@ import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
-from dynamorm.types import ManyToMany, ManyToOne, OneToMany, OneToOne
+from dynamorm.types import ManyToMany, OneToMany, OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String, Number, List
+    from marshmallow.fields import String, Decimal as Number, List
 else:
     from schematics.types import StringType as String, IntType as Number
     from schematics.types.compound import ListType as List

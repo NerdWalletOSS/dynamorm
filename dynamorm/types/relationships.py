@@ -41,9 +41,3 @@ class OneToMany(BaseRelationship):
         for attr_value in attr_values:
             get_kwargs = self.get_kwargs(attr_value)
             yield self.other.get(**get_kwargs)
-
-
-class ManyToOne(BaseRelationship):
-    """A Many To One relationship is an inverse One To Many relationship, which can be used when the semantics of the
-    relationship are better expressed on the child rather than the parent.
-    """
