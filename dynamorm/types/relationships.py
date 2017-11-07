@@ -1,3 +1,23 @@
+import six
+
+from dynamorm.exceptions import InvalidOtherModel
+
+
+class RelationshipProxy(object):
+    def __init__(self, relationship, model_registry):
+        self.relationship = relationship
+        self.model_registry = model_registry
+
+    def __get__(self, instance, owner):
+        if isinstance(self.relationship.other, six.string_types):
+            try:
+                self.relationship.other = self.model_registry[self.relationship.other]
+            except KeyError:
+                raise InvalidOtherModel("{0} is not a valid other model".format(self.relationship.other))
+
+        return self.relationship.load_relations(instance)
+
+
 class BaseRelationship(object):
     def __init__(self, other, attr):
         self.other = other

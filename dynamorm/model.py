@@ -11,9 +11,9 @@ import logging
 
 import six
 
-from .exceptions import DynaModelException, InvalidRelationshipAttribute, InvalidOtherModel
+from .exceptions import DynaModelException, InvalidRelationshipAttribute
 from .table import DynamoTable3
-from .types.relationships import BaseRelationship
+from .types.relationships import BaseRelationship, RelationshipProxy
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +75,8 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
-            # Go through the original schema attrs.  Any relationships are added to our model attrs, and we just pass
-            # through all other attrs to the transformed schema.
+            # Go through the original schema attrs.  Any relationships are added to our model attrs via a proxy, and we
+            # just pass through all other attrs to the transformed schema.
             schema_attrs = {}
             for key, value in six.iteritems(attrs['Schema'].__dict__):
                 if isinstance(value, BaseRelationship):
@@ -87,23 +87,7 @@ class DynaModelMeta(type):
                         ))
 
                     relationships[key] = value
-
-                    def relationship_proxy(model, relationship):
-                        if isinstance(relationship.other, six.string_types):
-                            try:
-                                relationship.other = DynaModelMeta.REGISTRY[relationship.other]
-                            except KeyError:
-                                raise InvalidOtherModel("{0} is not a valid other model".format(relationship.other))
-
-                        return relationship.load_relations(model)
-
-                    def make_proxy(relationship):
-                        """Closure to ensure we bind the correct value to relationship_proxy scope"""
-                        return property(
-                            fget=lambda model: relationship_proxy(model, relationship)
-                        )
-
-                    attrs[key] = make_proxy(value)
+                    attrs[key] = RelationshipProxy(value, DynaModelMeta.REGISTRY)
                 else:
                     schema_attrs[key] = value
 

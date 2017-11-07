@@ -3,7 +3,7 @@ import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
-from dynamorm.types import ManyToMany, OneToMany, OneToOne
+from dynamorm.types import OneToMany, OneToOne  # , ManyToMany
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Decimal as Number, List
@@ -485,7 +485,15 @@ def test_relationship_one_to_many(request, dynamo_local):
     assert [kid.name for kid in mom2.children] == [jimbo.name]
 
     # next, test mutating objects
+    """
     martin = Child(name='martin')
+
+    mom2.children.append(martin)
+    mom2.save()
+
+    mom2 = Parent.get(name='mom2')
+    assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
+    """
 
 
 def test_relationship_one_to_one(request, dynamo_local):
@@ -540,3 +548,7 @@ def test_relationship_one_to_one(request, dynamo_local):
 
     assert mom1.child.name == kearney.name
     assert mom2.child.name == dolph.name
+
+    # Test assigning the relationship
+    # mom2.child = kearney
+    # mom2.save()
