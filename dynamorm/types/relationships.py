@@ -1,4 +1,5 @@
 import collections
+import functools
 
 import six
 
@@ -54,11 +55,10 @@ class BaseRelationshipProxy(object):
 
 class OneToOneProxy(BaseRelationshipProxy):
     """TODO"""
-    _local_attrs = BaseRelationshipProxy._local_attrs + ('other', 'other_model')
+    _local_attrs = BaseRelationshipProxy._local_attrs + ('other',)
 
     def get_other(self):
         other_keys = getattr(self.instance, self.relationship.attr)
-        print(other_keys)
         self.other = self.relationship.other_model.get(**other_keys)
 
     def assign(self, new_instance):
@@ -72,65 +72,69 @@ class OneToOneProxy(BaseRelationshipProxy):
     def delete(self):
         return delattr(self.instance, self.relationship.attr)
 
+    def with_lazy_other(self, func, *args, **kwargs):
+        try:
+            return func(self.other, *args, **kwargs)
+        except AttributeError:
+            if self.other is None:
+                self.get_other()
+                return func(self.other, *args, **kwargs)
+            raise
+
     def __getattr__(self, name):
         if name in self._local_attrs:
             return self.__dict__.get(name)
 
-        try:
-            return getattr(self.other, name)
-        except AttributeError:
-            if self.other is None:
-                self.get_other()
-                return getattr(self.other, name)
-            raise
+        return self.with_lazy_other(getattr, name)
 
     def __setattr__(self, name, value):
         if name in self._local_attrs:
             self.__dict__[name] = value
             return
 
-        return setattr(self.other, name, value)
+        return self.with_lazy_other(setattr, name, value)
 
     def __delattr__(self, name):
         if name in self._local_attrs:
             raise AttributeError("Cannot delete {0}".format(name))
 
-        return delattr(self.other, name)
+        return self.with_lazy_other(delattr, name)
 
 class OneToManyProxy(BaseRelationshipProxy):
-    def get_relations(self, model):
-        attr_values = getattr(model, self.attr)
+    def __iter__(self):
+        other_keys = getattr(self.instance, self.relationship.attr)
 
-        if self.get_mode == OneToMany.Individual:
-            return self.get_individual(model, attr_values)
+        if self.relationship.get_mode == OneToMany.Batch:
+            for inst in self.relationship.other_model.get_batch([keys for keys in other_keys]):
+                yield inst
+        else:
+            for keys in other_keys:
+                yield self.relationship.other_model.get(**keys)
 
-        elif self.get_mode == OneToMany.Batch:
-            return self.get_batch(model, attr_values)
-
-    def get_individual(self, model, attr_values):
-        for attr_value in attr_values:
-            keys = self.value_to_keys(self.other_model, attr_value)
-            yield self.other_model.get(**keys)
-
-    def get_batch(self, model, attr_values):
-        return self.other_model.get_batch([
-            self.value_to_keys(attr_value)
-            for attr_value in attr_values
-        ])
-
-    def set_relations(self, model, value):
+    def assign(self, value):
         if not isinstance(value, collections.Mapping):
             raise ValueError("{0} must be set with a mapping", self.attr)
 
         new_value = []
         for inst in value:
-            if not isinstance(inst, self.other_model):
-                raise ValueError("{0} is not an instance of {1}".format(inst, self.other_model))
+            if not isinstance(inst, self.relationship.other_model):
+                raise ValueError("{0} is not an instance of {1}".format(inst, self.relationship.other_model))
 
-            new_value.append(self.inst_to_value(inst))
+            new_value.append(inst.primary_key)
 
-        setattr(model, self.attr, new_value)
+        setattr(self.instance, self.relationship.attr, new_value)
 
+    def __len__(self):
+        return len(getattr(self.instance, self.relationship.attr))
+
+    def count(self):
+        return len(getattr(self.instance, self.relationship.attr))
+
+    def append(self, inst):
+        if not isinstance(inst, self.relationship.other_model):
+            raise ValueError("{0} is not an instance of {1}".format(inst, self.relationship.other_model))
+
+        return getattr(self.instance, self.relationship.attr).append(inst.primary_key)
 
 class BaseRelationship(object):
     PROXY = None
@@ -163,6 +167,9 @@ class OneToMany(BaseRelationship):
     Individual = 1
     Batch = 2
 
-    def __init__(self, other_model, attr, get_mode=Individual):
-        super(OneToMany, self).__init__(other_model, attr)
+    def __init__(self, other_model, attr=None, required=False, get_mode=Individual):
+        super(OneToMany, self).__init__(other_model, attr=attr, required=required)
         self.get_mode = get_mode
+
+    def schema_field(self, schema):
+        return schema.keys_field(required=self.required)

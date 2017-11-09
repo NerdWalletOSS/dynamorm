@@ -439,7 +439,6 @@ def test_relationship_one_to_many(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
-            parent_id = String()
             parent = OneToOne('Parent')
 
     class Parent(DynaModel):
@@ -460,14 +459,14 @@ def test_relationship_one_to_many(request, dynamo_local):
 
     # first do some "raw" testing by inserting the correct values by hand
     Child.put_batch(
-        {'name': 'kearney', 'parent': {'name': 'mom1'}},
-        {'name': 'dolph', 'parent': {'name': 'mom1'}},
-        {'name': 'jimbo', 'parent': {'name': 'mom2'}},
+        {'name': 'kearney', 'parent_id': {'name': 'mom1'}},
+        {'name': 'dolph', 'parent_id': {'name': 'mom1'}},
+        {'name': 'jimbo', 'parent_id': {'name': 'mom2'}},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'children': [{'name': 'kearney'}, {'name': 'dolph'}]},
-        {'name': 'mom2', 'children': [{'name': 'jimbo'}]},
+        {'name': 'mom1', 'children_id': [{'name': 'kearney'}, {'name': 'dolph'}]},
+        {'name': 'mom2', 'children_id': [{'name': 'jimbo'}]},
     )
 
     kearney = Child.get(name='kearney')
@@ -485,11 +484,12 @@ def test_relationship_one_to_many(request, dynamo_local):
 
     # next, test mutating objects
     martin = Child(name='martin')
+    martin.save()
 
     mom2.children.append(martin)
     mom2.save()
 
-    mom2 = Parent.get(name='mom2')
+    mom2 = Parent.get(name='mom2', consistent=True)
     assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
 
 
