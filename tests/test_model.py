@@ -6,10 +6,9 @@ from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaM
 from dynamorm.types import OneToMany, OneToOne  # , ManyToMany
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String, Decimal as Number, List
+    from marshmallow.fields import String, Decimal as Number
 else:
     from schematics.types import StringType as String, IntType as Number
-    from schematics.types.compound import ListType as List
 
 try:
     from unittest.mock import MagicMock, call

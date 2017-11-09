@@ -11,7 +11,14 @@ import logging
 
 import six
 
-from .exceptions import DynaModelException, InvalidRelationshipAttribute
+from .exceptions import DynaModelException
+from .signals import (
+    model_prepared,
+    pre_init, post_init,
+    pre_save, post_save,
+    pre_update, post_update,
+    pre_delete, post_delete
+)
 from .table import DynamoTable3
 from .types.relationships import BaseRelationship, RelationshipResolver
 
@@ -134,6 +141,8 @@ class DynaModelMeta(type):
         # Store it in our registry
         DynaModelMeta.REGISTRY[name] = model
 
+        model_prepared.send(model)
+
         return model
 
 
@@ -206,12 +215,16 @@ class DynaModel(object):
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
         input will be set on ``self`` as attributes.
         """
+        pre_init.send(self, partial=partial, raw=raw)
+
         # Validate the data
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
             if not hasattr(self, k):
                 setattr(self, k, v)
+
+        post_init.send(self, partial=partial, raw=raw)
 
     @classmethod
     def _normalize_keys_in_kwargs(cls, kwargs):
@@ -456,9 +469,11 @@ class DynaModel(object):
 
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
-        # XXX: TODO: offer relationships a chance to update 
         if not partial:
-            return self.put(self.to_dict(), **kwargs)
+            pre_save.send(self, partial=partial)
+            resp = self.put(self.to_dict(), **kwargs)
+            post_save.send(self, partial=partial)
+            return resp
 
         # Collect the fields to updated based on what's changed
         # XXX: Deeply nested data will still put the whole top-most object that has changed
@@ -522,6 +537,7 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
+        pre_update.send(self, conditions=conditions, update_item_kwargs=update_item_kwargs, kwargs=kwargs)
         kwargs.update(self.primary_key)
 
         try:
@@ -535,11 +551,16 @@ class DynaModel(object):
         for key, val in six.iteritems(resp['Attributes']):
             setattr(self, key, val)
 
+        post_update.send(self, conditions=conditions, update_item_kwargs=update_item_kwargs, kwargs=kwargs)
+
         return resp
 
     def delete(self):
         """Delete this record in the table."""
-        return self.Table.delete_item(**self.primary_key)
+        pre_delete.send(self)
+        resp = self.Table.delete_item(**self.primary_key)
+        post_delete.send(self)
+        return resp
 
 
 class Index(object):

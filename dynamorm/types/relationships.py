@@ -1,5 +1,4 @@
 import collections
-import functools
 
 import six
 
@@ -100,6 +99,7 @@ class OneToOneProxy(BaseRelationshipProxy):
 
         return self.with_lazy_other(delattr, name)
 
+
 class OneToManyProxy(BaseRelationshipProxy):
     def __iter__(self):
         other_keys = getattr(self.instance, self.relationship.attr)
@@ -135,6 +135,7 @@ class OneToManyProxy(BaseRelationshipProxy):
             raise ValueError("{0} is not an instance of {1}".format(inst, self.relationship.other_model))
 
         return getattr(self.instance, self.relationship.attr).append(inst.primary_key)
+
 
 class BaseRelationship(object):
     PROXY = None
