@@ -32,9 +32,9 @@ class Schema(MarshmallowSchema, DynamORMSchema):
         return data
 
     @classmethod
-    def key_field(cls, required=False)
-        return fields.Dict(fields.Field, required=required)
+    def key_field(cls, required=False):
+        return fields.Dict(required=required)
 
     @classmethod
-    def keys_field(cls, required=False)
+    def keys_field(cls, required=False):
         return fields.List(cls.key_field(required=required))

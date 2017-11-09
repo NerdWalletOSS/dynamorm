@@ -492,6 +492,9 @@ def test_relationship_one_to_many(request, dynamo_local):
     mom2 = Parent.get(name='mom2', consistent=True)
     assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
 
+    martin = Child.get(name='martin')
+    assert martin.parent.name == mom2.name
+
 
 def test_relationship_one_to_one(request, dynamo_local):
     class Child(DynaModel):
