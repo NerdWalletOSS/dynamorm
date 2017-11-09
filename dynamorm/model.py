@@ -13,7 +13,7 @@ import six
 
 from .exceptions import DynaModelException, InvalidRelationshipAttribute
 from .table import DynamoTable3
-from .types.relationships import BaseRelationship, RelationshipProxy
+from .types.relationships import BaseRelationship, RelationshipResolver
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +75,9 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
-            # Go through the original schema attrs.  Any relationships are added to our model attrs via a proxy, and we
-            # just pass through all other attrs to the transformed schema.
+            # Go through the original schema attrs.  Any relationships are added to our model attrs via a "resolver",
+            # which works like a property but knows how to resolve strings to classes and then returns a proxy for the
+            # specific type of relationship.  All other attrs are added to the transformed schema.
             schema_attrs = {}
             for key, value in six.iteritems(attrs['Schema'].__dict__):
                 if isinstance(value, BaseRelationship):
@@ -87,7 +88,7 @@ class DynaModelMeta(type):
                         ))
 
                     relationships[key] = value
-                    attrs[key] = RelationshipProxy(value, DynaModelMeta.REGISTRY)
+                    attrs[key] = RelationshipResolver(value, DynaModelMeta.REGISTRY)
                 else:
                     schema_attrs[key] = value
 
@@ -454,6 +455,7 @@ class DynaModel(object):
 
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
+        # XXX: TODO: offer relationships a chance to update 
         if not partial:
             return self.put(self.to_dict(), **kwargs)
 

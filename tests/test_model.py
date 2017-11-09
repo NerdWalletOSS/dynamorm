@@ -481,11 +481,10 @@ def test_relationship_one_to_many(request, dynamo_local):
     assert kearney.parent.name == dolph.parent.name == mom1.name
     assert jimbo.parent.name == mom2.name
 
-    assert [kid.name for kid in mom1.children] == [kearney.name, dolph.name]
+    assert sorted([kid.name for kid in mom1.children]) == [dolph.name, kearney.name]
     assert [kid.name for kid in mom2.children] == [jimbo.name]
 
     # next, test mutating objects
-    """
     martin = Child(name='martin')
 
     mom2.children.append(martin)
@@ -493,7 +492,6 @@ def test_relationship_one_to_many(request, dynamo_local):
 
     mom2 = Parent.get(name='mom2')
     assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
-    """
 
 
 def test_relationship_one_to_one(request, dynamo_local):
@@ -550,5 +548,7 @@ def test_relationship_one_to_one(request, dynamo_local):
     assert mom2.child.name == dolph.name
 
     # Test assigning the relationship
-    # mom2.child = kearney
-    # mom2.save()
+    mom2.child = kearney
+    mom2.save()
+
+    assert Parent.get(name='mom2', consistent=True).child_id == 'kearney 13'
