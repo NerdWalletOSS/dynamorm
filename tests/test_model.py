@@ -440,7 +440,7 @@ def test_relationship_one_to_many(request, dynamo_local):
         class Schema:
             name = String(required=True)
             parent_id = String()
-            parent = OneToOne('Parent', 'parent_id')
+            parent = OneToOne('Parent')
 
     class Parent(DynaModel):
         class Table:
@@ -451,8 +451,7 @@ def test_relationship_one_to_many(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
-            child_ids = List(String)
-            children = OneToMany('Child', 'child_ids')
+            children = OneToMany('Child')
 
     Child.Table.create()
     Parent.Table.create()
@@ -461,14 +460,14 @@ def test_relationship_one_to_many(request, dynamo_local):
 
     # first do some "raw" testing by inserting the correct values by hand
     Child.put_batch(
-        {'name': 'kearney', 'parent_id': 'mom1'},
-        {'name': 'dolph', 'parent_id': 'mom1'},
-        {'name': 'jimbo', 'parent_id': 'mom2'},
+        {'name': 'kearney', 'parent': {'name': 'mom1'}},
+        {'name': 'dolph', 'parent': {'name': 'mom1'}},
+        {'name': 'jimbo', 'parent': {'name': 'mom2'}},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'child_ids': ['kearney', 'dolph']},
-        {'name': 'mom2', 'child_ids': ['jimbo']},
+        {'name': 'mom1', 'children': [{'name': 'kearney'}, {'name': 'dolph'}]},
+        {'name': 'mom2', 'children': [{'name': 'jimbo'}]},
     )
 
     kearney = Child.get(name='kearney')
@@ -506,8 +505,7 @@ def test_relationship_one_to_one(request, dynamo_local):
         class Schema:
             name = String(required=True)
             age = Number(required=True)
-            parent_id = String()
-            parent = OneToOne('Parent', 'parent_id')
+            parent = OneToOne('Parent')
 
     class Parent(DynaModel):
         class Table:
@@ -518,8 +516,7 @@ def test_relationship_one_to_one(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
-            child_id = String()
-            child = OneToOne('Child', 'child_id')
+            child = OneToOne('Child')
 
     Child.Table.create()
     Parent.Table.create()
@@ -527,13 +524,13 @@ def test_relationship_one_to_one(request, dynamo_local):
     request.addfinalizer(Parent.Table.delete)
 
     Child.put_batch(
-        {'name': 'kearney', 'age': 13, 'parent_id': 'mom1'},
-        {'name': 'dolph', 'age': 14, 'parent_id': 'mom2'},
+        {'name': 'kearney', 'age': 13, 'parent_id': {'name': 'mom1'}},
+        {'name': 'dolph', 'age': 14, 'parent_id': {'name': 'mom2'}},
     )
 
     Parent.put_batch(
-        {'name': 'mom1', 'child_id': 'kearney 13'},
-        {'name': 'mom2', 'child_id': 'dolph 14'},
+        {'name': 'mom1', 'child_id': {'name': 'kearney', 'age': 13}},
+        {'name': 'mom2', 'child_id': {'name': 'dolph', 'age': 14}},
     )
     kearney = Child.get(name='kearney', age=13)
     dolph = Child.get(name='dolph', age=14)
@@ -551,4 +548,4 @@ def test_relationship_one_to_one(request, dynamo_local):
     mom2.child = kearney
     mom2.save()
 
-    assert Parent.get(name='mom2', consistent=True).child_id == 'kearney 13'
+    assert Parent.get(name='mom2', consistent=True).child_id == {'name': 'kearney', 'age': 13}

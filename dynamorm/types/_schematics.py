@@ -1,6 +1,7 @@
 from schematics.models import Model as SchematicsModel
 from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
 from schematics import types
+from schematics.types import compound
 
 from .base import DynamORMSchema
 from ..exceptions import ValidationError
@@ -32,3 +33,11 @@ class Schema(SchematicsModel, DynamORMSchema):
             return inst.to_native()
         else:
             return inst.to_primitive()
+
+    @classmethod
+    def key_field(cls, required=False):
+        return compound.DictType(types.BaseType, required=required)
+
+    @classmethod
+    def keys_field(cls, required=False):
+        return compound.ListType(cls.key_field(required=required))

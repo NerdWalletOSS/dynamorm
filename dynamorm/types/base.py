@@ -9,7 +9,7 @@ class DynamORMSchema(object):
     @classmethod
     def dynamorm_fields(cls):
         """Returns a dictionary of key value pairs where keys are attributes and values are type classes"""
-        raise NotImplementedError('{0} class must implement dynamallow_fields'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dyanmorm_fields'.format(cls.__name__))
 
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
@@ -24,4 +24,12 @@ class DynamORMSchema(object):
 
         On validation failure, this should raise ``dynamorm.exc.ValidationError``.
         """
-        raise NotImplementedError('{0} class must implement dynamallow_validate'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dyanmorm_validate'.format(cls.__name__))
+
+    @classmethod
+    def key_field(cls, required=False):
+        raise NotImplementedError('{0} class must implement key_field'.format(cls.__name__))
+
+    @classmethod
+    def keys_field(cls, required=False):
+        raise NotImplementedError('{0} class must implement keys_field'.format(cls.__name__))

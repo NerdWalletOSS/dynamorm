@@ -30,3 +30,11 @@ class Schema(MarshmallowSchema, DynamORMSchema):
         if errors:
             raise ValidationError(obj, cls.__name__, errors)
         return data
+
+    @classmethod
+    def key_field(cls, required=False)
+        return fields.Dict(fields.Field, required=required)
+
+    @classmethod
+    def keys_field(cls, required=False)
+        return fields.List(cls.key_field(required=required))

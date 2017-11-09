@@ -51,48 +51,23 @@ class BaseRelationshipProxy(object):
     def delete(self):
         raise AttributeError("Can't delete {0} relationship {1}".format(self.relationship, self.instance))
 
-    def value_to_keys(self, inst, value):
-        """Return a dict of the Table keys suitable for ``**`` use when calling model operations"""
-        if inst.Table.range_key:
-            # XXX This assumes that both the hash & range are strings since we store them as a string
-            # XXX This may cause problems if a complex decimal is used as a key
-            hash_key, range_key = value.split()
-            return {
-                inst.Table.hash_key: hash_key,
-                inst.Table.range_key: range_key
-            }
-
-        return {
-            inst.Table.hash_key: value
-        }
-
-    def inst_to_value(self, inst):
-        """Return a string value representing the Table keys in the given instance"""
-        if inst.Table.range_key:
-            # XXX See the note in value_to_keys
-            return '{0} {1}'.format(
-                getattr(inst, inst.Table.hash_key),
-                getattr(inst, inst.Table.range_key)
-            )
-        return getattr(inst, inst.Table.hash_key)
-
 
 class OneToOneProxy(BaseRelationshipProxy):
     """TODO"""
     _local_attrs = BaseRelationshipProxy._local_attrs + ('other', 'other_model')
 
     def get_other(self):
-        other_value = getattr(self.instance, self.relationship.attr)
-        keys = self.value_to_keys(self.relationship.other_model, other_value)
-        self.other = self.relationship.other_model.get(**keys)
+        other_keys = getattr(self.instance, self.relationship.attr)
+        print(other_keys)
+        self.other = self.relationship.other_model.get(**other_keys)
 
     def assign(self, new_instance):
         if not isinstance(new_instance, self.relationship.other_model):
             raise AttributeError("You cannot assign {0}, it is not an instance of {1}".format(
-                value,
+                new_instance,
                 self.relationship.other_model
             ))
-        return setattr(self.instance, self.relationship.attr, self.inst_to_value(new_instance))
+        return setattr(self.instance, self.relationship.attr, new_instance.primary_key)
 
     def delete(self):
         return delattr(self.instance, self.relationship.attr)
@@ -122,32 +97,7 @@ class OneToOneProxy(BaseRelationshipProxy):
 
         return delattr(self.other, name)
 
-
-class BaseRelationship(object):
-    PROXY = None
-
-    def __init__(self, other_model, attr):
-        self.other_model = other_model
-        self.attr = attr
-
-
-class ManyToMany(BaseRelationship):
-    pass
-
-
-class OneToOne(BaseRelationship):
-    """One to one relationship between two models"""
-    PROXY = OneToOneProxy
-
-
-class OneToMany(BaseRelationship):
-    Individual = 1
-    Batch = 2
-
-    def __init__(self, other_model, attr, get_mode=Individual):
-        super(OneToMany, self).__init__(other_model, attr)
-        self.get_mode = get_mode
-
+class OneToManyProxy(BaseRelationshipProxy):
     def get_relations(self, model):
         attr_values = getattr(model, self.attr)
 
@@ -180,3 +130,39 @@ class OneToMany(BaseRelationship):
             new_value.append(self.inst_to_value(inst))
 
         setattr(model, self.attr, new_value)
+
+
+class BaseRelationship(object):
+    PROXY = None
+
+    def __init__(self, other_model, attr=None, required=False):
+        self.other_model = other_model
+        self.attr = attr
+        self.required = required
+
+    def schema_field(self, schema):
+        raise NotImplementedError
+
+
+class ManyToMany(BaseRelationship):
+    PROXY = None
+
+
+class OneToOne(BaseRelationship):
+    """One to one relationship between two models"""
+    PROXY = OneToOneProxy
+
+    def schema_field(self, schema):
+        return schema.key_field(required=self.required)
+
+
+class OneToMany(BaseRelationship):
+    """One to many relationship between a parent and children models"""
+    PROXY = OneToManyProxy
+
+    Individual = 1
+    Batch = 2
+
+    def __init__(self, other_model, attr, get_mode=Individual):
+        super(OneToMany, self).__init__(other_model, attr)
+        self.get_mode = get_mode

@@ -81,14 +81,14 @@ class DynaModelMeta(type):
             schema_attrs = {}
             for key, value in six.iteritems(attrs['Schema'].__dict__):
                 if isinstance(value, BaseRelationship):
-                    if value.attr not in attrs['Schema'].__dict__:
-                        raise InvalidRelationshipAttribute("{0} does not exist in the Schema for {1}".format(
-                            key,
-                            name
-                        ))
+                    schema_key = '{0}_id'.format(key)
+
+                    if value.attr is None:
+                        value.attr = schema_key
 
                     relationships[key] = value
                     attrs[key] = RelationshipResolver(value, DynaModelMeta.REGISTRY)
+                    schema_attrs[schema_key] = value.schema_field(Schema)
                 else:
                     schema_attrs[key] = value
 
@@ -210,7 +210,8 @@ class DynaModel(object):
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
-            setattr(self, k, v)
+            if not hasattr(self, k):
+                setattr(self, k, v)
 
     @classmethod
     def _normalize_keys_in_kwargs(cls, kwargs):
@@ -474,14 +475,14 @@ class DynaModel(object):
 
         return self.update(update_item_kwargs=kwargs, **updates)
 
-    def _add_hash_key_values(self, hash_dict):
-        """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
-        """
-        hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+    @property
+    def primary_key(self):
+        key = {self.Table.hash_key: getattr(self, self.Table.hash_key)}
         try:
-            hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
+            key[self.Table.range_key] = getattr(self, self.Table.range_key)
         except (AttributeError, TypeError):
             pass
+        return key
 
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
         """Update this instance in the table
@@ -521,7 +522,7 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        self._add_hash_key_values(kwargs)
+        kwargs.update(self.primary_key)
 
         try:
             update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
@@ -538,10 +539,7 @@ class DynaModel(object):
 
     def delete(self):
         """Delete this record in the table."""
-        delete_item_kwargs = {}
-        self._add_hash_key_values(delete_item_kwargs)
-
-        return self.Table.delete_item(**delete_item_kwargs)
+        return self.Table.delete_item(**self.primary_key)
 
 
 class Index(object):
