@@ -1,6 +1,7 @@
-from schematics.models import Model as SchematicsModel
-from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
 from schematics import types
+from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
+from schematics.models import Model as SchematicsModel, FieldDescriptor
+from schematics.schema import Field
 from schematics.types import compound
 
 from .base import DynamORMSchema
@@ -41,3 +42,8 @@ class Schema(SchematicsModel, DynamORMSchema):
     @classmethod
     def keys_field(cls, required=False):
         return compound.ListType(cls.key_field(required=required))
+
+    @classmethod
+    def add_field(cls, name, field):
+        cls._schema.append_field(Field(name, field))
+        setattr(cls, name, FieldDescriptor(name))

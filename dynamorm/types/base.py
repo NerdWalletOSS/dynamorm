@@ -35,3 +35,8 @@ class DynamORMSchema(object):
     def keys_field(cls, required=False):
         """Returns a schema field for storing a list of primary keys"""
         raise NotImplementedError('{0} class must implement keys_field'.format(cls.__name__))
+
+    @classmethod
+    def add_field(cls, name, field):
+        """Adds a field to an already initialized schema class"""
+        raise NotImplementedError('{0} class must implement add_field'.format(cls.__name__))

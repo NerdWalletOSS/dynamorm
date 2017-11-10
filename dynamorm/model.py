@@ -20,7 +20,7 @@ from .signals import (
     pre_delete, post_delete
 )
 from .table import DynamoTable3
-from .types.relationships import BaseRelationship, RelationshipResolver
+from .types.relationships import BaseRelationship
 
 log = logging.getLogger(__name__)
 
@@ -36,8 +36,6 @@ class DynaModelMeta(type):
     model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
     than a class named ``Schema``
     """
-    REGISTRY = {}
-
     def __new__(cls, name, parents, attrs):
         if name in ('DynaModel', 'DynaModelMeta'):
             return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
@@ -62,6 +60,8 @@ class DynaModelMeta(type):
             ))
 
         relationships = {}
+        indexes = {}
+        schema_attrs = {}
 
         # transform the Schema
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
@@ -82,20 +82,19 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
-            # Go through the original schema attrs.  Any relationships are added to our model attrs via a "resolver",
-            # which works like a property but knows how to resolve strings to classes and then returns a proxy for the
-            # specific type of relationship.  All other attrs are added to the transformed schema.
-            schema_attrs = {}
+            # Go through the original schema attrs.  Any relationships are added to our model attrs as a proxy for that
+            # specific type of relationship.  All other attrs are added to the schema as-is.
             for key, value in six.iteritems(attrs['Schema'].__dict__):
                 if isinstance(value, BaseRelationship):
-                    schema_key = '{0}_id'.format(key)
-
-                    if value.attr is None:
-                        value.attr = schema_key
-
                     relationships[key] = value
-                    attrs[key] = RelationshipResolver(value, DynaModelMeta.REGISTRY)
-                    schema_attrs[schema_key] = value.schema_field(Schema)
+                    attrs[key] = value.proxy
+
+                    schema_field = value.schema_field(Schema)
+                    if schema_field:
+                        if value.attr is None:
+                            value.attr = '{0}_id'.format(key)
+
+                        schema_attrs[value.attr] = schema_field
                 else:
                     schema_attrs[key] = value
 
@@ -106,8 +105,6 @@ class DynaModelMeta(type):
             )
             attrs['Schema'] = SchemaClass
             attrs['relationships'] = relationships
-
-        indexes = {}
 
         # transform the Table
         if should_transform('Table'):
@@ -137,9 +134,6 @@ class DynaModelMeta(type):
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
         model.Table._model = model
-
-        # Store it in our registry
-        DynaModelMeta.REGISTRY[name] = model
 
         model_prepared.send(model)
 
@@ -215,7 +209,7 @@ class DynaModel(object):
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
         input will be set on ``self`` as attributes.
         """
-        pre_init.send(self, partial=partial, raw=raw)
+        pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
         # Validate the data
         self._raw = raw
@@ -224,7 +218,7 @@ class DynaModel(object):
             if not hasattr(self, k):
                 setattr(self, k, v)
 
-        post_init.send(self, partial=partial, raw=raw)
+        post_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
     @classmethod
     def _normalize_keys_in_kwargs(cls, kwargs):
@@ -470,9 +464,9 @@ class DynaModel(object):
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         if not partial:
-            pre_save.send(self, partial=partial)
+            pre_save.send(self.__class__, instance=self, partial=partial)
             resp = self.put(self.to_dict(), **kwargs)
-            post_save.send(self, partial=partial)
+            post_save.send(self.__class__, instance=self, partial=partial)
             return resp
 
         # Collect the fields to updated based on what's changed
@@ -537,7 +531,9 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        pre_update.send(self, conditions=conditions, update_item_kwargs=update_item_kwargs, kwargs=kwargs)
+        pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                        kwargs=kwargs)
+
         kwargs.update(self.primary_key)
 
         try:
@@ -551,7 +547,8 @@ class DynaModel(object):
         for key, val in six.iteritems(resp['Attributes']):
             setattr(self, key, val)
 
-        post_update.send(self, conditions=conditions, update_item_kwargs=update_item_kwargs, kwargs=kwargs)
+        post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                         kwargs=kwargs)
 
         return resp
 

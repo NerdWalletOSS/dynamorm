@@ -438,7 +438,6 @@ def test_relationship_one_to_many(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
-            parent = OneToOne('Parent')
 
     class Parent(DynaModel):
         class Table:
@@ -488,6 +487,9 @@ def test_relationship_one_to_many(request, dynamo_local):
     mom2.children.append(martin)
     mom2.save()
 
+    # we must save martin again, so the new parent_id persists
+    martin.save()
+
     mom2 = Parent.get(name='mom2', consistent=True)
     assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
 
@@ -507,7 +509,6 @@ def test_relationship_one_to_one(request, dynamo_local):
         class Schema:
             name = String(required=True)
             age = Number(required=True)
-            parent = OneToOne('Parent')
 
     class Parent(DynaModel):
         class Table:
@@ -536,6 +537,8 @@ def test_relationship_one_to_one(request, dynamo_local):
     )
     kearney = Child.get(name='kearney', age=13)
     dolph = Child.get(name='dolph', age=14)
+
+    assert kearney.parent_id == {'name': 'mom1'}
 
     mom1 = Parent.get(name='mom1')
     mom2 = Parent.get(name='mom2')

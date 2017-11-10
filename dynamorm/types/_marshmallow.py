@@ -38,3 +38,7 @@ class Schema(MarshmallowSchema, DynamORMSchema):
     @classmethod
     def keys_field(cls, required=False):
         return fields.List(cls.key_field(required=required))
+
+    @classmethod
+    def add_field(cls, name, field):
+        cls._declared_fields[name] = field
