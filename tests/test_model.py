@@ -429,9 +429,9 @@ def test_explicit_schema_parents():
 
 def test_relationship_one_to_many(request, dynamo_local):
     """A Parent has many Child(ren)"""
-    class Child(DynaModel):
+    class User(DynaModel):
         class Table:
-            name = 'child'
+            name = 'users'
             hash_key = 'name'
             read = 1
             write = 1
@@ -439,66 +439,70 @@ def test_relationship_one_to_many(request, dynamo_local):
         class Schema:
             name = String(required=True)
 
-    class Parent(DynaModel):
+    class Group(DynaModel):
         class Table:
-            name = 'parent'
+            name = 'group'
             hash_key = 'name'
             read = 1
             write = 1
 
         class Schema:
             name = String(required=True)
-            children = OneToMany('Child')
+            users = OneToMany('User', attr='user_ids')
 
-    Child.Table.create()
-    Parent.Table.create()
-    request.addfinalizer(Child.Table.delete)
-    request.addfinalizer(Parent.Table.delete)
+    User.Table.create()
+    Group.Table.create()
+    request.addfinalizer(User.Table.delete)
+    request.addfinalizer(Group.Table.delete)
 
     # first do some "raw" testing by inserting the correct values by hand
-    Child.put_batch(
-        {'name': 'kearney', 'parent_id': {'name': 'mom1'}},
-        {'name': 'dolph', 'parent_id': {'name': 'mom1'}},
-        {'name': 'jimbo', 'parent_id': {'name': 'mom2'}},
+    User.put_batch(
+        {'name': 'kearney', 'group_id': {'name': 'group1'}},
+        {'name': 'dolph', 'group_id': {'name': 'group1'}},
+        {'name': 'jimbo', 'group_id': {'name': 'group2'}},
     )
 
-    Parent.put_batch(
-        {'name': 'mom1', 'children_id': [{'name': 'kearney'}, {'name': 'dolph'}]},
-        {'name': 'mom2', 'children_id': [{'name': 'jimbo'}]},
+    Group.put_batch(
+        {'name': 'group1', 'user_ids': [{'name': 'kearney'}, {'name': 'dolph'}]},
+        {'name': 'group2', 'user_ids': [{'name': 'jimbo'}]},
     )
 
-    kearney = Child.get(name='kearney')
-    dolph = Child.get(name='dolph')
-    jimbo = Child.get(name='jimbo')
+    kearney = User.get(name='kearney')
+    dolph = User.get(name='dolph')
+    jimbo = User.get(name='jimbo')
 
-    mom1 = Parent.get(name='mom1')
-    mom2 = Parent.get(name='mom2')
+    group1 = Group.get(name='group1')
+    group2 = Group.get(name='group2')
 
-    assert kearney.parent.name == dolph.parent.name == mom1.name
-    assert jimbo.parent.name == mom2.name
+    assert kearney.group.name == dolph.group.name == group1.name
+    assert jimbo.group.name == group2.name
 
-    assert sorted([kid.name for kid in mom1.children]) == [dolph.name, kearney.name]
-    assert [kid.name for kid in mom2.children] == [jimbo.name]
+    assert sorted([user.name for user in group1.users]) == [dolph.name, kearney.name]
+    assert [user.name for user in group2.users] == [jimbo.name]
 
     # next, test mutating objects
-    martin = Child(name='martin')
+    martin = User(name='martin')
     martin.save()
 
-    mom2.children.append(martin)
-    mom2.save()
+    assert martin.group_id is None
 
-    # we must save martin again, so the new parent_id persists
+    group2.users.append(martin)
+    group2.save()
+
+    assert martin.group_id == {'name': 'group2'}
+
+    # we must save martin again, so the new group_id persists
     martin.save()
 
-    mom2 = Parent.get(name='mom2', consistent=True)
-    assert [kid.name for kid in mom2.children] == [jimbo.name, martin.name]
+    group2 = Group.get(name='group2', consistent=True)
+    assert [user.name for user in group2.users] == [jimbo.name, martin.name]
 
-    martin = Child.get(name='martin')
-    assert martin.parent.name == mom2.name
+    martin = User.get(name='martin')
+    assert martin.group.name == group2.name
 
 
 def test_relationship_one_to_one(request, dynamo_local):
-    class Child(DynaModel):
+    class ChildOneToOne(DynaModel):
         class Table:
             name = 'child'
             hash_key = 'name'
@@ -519,14 +523,14 @@ def test_relationship_one_to_one(request, dynamo_local):
 
         class Schema:
             name = String(required=True)
-            child = OneToOne('Child')
+            child = OneToOne('ChildOneToOne')
 
-    Child.Table.create()
+    ChildOneToOne.Table.create()
     Parent.Table.create()
-    request.addfinalizer(Child.Table.delete)
+    request.addfinalizer(ChildOneToOne.Table.delete)
     request.addfinalizer(Parent.Table.delete)
 
-    Child.put_batch(
+    ChildOneToOne.put_batch(
         {'name': 'kearney', 'age': 13, 'parent_id': {'name': 'mom1'}},
         {'name': 'dolph', 'age': 14, 'parent_id': {'name': 'mom2'}},
     )
@@ -535,8 +539,8 @@ def test_relationship_one_to_one(request, dynamo_local):
         {'name': 'mom1', 'child_id': {'name': 'kearney', 'age': 13}},
         {'name': 'mom2', 'child_id': {'name': 'dolph', 'age': 14}},
     )
-    kearney = Child.get(name='kearney', age=13)
-    dolph = Child.get(name='dolph', age=14)
+    kearney = ChildOneToOne.get(name='kearney', age=13)
+    dolph = ChildOneToOne.get(name='dolph', age=14)
 
     assert kearney.parent_id == {'name': 'mom1'}
 

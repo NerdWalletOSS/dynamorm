@@ -135,6 +135,7 @@ class DynaModelMeta(type):
         model.Schema._model = model
         model.Table._model = model
 
+        log.debug("Model prepared: %s", model)
         model_prepared.send(model)
 
         return model

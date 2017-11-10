@@ -1,9 +1,11 @@
 import collections
+import logging
 
 import six
 
-from dynamorm.exceptions import InvalidOtherModel
-from dynamorm.signals import model_prepared, post_save
+from dynamorm.signals import model_prepared
+
+log = logging.getLogger(__name__)
 
 
 class BaseRelationshipProxy(object):
@@ -159,12 +161,14 @@ class BaseRelationship(object):
                 self.set_other(cls)
 
     def set_other(self, model):
+        log.debug("Setting %s other model to: %s", self, model)
         self.other_model = model
 
         if self.this_model is not None:
             self.set_reference()
 
     def set_this(self, model):
+        log.debug("Setting %s this model to: %s", self, model)
         self.this_model = model
 
         if self.other_model is not None:
