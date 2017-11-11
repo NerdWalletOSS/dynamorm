@@ -12,6 +12,11 @@ DynamORM API
 .. automodule:: dynamorm.model
     :members:
 
+``dynamorm.signals``
+--------------------
+.. automodule:: dynamorm.signals
+    :members:
+
 
 ``dynamorm.table``
 --------------------
