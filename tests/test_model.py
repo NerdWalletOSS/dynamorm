@@ -484,7 +484,8 @@ def test_relationship_one_to_many(request, dynamo_local):
     martin = User(name='martin')
     martin.save()
 
-    assert martin.group_id is None
+    # we use getattr since the object will not have a group_id attr when using marshmallow
+    assert getattr(martin, 'group_id', None) is None
 
     group2.users.append(martin)
     group2.save()
