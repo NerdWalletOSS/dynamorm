@@ -13,7 +13,17 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope='session', autouse=True)
 def setup_logging():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
+
+    level_overrides = {
+        'requests.packages.urllib3': 'WARN',
+        'flask_app.cors': 'WARN',
+        'boto': 'WARN',
+        'boto3': 'WARN',
+        'botocore': 'WARN',
+    }
+    for logger, level in level_overrides.items():
+        logging.getLogger(logger).setLevel(level)
 
 
 @pytest.fixture(scope='session')

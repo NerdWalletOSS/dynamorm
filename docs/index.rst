@@ -1,7 +1,7 @@
 DynamORM
 ========
 
-DynamORM (pronounced *Dynamo-R-M*) is a Python object relation mapping library for Amazon's `DynamoDB`_ service.
+DynamORM (pronounced *Dynamo-R-M*) is a Python object and relation mapping library for Amazon's `DynamoDB`_.
 
 The project has two goals:
 
@@ -11,9 +11,10 @@ The project has two goals:
    etc) means that we can always provide best-practices for queries and take advantages of new features without needing
    to refactor any application logic.
 
-2. **Delegate schema validation and serialization to more focused libraries**.  Building ORM semantics is "easy", doing
-   data validation and serialization is not.  We support both `Marshmallow`_ and `Schematics`_ for building your object
-   schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in your code.
+2. **Delegate schema validation and serialization to more focused libraries**.  Building object mapping and relationship
+   semantics is "easy", doing data validation and serialization is not.  We support both `Marshmallow`_ and
+   `Schematics`_ for building your object schemas.  You can take advantage of the full power of these libraries as they
+   are transparently exposed in your code.
 
 .. _DynamoDB: http://aws.amazon.com/dynamodb/
 .. _Dynamo v1 in boto to Dynamo v2 in boto: http://boto.cloudhackers.com/en/latest/migrations/dynamodb_v1_to_v2.html

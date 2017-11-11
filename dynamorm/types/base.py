@@ -1,10 +1,6 @@
 class DynamORMSchema(object):
-    """This is the base class for the inner ``Schema`` class on Tables.
+    """This is the base class for the inner ``Schema`` class on Tables"""
 
-    It must define ``dynamorm_validate`` which runs validation in your desired serialization library,
-    ``dynamorm_fields`` which returns a dictionary of key value pairs where keys are attributes and values are the
-    type of the attribute, and ``field_to_dynamo_type`` which returns the dynamo type character for the input type.
-    """
     @staticmethod
     def field_to_dynamo_type(field):
         """Returns the dynamo type character given the field."""
@@ -13,7 +9,7 @@ class DynamORMSchema(object):
     @classmethod
     def dynamorm_fields(cls):
         """Returns a dictionary of key value pairs where keys are attributes and values are type classes"""
-        raise NotImplementedError('{0} class must implement dynamallow_fields'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dyanmorm_fields'.format(cls.__name__))
 
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
@@ -28,4 +24,19 @@ class DynamORMSchema(object):
 
         On validation failure, this should raise ``dynamorm.exc.ValidationError``.
         """
-        raise NotImplementedError('{0} class must implement dynamallow_validate'.format(cls.__name__))
+        raise NotImplementedError('{0} class must implement dyanmorm_validate'.format(cls.__name__))
+
+    @classmethod
+    def key_field(cls, required=False):
+        """Returns a schema field for storing primary keys"""
+        raise NotImplementedError('{0} class must implement key_field'.format(cls.__name__))
+
+    @classmethod
+    def keys_field(cls, required=False):
+        """Returns a schema field for storing a list of primary keys"""
+        raise NotImplementedError('{0} class must implement keys_field'.format(cls.__name__))
+
+    @classmethod
+    def add_field(cls, name, field):
+        """Adds a field to an already initialized schema class"""
+        raise NotImplementedError('{0} class must implement add_field'.format(cls.__name__))

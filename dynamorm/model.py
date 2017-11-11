@@ -11,8 +11,16 @@ import logging
 
 import six
 
-from .table import DynamoTable3
 from .exceptions import DynaModelException
+from .signals import (
+    model_prepared,
+    pre_init, post_init,
+    pre_save, post_save,
+    pre_update, post_update,
+    pre_delete, post_delete
+)
+from .table import DynamoTable3
+from .types.relationships import BaseRelationship
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +59,10 @@ class DynaModelMeta(type):
                 name=name
             ))
 
+        relationships = {}
+        indexes = {}
+        schema_attrs = {}
+
         # transform the Schema
         # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation
@@ -70,14 +82,29 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
+            # Go through the original schema attrs.  Any relationships are added to our model attrs as a proxy for that
+            # specific type of relationship.  All other attrs are added to the schema as-is.
+            for key, value in six.iteritems(attrs['Schema'].__dict__):
+                if isinstance(value, BaseRelationship):
+                    relationships[key] = value
+                    attrs[key] = value.proxy
+
+                    schema_field = value.schema_field(Schema)
+                    if schema_field:
+                        if value.attr is None:
+                            value.attr = '{0}_id'.format(key)
+
+                        schema_attrs[value.attr] = schema_field
+                else:
+                    schema_attrs[key] = value
+
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-                dict(attrs['Schema'].__dict__),
+                schema_attrs
             )
             attrs['Schema'] = SchemaClass
-
-        indexes = {}
+            attrs['relationships'] = relationships
 
         # transform the Table
         if should_transform('Table'):
@@ -107,6 +134,9 @@ class DynaModelMeta(type):
         # give the Schema and Table objects a reference back to the model
         model.Schema._model = model
         model.Table._model = model
+
+        log.debug("Model prepared: %s", model)
+        model_prepared.send(model)
 
         return model
 
@@ -178,12 +208,18 @@ class DynaModel(object):
         """Create a new instance of a DynaModel
 
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
-        input will be put onto ``self`` as attributes.
+        input will be set on ``self`` as attributes.
         """
+        pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
+
+        # Validate the data
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
-            setattr(self, k, v)
+            if not hasattr(self, k):
+                setattr(self, k, v)
+
+        post_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
     @classmethod
     def _normalize_keys_in_kwargs(cls, kwargs):
@@ -429,7 +465,10 @@ class DynaModel(object):
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         if not partial:
-            return self.put(self.to_dict(), **kwargs)
+            pre_save.send(self.__class__, instance=self, partial=partial)
+            resp = self.put(self.to_dict(), **kwargs)
+            post_save.send(self.__class__, instance=self, partial=partial)
+            return resp
 
         # Collect the fields to updated based on what's changed
         # XXX: Deeply nested data will still put the whole top-most object that has changed
@@ -446,14 +485,14 @@ class DynaModel(object):
 
         return self.update(update_item_kwargs=kwargs, **updates)
 
-    def _add_hash_key_values(self, hash_dict):
-        """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
-        """
-        hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+    @property
+    def primary_key(self):
+        key = {self.Table.hash_key: getattr(self, self.Table.hash_key)}
         try:
-            hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
+            key[self.Table.range_key] = getattr(self, self.Table.range_key)
         except (AttributeError, TypeError):
             pass
+        return key
 
     def update(self, conditions=None, update_item_kwargs=None, **kwargs):
         """Update this instance in the table
@@ -493,7 +532,10 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        self._add_hash_key_values(kwargs)
+        pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                        kwargs=kwargs)
+
+        kwargs.update(self.primary_key)
 
         try:
             update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
@@ -506,14 +548,17 @@ class DynaModel(object):
         for key, val in six.iteritems(resp['Attributes']):
             setattr(self, key, val)
 
+        post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                         kwargs=kwargs)
+
         return resp
 
     def delete(self):
         """Delete this record in the table."""
-        delete_item_kwargs = {}
-        self._add_hash_key_values(delete_item_kwargs)
-
-        return self.Table.delete_item(**delete_item_kwargs)
+        pre_delete.send(self)
+        resp = self.Table.delete_item(**self.primary_key)
+        post_delete.send(self)
+        return resp
 
 
 class Index(object):
