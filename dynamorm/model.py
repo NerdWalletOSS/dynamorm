@@ -11,6 +11,13 @@ import logging
 
 import six
 
+from .signals import (
+    model_prepared,
+    pre_init, post_init,
+    pre_save, post_save,
+    pre_update, post_update,
+    pre_delete, post_delete
+)
 from .table import DynamoTable3
 from .exceptions import DynaModelException
 
@@ -108,6 +115,8 @@ class DynaModelMeta(type):
         model.Schema._model = model
         model.Table._model = model
 
+        model_prepared.send(model)
+
         return model
 
 
@@ -180,10 +189,14 @@ class DynaModel(object):
         :param \*\*raw: The raw data as pulled out of dynamo. This will be validated and the sanitized
         input will be put onto ``self`` as attributes.
         """
+        pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
+
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
             setattr(self, k, v)
+
+        post_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
     @classmethod
     def _normalize_keys_in_kwargs(cls, kwargs):
@@ -429,7 +442,10 @@ class DynaModel(object):
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         if not partial:
-            return self.put(self.to_dict(), **kwargs)
+            pre_save.send(self.__class__, instance=self, partial=partial, put_kwargs=kwargs)
+            resp = self.put(self.to_dict(), **kwargs)
+            post_save.send(self.__class__, instance=self, partial=partial, put_kwargs=kwargs)
+            return resp
 
         # Collect the fields to updated based on what's changed
         # XXX: Deeply nested data will still put the whole top-most object that has changed
@@ -500,12 +516,17 @@ class DynaModel(object):
         except TypeError:
             update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
 
+        pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                        updates=kwargs)
+
         resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
         # update our local attrs to match what we updated
         for key, val in six.iteritems(resp['Attributes']):
             setattr(self, key, val)
 
+        post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
+                         updates=kwargs)
         return resp
 
     def delete(self):
@@ -513,7 +534,10 @@ class DynaModel(object):
         delete_item_kwargs = {}
         self._add_hash_key_values(delete_item_kwargs)
 
-        return self.Table.delete_item(**delete_item_kwargs)
+        pre_delete.send(self.__class__, instance=self)
+        resp = self.Table.delete_item(**delete_item_kwargs)
+        post_delete.send(self.__class__, instance=self)
+        return resp
 
 
 class Index(object):
