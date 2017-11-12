@@ -31,8 +31,8 @@ data model with one extra field.
 ==========  ========  ======  ===========
 Attribute   Required  Type    Description
 ==========  ========  ======  ===========
-projection  True      object  An instance of of :class:`dynamorm.model.ProjectAll`, :class:`dynamorm.model.ProjectKeys`,
-                              or :class:`dynamorm.model.ProjectInclude`
+projection  True      object  An instance of of :class:`dynamorm.model.ProjectAll`,
+                              :class:`dynamorm.model.ProjectKeys`, or :class:`dynamorm.model.ProjectInclude`
 
 ==========  ========  ======  ===========
 
