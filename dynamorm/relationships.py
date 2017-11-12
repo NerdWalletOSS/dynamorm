@@ -63,7 +63,8 @@ class OneToOne(Relationship):
 
     def post_save(self, sender, instance, put_kwargs):
         if self.other_inst:
-            self.other_inst.save()
+            self.other_inst.save(partial=False)
 
     def post_update(self, sender, instance, conditions, update_item_kwargs, updates):
-        pass
+        if self.other_inst:
+            self.other_inst.save(partial=True)
