@@ -29,12 +29,6 @@ class OneToOne(Relationship):
         self.back_reference = back_reference
         self.auto_create = auto_create
 
-    def set_this_model(self, model):
-        super(OneToOne, self).set_this_model(model)
-
-        post_save.connect(self.post_save, sender=model)
-        post_update.connect(self.post_update, sender=model)
-
     def __get__(self, obj, owner):
         self.get_other_inst(obj, create_missing=self.auto_create)
         return self.other_inst
@@ -57,17 +51,6 @@ class OneToOne(Relationship):
             self.other_inst.delete()
             self.other_inst = None
 
-    def get_other_inst(self, obj, create_missing=False):
-        query_kwargs = self.query(obj)
-        results = self.other.query(**query_kwargs)
-
-        try:
-            self.other_inst = next(results)
-        except StopIteration:
-            if create_missing:
-                query_kwargs['partial'] = True
-                self.other_inst = self.other(**query_kwargs)
-
     @staticmethod
     def default_query(accessor):
         if accessor.range_key:
@@ -79,6 +62,23 @@ class OneToOne(Relationship):
             return lambda instance: {
                 accessor.hash_key: getattr(instance, accessor.hash_key),
             }
+
+    def set_this_model(self, model):
+        super(OneToOne, self).set_this_model(model)
+
+        post_save.connect(self.post_save, sender=model)
+        post_update.connect(self.post_update, sender=model)
+
+    def get_other_inst(self, obj, create_missing=False):
+        query_kwargs = self.query(obj)
+        results = self.other.query(**query_kwargs)
+
+        try:
+            self.other_inst = next(results)
+        except StopIteration:
+            if create_missing:
+                query_kwargs['partial'] = True
+                self.other_inst = self.other(**query_kwargs)
 
     def post_save(self, sender, instance, put_kwargs):
         if self.other_inst:
