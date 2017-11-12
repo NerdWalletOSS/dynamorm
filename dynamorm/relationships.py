@@ -61,7 +61,7 @@ class OneToOne(Relationship):
                 accessor.hash_key: getattr(instance, accessor.hash_key),
             }
 
-    def post_save(self, sender, instance, partial, put_kwargs):
+    def post_save(self, sender, instance, put_kwargs):
         if self.other_inst:
             self.other_inst.save()
 
