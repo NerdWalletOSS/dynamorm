@@ -1,5 +1,8 @@
 """Relationships leverage the native tables & indexes in DynamoDB to allow more concise definition and access of related
 objects.
+
+When you define a relationship you set the other model in the relationship as well as the "accessor", which defaults to
+the ``Table`` but can be changed to a ``GlobalIndex`` if your relationship is based on a secondary index.
 """
 import six
 
@@ -19,6 +22,14 @@ class Relationship(object):
 
 
 class OneToOne(Relationship):
+    """A One-to-One relationship is where two models (tables) have items that have a relation to exactly one model in
+    the other model.
+
+    It is a useful pattern when you wish to split up large tables with many attributes where your "main" table is
+    queried frequently and having all of the attributes included in the query results would increase your required
+    throughput.  By splitting the data into two tables you can have lower throughput on the "secondary" table as the
+    items will be lazily fetched only as they are accessed.
+    """
     def __init__(self, other, accessor='Table', query=None, back_reference=DefaultBackReference, auto_create=True):
         super(OneToOne, self).__init__()
 
@@ -28,6 +39,8 @@ class OneToOne(Relationship):
         self.query = query or OneToOne.default_query(self.accessor)
         self.back_reference = back_reference
         self.auto_create = auto_create
+
+        # XXX TODO: handle back_reference
 
     def __get__(self, obj, owner):
         self.get_other_inst(obj, create_missing=self.auto_create)
@@ -87,3 +100,13 @@ class OneToOne(Relationship):
     def post_update(self, sender, instance, conditions, update_item_kwargs, updates):
         if self.other_inst:
             self.other_inst.save(partial=True)
+
+
+class OneToMany(Relationship):
+    """XXX TODO"""
+    pass
+
+
+class ManyToMany(Relationship):
+    """XXX TODO"""
+    pass
