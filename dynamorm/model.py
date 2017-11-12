@@ -11,8 +11,9 @@ import logging
 
 import six
 
-from .table import DynamoTable3
 from .exceptions import DynaModelException
+from .relationships import Relationship
+from .table import DynamoTable3
 
 log = logging.getLogger(__name__)
 
@@ -51,9 +52,9 @@ class DynaModelMeta(type):
                 name=name
             ))
 
-        # transform the Schema
-        # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
-        # dict and see if the item comes from either of them and lazily import our local Model implementation
+        # Transform the Schema.
+        # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
+        # dict and see if the item comes from either of them and lazily import our local Model implementation.
         if should_transform('Schema'):
             for schema_item in six.itervalues(attrs['Schema'].__dict__):
                 try:
@@ -70,10 +71,17 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
+            schema_attrs = {}
+            for key, val in six.iteritems(attrs['Schema'].__dict__):
+                if isinstance(val, Relationship):
+                    attrs[key] = val
+                else:
+                    schema_attrs[key] = val
+
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-                dict(attrs['Schema'].__dict__),
+                schema_attrs
             )
             attrs['Schema'] = SchemaClass
 

@@ -236,4 +236,4 @@ def dynamo_local(request, TestModel):
         region_name="us-west-2",
         endpoint_url="http://localhost:{port}".format(port=dynamo_local_.port)
     )
-    return dynamo_local_.port
+    return dynamo_local_
