@@ -131,8 +131,6 @@ class DynaModelMeta(type):
 
         model_prepared.send(model)
 
-        model_prepared.send(model)
-
         return model
 
 

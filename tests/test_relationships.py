@@ -1,18 +1,12 @@
 import os
-import pytest
 
-from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
+from dynamorm.model import DynaModel
 from dynamorm.relationships import OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
 else:
     from schematics.types import StringType as String, IntType as Number
-
-try:
-    from unittest.mock import MagicMock, call
-except ImportError:
-    from mock import MagicMock, call
 
 
 def test_one_to_one(dynamo_local, request):
