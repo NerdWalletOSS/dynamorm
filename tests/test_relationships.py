@@ -68,3 +68,7 @@ def test_one_to_one(dynamo_local, request):
 
     details = Details.get(thing_version='foo:1')
     assert details.attr1 == 'new attr1'
+
+    # test deleting the details
+    del item.details
+    assert Details.get(thing_version='foo:1') is None

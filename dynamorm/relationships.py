@@ -35,19 +35,8 @@ class OneToOne(Relationship):
         post_save.connect(self.post_save, sender=model)
         post_update.connect(self.post_update, sender=model)
 
-    def __get__(self, instance, owner):
-        query_kwargs = self.query(instance)
-        results = self.other.query(**query_kwargs)
-
-        try:
-            self.other_inst = next(results)
-        except StopIteration:
-            if not self.auto_create:
-                return
-
-            query_kwargs['partial'] = True
-            self.other_inst = self.other(**query_kwargs)
-
+    def __get__(self, obj, owner):
+        self.get_other_inst(obj, create_missing=self.auto_create)
         return self.other_inst
 
     def __set__(self, obj, new_instance):
@@ -59,6 +48,25 @@ class OneToOne(Relationship):
             setattr(new_instance, key, val)
 
         self.other_inst = new_instance
+
+    def __delete__(self, obj):
+        if self.other_inst is None:
+            self.get_other_inst(obj, create_missing=False)
+
+        if self.other_inst:
+            self.other_inst.delete()
+            self.other_inst = None
+
+    def get_other_inst(self, obj, create_missing=False):
+        query_kwargs = self.query(obj)
+        results = self.other.query(**query_kwargs)
+
+        try:
+            self.other_inst = next(results)
+        except StopIteration:
+            if create_missing:
+                query_kwargs['partial'] = True
+                self.other_inst = self.other(**query_kwargs)
 
     @staticmethod
     def default_query(accessor):
