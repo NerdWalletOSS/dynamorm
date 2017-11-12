@@ -56,7 +56,6 @@ pre_save = signal(
 
     :param: sender: The model class.
     :param: instance: The model instance.
-    :param: bool partial: True if this is a partial instantiation, not all data may be present.
     :param: dict put_kwargs: A dict of the kwargs being sent to the table put method.
     '''
 )
@@ -67,7 +66,6 @@ post_save = signal(
 
     :param: sender: The model class.
     :param: instance: The model instance.
-    :param: bool partial: True if this is a partial instantiation, not all data may be present.
     :param: dict put_kwargs: A dict of the kwargs being sent to the table put method.
     '''
 )
