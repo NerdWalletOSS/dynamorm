@@ -21,7 +21,7 @@ fi
 # only build docs on py2.7
 if [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ]; then
     pip install travis-sphinx
-    travis-sphinx build
+    travis-sphinx -s docs build
 
     # push if we have a token and this isn't a pr build
     if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ ! -z "${GH_TOKEN}" ]; then
