@@ -12,6 +12,30 @@ DynamORM API
 .. automodule:: dynamorm.model
     :members:
 
+``dynamorm.signals``
+--------------------
+.. automodule:: dynamorm.signals
+    :members:
+
+.. autodata:: model_prepared
+    :annotation:
+.. autodata:: pre_init
+    :annotation:
+.. autodata:: post_init
+    :annotation:
+.. autodata:: pre_save
+    :annotation:
+.. autodata:: post_save
+    :annotation:
+.. autodata:: pre_update
+    :annotation:
+.. autodata:: post_update
+    :annotation:
+.. autodata:: pre_delete
+    :annotation:
+.. autodata:: post_delete
+    :annotation:
+
 
 ``dynamorm.table``
 --------------------
