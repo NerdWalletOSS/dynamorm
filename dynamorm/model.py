@@ -442,9 +442,9 @@ class DynaModel(object):
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
         """
         if not partial:
-            pre_save.send(self.__class__, instance=self, partial=partial, put_kwargs=kwargs)
+            pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             resp = self.put(self.to_dict(), **kwargs)
-            post_save.send(self.__class__, instance=self, partial=partial, put_kwargs=kwargs)
+            post_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             return resp
 
         # Collect the fields to updated based on what's changed
