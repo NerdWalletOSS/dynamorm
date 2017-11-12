@@ -1,6 +1,7 @@
 """Relationships leverage the native tables & indexes in DynamoDB to allow more concise definition and access of related
 objects.
 """
+import six
 
 from .signals import post_save, post_update
 
@@ -48,6 +49,16 @@ class OneToOne(Relationship):
             self.other_inst = self.other(**query_kwargs)
 
         return self.other_inst
+
+    def __set__(self, obj, new_instance):
+        if not isinstance(new_instance, self.other):
+            raise TypeError("%s is not an instance of %s", new_instance, self.other)
+
+        query_kwargs = self.query(obj)
+        for key, val in six.iteritems(query_kwargs):
+            setattr(new_instance, key, val)
+
+        self.other_inst = new_instance
 
     @staticmethod
     def default_query(accessor):

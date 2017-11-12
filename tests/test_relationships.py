@@ -61,3 +61,10 @@ def test_one_to_one(dynamo_local, request):
 
     details = Details.get(thing_version='foo:1')
     assert details.attr1 == 'this is attr1'
+
+    # test replacing the details
+    item.details = Details(attr1='new attr1', partial=True)
+    item.save()
+
+    details = Details.get(thing_version='foo:1')
+    assert details.attr1 == 'new attr1'
