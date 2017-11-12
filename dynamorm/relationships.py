@@ -2,22 +2,52 @@
 objects.
 """
 
+from .signals import post_save, post_update
+
 
 class DefaultBackReference(object):
     pass
 
 
 class Relationship(object):
-    pass
+    def __init__(self):
+        self.this = None
+
+    def set_this_model(self, model):
+        self.this = model
 
 
 class OneToOne(Relationship):
     def __init__(self, other, accessor='Table', query=None, back_reference=DefaultBackReference, auto_create=True):
+        super(OneToOne, self).__init__()
+
         self.other = other
+        self.other_inst = None
         self.accessor = getattr(other, accessor)
         self.query = query or OneToOne.default_query(self.accessor)
         self.back_reference = back_reference
         self.auto_create = auto_create
+
+    def set_this_model(self, model):
+        super(OneToOne, self).set_this_model(model)
+
+        post_save.connect(self.post_save, sender=model)
+        post_update.connect(self.post_update, sender=model)
+
+    def __get__(self, instance, owner):
+        query_kwargs = self.query(instance)
+        results = self.other.query(**query_kwargs)
+
+        try:
+            self.other_inst = next(results)
+        except StopIteration:
+            if not self.auto_create:
+                return
+
+            query_kwargs['partial'] = True
+            self.other_inst = self.other(**query_kwargs)
+
+        return self.other_inst
 
     @staticmethod
     def default_query(accessor):
@@ -31,16 +61,9 @@ class OneToOne(Relationship):
                 accessor.hash_key: getattr(instance, accessor.hash_key),
             }
 
-    def __get__(self, instance, owner):
-        results = self.other.query(**self.query(instance))
+    def post_save(self, sender, instance, partial, put_kwargs):
+        if self.other_inst:
+            self.other_inst.save()
 
-        try:
-            return next(results)
-        except StopIteration:
-            if not self.auto_create:
-                return None
-
-            query_func = self.default_query(owner.Table)
-            kwargs = query_func(instance)
-            kwargs['partial'] = True
-            return self.other(**kwargs)
+    def post_update(self, sender, instance, conditions, update_item_kwargs, updates):
+        pass

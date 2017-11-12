@@ -59,6 +59,9 @@ class DynaModelMeta(type):
                 name=name
             ))
 
+        indexes = {}
+        relationships = {}
+
         # Transform the Schema.
         # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation.
@@ -82,6 +85,7 @@ class DynaModelMeta(type):
             for key, val in six.iteritems(attrs['Schema'].__dict__):
                 if isinstance(val, Relationship):
                     attrs[key] = val
+                    relationships[key] = val
                 else:
                     schema_attrs[key] = val
 
@@ -91,8 +95,7 @@ class DynaModelMeta(type):
                 schema_attrs
             )
             attrs['Schema'] = SchemaClass
-
-        indexes = {}
+            attrs['relationships'] = relationships
 
         # transform the Table
         if should_transform('Table'):
@@ -113,15 +116,18 @@ class DynaModelMeta(type):
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
+        # give the Schema and Table objects a reference back to the model
+        model.Schema._model = model
+        model.Table._model = model
+
         # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
         # provide the actual Index object from our table as the parameter.
         for name, klass in six.iteritems(indexes):
             index = klass(model, model.Table.indexes[klass.name])
             setattr(model, name, index)
 
-        # give the Schema and Table objects a reference back to the model
-        model.Schema._model = model
-        model.Table._model = model
+        for relationship in six.itervalues(relationships):
+            relationship.set_this_model(model)
 
         model_prepared.send(model)
 
