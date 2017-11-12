@@ -1,3 +1,23 @@
+"""Signals provide a way for applications to loosely couple themselves and respond to different life cycle events.
+
+The `blinker`_ library provides the low-level signal implementation.
+
+To use the signals you ``connect`` a receiver function to the signals you're interested in:
+
+.. code-block:: python
+
+    from dynamorm.signals import post_save
+
+    def post_save_receiver(sender, instance, partial, put_kwargs):
+        log.info("Received post_save signal from model %s for instance %s", sender, instance)
+
+    post_save.connect(post_save_receiver)
+
+See the `blinker`_ documentation for more details.
+
+.. _blinker: https://pythonhosted.org/blinker/
+"""
+
 from blinker import signal
 
 model_prepared = signal(
