@@ -4,7 +4,7 @@ from dynamorm.model import DynaModel
 from dynamorm.relationships import OneToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String, Number
+    from marshmallow.fields import String, Integer as Number
 else:
     from schematics.types import StringType as String, IntType as Number
 
@@ -66,3 +66,10 @@ def test_one_to_one(dynamo_local, request):
     # test deleting the details
     del item.details
     assert Details.get(thing_version='foo:1') is None
+
+    # test back references
+    item = Sparse(thing='foo', version=1)
+    item.details.attr1 = 'this is attr1 again'
+    item.save()
+
+    details = Details.get(thing_version='foo:1')

@@ -103,8 +103,9 @@ class OneToOne(Relationship):
 
 
 class OneToMany(Relationship):
-    """XXX TODO"""
-    pass
+    """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"
+    instances of another model.
+    """
 
 
 class ManyToMany(Relationship):

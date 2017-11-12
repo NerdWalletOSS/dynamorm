@@ -4,7 +4,7 @@ import pytest
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
-    from marshmallow.fields import String, Number
+    from marshmallow.fields import String, Integer as Number
 else:
     from schematics.types import StringType as String, IntType as Number
 
@@ -133,7 +133,7 @@ def test_invalid_range_key():
                 baz = String(required=True)
 
 
-def test_number_hash_key():
+def test_number_hash_key(dynamo_local, request):
     """Test a number hash key and ensure the dynamo type gets set correctly"""
     class Model(DynaModel):
         class Table:
@@ -146,8 +146,13 @@ def test_number_hash_key():
             foo = Number(required=True)
             baz = String(required=True)
 
+    Model.Table.create()
+    request.addfinalizer(Model.Table.delete)
+
     model = Model(foo=1, baz='foo')
     assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]
+
+    model.save()
 
 
 def test_index_setup():
