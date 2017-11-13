@@ -187,3 +187,5 @@ def test_one_to_many(dynamo_local, request):
 
     assert len(general.threads) == 1
     assert len(bob.threads) == 1
+
+    assert [t.subject for t in bob.threads] == ['Topic #1']

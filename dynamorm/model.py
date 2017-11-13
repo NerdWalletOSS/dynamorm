@@ -1,9 +1,5 @@
 """Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
 or Schematics schema that is used for validating and marshalling your data.
-
-.. autoclass:: DynaModel
-    :noindex:
-
 """
 
 import inspect

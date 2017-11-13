@@ -185,7 +185,9 @@ class QuerySet(object):
         self.index = index
 
     def __iter__(self):
-        return self.accessor.query(**self.query)
+        if self.index:
+            return self.index.query(**self.query)
+        return self.model.query(**self.query)
 
     def __len__(self):
         return self.count()
