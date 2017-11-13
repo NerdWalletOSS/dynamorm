@@ -199,15 +199,25 @@ class DynaModel(object):
         """
         pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
+        # When creating models you can pass in values to the relationships defined on the model, we remove the value
+        # from raw (since it would be ignored when validating anyway), and instead leverage the relationship to
+        # determine if we should add any new values to raw to represent the relationship
+        relationships = {}
         for name, relationship in six.iteritems(self.relationships):
             new_value = raw.pop(name, None)
             if new_value is not None:
-                query = relationship.back_query(new_value)
-                raw.update(query)
+                relationships[name] = new_value
+
+                to_assign = relationship.assign(new_value)
+                if to_assign:
+                    raw.update(to_assign)
 
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
+            setattr(self, k, v)
+
+        for k, v in six.iteritems(relationships):
             setattr(self, k, v)
 
         post_init.send(self.__class__, instance=self, partial=partial, raw=raw)

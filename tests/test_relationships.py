@@ -79,7 +79,7 @@ def test_one_to_many(dynamo_local, request):
             write = 1
 
         class ByUser(GlobalIndex):
-            name = 'threads-by-user'
+            name = 'replies-by-user'
             hash_key = 'user_name'
             range_key = 'message'
             projection = ProjectKeys()
@@ -117,6 +117,14 @@ def test_one_to_many(dynamo_local, request):
             read = 1
             write = 1
 
+        class ByUser(GlobalIndex):
+            name = 'threads-by-user'
+            hash_key = 'user_name'
+            range_key = 'subject'
+            projection = ProjectKeys()
+            read = 1
+            write = 1
+
         class Schema:
             forum_name = String(required=True)
             user_name = String(required=True)
@@ -125,6 +133,7 @@ def test_one_to_many(dynamo_local, request):
         user = ManyToOne(
             User,
             query=lambda thread: dict(name=thread.user_name),
+            back_index='ByUser',
             back_query=lambda user: dict(user_name=user.name)
         )
         replies = OneToMany(
@@ -177,3 +186,4 @@ def test_one_to_many(dynamo_local, request):
     topic1.save()
 
     assert len(general.threads) == 1
+    assert len(bob.threads) == 1

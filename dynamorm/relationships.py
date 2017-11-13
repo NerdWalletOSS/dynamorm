@@ -29,6 +29,7 @@ class DefaultBackReference(object):
 
 class Relationship(object):
     BackReferenceClass = None
+    BackReferenceTemplate = '{0}'
 
     def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference):
         self.this = None
@@ -74,9 +75,13 @@ class Relationship(object):
         )
         self.back_reference_relationship.set_this_model(self.other)
 
-        ref_name = str(self.back_reference)
+        ref_name = self.BackReferenceTemplate.format(self.back_reference)
         setattr(self.other, ref_name, self.back_reference_relationship)
         self.other.relationships[ref_name] = self.back_reference_relationship
+
+    def assign(self, value):
+        """ """
+        pass
 
 
 class OneToOne(Relationship):
@@ -126,7 +131,7 @@ class OneToOne(Relationship):
         post_update.connect(self.post_update, sender=model)
 
     def get_other_inst(self, obj, create_missing=False):
-        query= self.query(obj)
+        query = self.query(obj)
         results = self.accessor.query(**query)
 
         try:
@@ -135,6 +140,9 @@ class OneToOne(Relationship):
             if create_missing:
                 query['partial'] = True
                 self.other_inst = self.other(**query)
+
+    def assign(self, value):
+        return self.back_query(value)
 
     def post_save(self, sender, instance, put_kwargs):
         if self.other_inst:
@@ -145,9 +153,34 @@ class OneToOne(Relationship):
             self.other_inst.save(partial=True)
 
 
-class ToManyProxy(object):
-    def __init__(self, other, query, index=None):
-        self.other = other
+class OneToMany(Relationship):
+    """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"
+    instances of another model.
+    """
+    BackReferenceClass = OneToOne
+
+    def __get__(self, obj, owner):
+        return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
+
+
+class ManyToOne(OneToOne):
+    """A Many To One relationship is defined on the "child" model, where many child models have one parent model."""
+    BackReferenceClass = OneToMany
+    BackReferenceTemplate = '{0}s'
+
+
+class ManyToMany(Relationship):
+    """XXX TODO"""
+    BackReferenceClass = 'self'
+    BackReferenceTemplate = '{0}s'
+
+    def __get__(self, obj, owner):
+        return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
+
+
+class QuerySet(object):
+    def __init__(self, model, query, index=None):
+        self.model = model
         self.query = query
         self.index = index
 
@@ -161,26 +194,11 @@ class ToManyProxy(object):
         query = self.query.copy()
         query['query_kwargs'] = dict(Select='COUNT')
         if self.index:
-            query['IndexName'] = self.index
-        resp = self.other.Table.query(**query)
+            query['query_kwargs']['IndexName'] = self.index.name
+        resp = self.model.Table.query(**query)
         return resp['Count']
 
-
-class OneToMany(Relationship):
-    """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"
-    instances of another model.
-    """
-    BackReferenceClass = OneToOne
-
-    def __get__(self, obj, owner):
-        return ToManyProxy(self.other, self.query(obj), self.index)
-
-
-class ManyToOne(OneToOne):
-    """A Many To One relationship is defined on the "child" model, where many child models have one parent model."""
-    BackReferenceClass = OneToMany
-
-
-class ManyToMany(Relationship):
-    """XXX TODO"""
-    BackReferenceClass = 'self'
+    def filter(self, **kwargs):
+        new_query = self.query.copy()
+        new_query.update(kwargs)
+        return QuerySet(model=self.model, query=new_query, index=self.index)
