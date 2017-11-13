@@ -29,7 +29,7 @@ class DefaultBackReference(object):
 
 class Relationship(object):
     BackReferenceClass = None
-    BackReferenceTemplate = '{0}'
+    BackReferenceTemplate = '{back_reference}'
 
     def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference):
         self.this = None
@@ -75,7 +75,7 @@ class Relationship(object):
         )
         self.back_reference_relationship.set_this_model(self.other)
 
-        ref_name = self.BackReferenceTemplate.format(self.back_reference)
+        ref_name = self.BackReferenceTemplate.format(back_reference=self.back_reference)
         setattr(self.other, ref_name, self.back_reference_relationship)
         self.other.relationships[ref_name] = self.back_reference_relationship
 
@@ -166,13 +166,13 @@ class OneToMany(Relationship):
 class ManyToOne(OneToOne):
     """A Many To One relationship is defined on the "child" model, where many child models have one parent model."""
     BackReferenceClass = OneToMany
-    BackReferenceTemplate = '{0}s'
+    BackReferenceTemplate = '{back_reference}s'
 
 
 class ManyToMany(Relationship):
     """XXX TODO"""
     BackReferenceClass = 'self'
-    BackReferenceTemplate = '{0}s'
+    BackReferenceTemplate = '{back_reference}s'
 
     def __get__(self, obj, owner):
         return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
