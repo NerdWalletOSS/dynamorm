@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from dynamorm.model import DynaModel, GlobalIndex, ProjectKeys
@@ -173,6 +174,9 @@ def test_one_to_many(dynamo_local, request):
     Forum.Table.create()
     request.addfinalizer(Forum.Table.delete)
 
+    alice = User(name='alice')
+    alice.save()
+
     bob = User(name='bob')
     bob.save()
 
@@ -189,3 +193,15 @@ def test_one_to_many(dynamo_local, request):
     assert len(bob.threads) == 1
 
     assert [t.subject for t in bob.threads] == ['Topic #1']
+
+    assert len(bob.replies) == 0
+    assert len(alice.replies) == 0
+
+    reply1 = Reply(thread=topic1, user=bob, created=str(datetime.datetime.utcnow()), message='Reply #1')
+    reply1.save()
+
+    reply2 = Reply(thread=topic1, user=alice, created=str(datetime.datetime.utcnow()), message='Reply #2')
+    reply2.save()
+
+    assert [r.forum_thread for r in bob.replies] == ['general\nTopic #1']
+    assert [r.forum_thread for r in alice.replies] == ['general\nTopic #1']
