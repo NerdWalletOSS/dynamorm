@@ -1,7 +1,7 @@
 import os
 
-from dynamorm.model import DynaModel
-from dynamorm.relationships import OneToOne
+from dynamorm.model import DynaModel, GlobalIndex, ProjectKeys
+from dynamorm.relationships import OneToOne, OneToMany, ManyToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Integer as Number
@@ -34,10 +34,11 @@ def test_one_to_one(dynamo_local, request):
         class Schema:
             thing = String(required=True)
             version = Number(required=True)
-            details = OneToOne(
-                Details,
-                query=lambda instance: dict(thing_version='{0}:{1}'.format(instance.thing, instance.version))
-            )
+
+        details = OneToOne(
+            Details,
+            query=lambda sparse: dict(thing_version='{0}:{1}'.format(sparse.thing, sparse.version))
+        )
 
     Details.Table.create()
     request.addfinalizer(Details.Table.delete)
@@ -67,9 +68,112 @@ def test_one_to_one(dynamo_local, request):
     del item.details
     assert Details.get(thing_version='foo:1') is None
 
-    # test back references
-    item = Sparse(thing='foo', version=1)
-    item.details.attr1 = 'this is attr1 again'
-    item.save()
 
-    details = Details.get(thing_version='foo:1')
+def test_one_to_many(dynamo_local, request):
+    class Reply(DynaModel):
+        class Table:
+            name = 'replies'
+            hash_key = 'forum_thread'
+            range_key = 'created'
+            read = 1
+            write = 1
+
+        class ByUser(GlobalIndex):
+            name = 'threads-by-user'
+            hash_key = 'user_name'
+            range_key = 'message'
+            projection = ProjectKeys()
+            read = 1
+            write = 1
+
+        class Schema:
+            forum_thread = String(required=True)
+            created = String(required=True)
+            user_name = String(required=True)
+            message = String()
+
+    class User(DynaModel):
+        class Table:
+            name = 'users'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+        replies = OneToMany(
+            Reply,
+            index='ByUser',
+            query=lambda user: dict(user_name=user.name),
+            back_query=lambda reply: dict(name=reply.user_name)
+        )
+
+    class Thread(DynaModel):
+        class Table:
+            name = 'threads'
+            hash_key = 'forum_name'
+            range_key = 'subject'
+            read = 1
+            write = 1
+
+        class Schema:
+            forum_name = String(required=True)
+            user_name = String(required=True)
+            subject = String(required=True)
+
+        user = ManyToOne(
+            User,
+            query=lambda thread: dict(name=thread.user_name),
+            back_query=lambda user: dict(user_name=user.name)
+        )
+        replies = OneToMany(
+            Reply,
+            query=lambda thread: dict(forum_thread='{0}\n{1}'.format(thread.forum_name, thread.subject)),
+            back_query=lambda reply: dict(
+                forum_name=reply.forum_thread.split('\n')[0],
+                subject=reply.forum_thread.split('\n')[1]
+            )
+        )
+
+    class Forum(DynaModel):
+        class Table:
+            name = 'forums'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+        threads = OneToMany(
+            Thread,
+            query=lambda forum: dict(forum_name=forum.name),
+            back_query=lambda thread: dict(name=thread.forum_name)
+        )
+
+    User.Table.create()
+    request.addfinalizer(User.Table.delete)
+
+    Reply.Table.create()
+    request.addfinalizer(Reply.Table.delete)
+
+    Thread.Table.create()
+    request.addfinalizer(Thread.Table.delete)
+
+    Forum.Table.create()
+    request.addfinalizer(Forum.Table.delete)
+
+    bob = User(name='bob')
+    bob.save()
+
+    general = Forum(name='general')
+    general.save()
+    assert len(general.threads) == 0
+
+    topic1 = Thread(forum=general, user=bob, subject='Topic #1')
+    assert topic1.forum_name == 'general'
+    assert topic1.user_name == 'bob'
+    topic1.save()
+
+    assert len(general.threads) == 1

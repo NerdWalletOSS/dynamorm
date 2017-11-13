@@ -59,8 +59,18 @@ class DynaModelMeta(type):
                 name=name
             ))
 
-        indexes = {}
-        relationships = {}
+        # collect our indexes & relationships
+        indexes = dict(
+            (name, val)
+            for name, val in six.iteritems(attrs)
+            if inspect.isclass(val) and issubclass(val, Index)
+        )
+
+        attrs['relationships'] = dict(
+            (name, val)
+            for name, val in six.iteritems(attrs)
+            if isinstance(val, Relationship)
+        )
 
         # Transform the Schema.
         # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
@@ -81,31 +91,15 @@ class DynaModelMeta(type):
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
-            schema_attrs = {}
-            for key, val in six.iteritems(attrs['Schema'].__dict__):
-                if isinstance(val, Relationship):
-                    attrs[key] = val
-                    relationships[key] = val
-                else:
-                    schema_attrs[key] = val
-
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-                schema_attrs
+                dict(attrs['Schema'].__dict__)
             )
             attrs['Schema'] = SchemaClass
-            attrs['relationships'] = relationships
 
         # transform the Table
         if should_transform('Table'):
-            # collect our indexes
-            indexes = dict(
-                (name, val)
-                for name, val in six.iteritems(attrs)
-                if inspect.isclass(val) and issubclass(val, Index)
-            )
-
             TableClass = type(
                 '{name}Table'.format(name=name),
                 (DynamoTable3,),
@@ -126,7 +120,7 @@ class DynaModelMeta(type):
             index = klass(model, model.Table.indexes[klass.name])
             setattr(model, name, index)
 
-        for relationship in six.itervalues(relationships):
+        for relationship in six.itervalues(model.relationships):
             relationship.set_this_model(model)
 
         model_prepared.send(model)
@@ -204,6 +198,12 @@ class DynaModel(object):
         input will be put onto ``self`` as attributes.
         """
         pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
+
+        for name, relationship in six.iteritems(self.relationships):
+            new_value = raw.pop(name, None)
+            if new_value is not None:
+                query = relationship.back_query(new_value)
+                raw.update(query)
 
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
