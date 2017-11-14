@@ -29,3 +29,8 @@ class DynamORMSchema(object):
         On validation failure, this should raise ``dynamorm.exc.ValidationError``.
         """
         raise NotImplementedError('{0} class must implement dynamallow_validate'.format(cls.__name__))
+
+    @staticmethod
+    def base_field_type():
+        """Returns the class that all fields in the schema will inherit from"""
+        raise NotImplementedError('{0} class must implement base_field_type'.format(cls.__name__))
