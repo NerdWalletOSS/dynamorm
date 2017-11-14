@@ -447,6 +447,7 @@ def test_explicit_schema_parents():
     with pytest.raises(ValidationError):
         Model(foo='foo', baz='baz', bar='not bar')
 
+
 def test_schema_parents_mro():
     """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
     class MixinTwo(object):
