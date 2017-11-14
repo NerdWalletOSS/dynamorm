@@ -2,11 +2,13 @@ import os
 import pytest
 
 from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
-from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException
+from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException, ValidationError
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Number
+    from marshmallow import validates, ValidationError as SchemaValidationError
 else:
     from schematics.types import StringType as String, IntType as Number
+    from schematics.exceptions import ValidationError as SchemaValidationError
 
 try:
     from unittest.mock import MagicMock, call
@@ -407,8 +409,26 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
 
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
-    class Mixin(object):
-        is_mixin = True
+    class SuperMixin(object):
+        bbq = String()
+
+    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+        class Mixin(SuperMixin):
+            is_mixin = True
+            bar = String()
+
+            @validates('bar')
+            def validate_bar(self, value):
+                if value != 'bar':
+                    raise SchemaValidationError('bar must be bar')
+    else:
+        class Mixin(SuperMixin):
+            is_mixin = True
+            bar = String()
+
+            def validate_bar(self, data, value):
+                if value != 'bar':
+                    raise SchemaValidationError('bar must be bar')
 
     class Model(DynaModel):
         class Table:
@@ -422,4 +442,30 @@ def test_explicit_schema_parents():
             baz = String(required=True)
 
     assert Model.Schema.is_mixin is True
-    assert Model.Schema.dynamorm_fields()
+    assert list(sorted(Model.Schema.dynamorm_fields().keys())) == ['bar', 'baz', 'bbq', 'foo']
+
+    with pytest.raises(ValidationError):
+        Model(foo='foo', baz='baz', bar='not bar')
+
+
+def test_schema_parents_mro():
+    """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
+    class MixinTwo(object):
+        bar = Number()
+
+    class MixinOne(object):
+        bar = String()
+
+    class Model(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema(MixinOne, MixinTwo):
+            foo = Number(required=True)
+            baz = String(required=True)
+
+    assert 'bar' in Model.Schema.dynamorm_fields()
+    assert isinstance(Model.Schema.dynamorm_fields()['bar'], String)

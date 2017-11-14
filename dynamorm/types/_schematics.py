@@ -32,3 +32,7 @@ class Schema(SchematicsModel, DynamORMSchema):
             return inst.to_native()
         else:
             return inst.to_primitive()
+
+    @staticmethod
+    def base_field_type():
+        return types.BaseType

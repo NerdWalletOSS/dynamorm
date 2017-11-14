@@ -30,3 +30,7 @@ class Schema(MarshmallowSchema, DynamORMSchema):
         if errors:
             raise ValidationError(obj, cls.__name__, errors)
         return data
+
+    @staticmethod
+    def base_field_type():
+        return fields.Field
