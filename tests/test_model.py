@@ -428,6 +428,7 @@ def test_explicit_schema_parents():
     assert Model.Schema.is_mixin is True
     assert list(sorted(Model.Schema.dynamorm_fields().keys())) == ['bar', 'baz', 'bbq', 'foo']
 
+
 def test_schema_parents_mro():
     """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
     class MixinTwo(object):
