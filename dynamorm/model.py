@@ -83,6 +83,18 @@ class DynaModelMeta(type):
                     break
                 elif module_name.startswith('schematics.'):
                     from .types._schematics import Schema
+
+                    # Pull all of our fields up onto the main schema, obeying MRO
+                    # This is done to ensure that "mixin" class fields get properly declared for Schematics
+                    def pull_up_fields(cls):
+                        for base in reversed(cls.__bases__):
+                            for k, v in six.iteritems(base.__dict__):
+                                if isinstance(v, Schema.base_field_type()):
+                                    setattr(attrs['Schema'], k, v)
+                            pull_up_fields(base)
+
+                    pull_up_fields(attrs['Schema'])
+
                     break
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
