@@ -385,10 +385,7 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo='first', bar='one')
         first.put = MagicMock()
-        first.update_item = MagicMock(side_effect=[
-            {'Attributes': {'baz': 'changed'}},
-            {'Attributes': {'bbq': 10}},
-        ])
+        first.update_item = MagicMock()
         return first
 
     # the first time to a non-partial save and put should be called
@@ -400,7 +397,9 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     # put should not be called, and update should only be called once dispite save being called twice
     first = get_first()
     first.save(partial=True)
+
     first.baz = 'changed'
+    first.update_item.return_value = {'Attributes': {'baz': 'changed'}}
     first.save(partial=True)
     first.put.assert_not_called()
 
@@ -419,6 +418,7 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
 
     # do it again, and just count should be sent
     first.count = 999
+    first.update_item.return_value = {'Attributes': {'count': 999}}
     first.save(partial=True)
     first.put.assert_not_called()
 
