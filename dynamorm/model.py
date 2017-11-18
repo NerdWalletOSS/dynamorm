@@ -475,7 +475,9 @@ class DynaModel(object):
         """
         if not partial:
             pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)
-            resp = self.put(self.to_dict(), **kwargs)
+            as_dict = self.to_dict()
+            resp = self.put(as_dict, **kwargs)
+            self._validated_data = as_dict
             post_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             return resp
 
@@ -483,7 +485,7 @@ class DynaModel(object):
         # XXX: Deeply nested data will still put the whole top-most object that has changed
         # TODO: Support the __ syntax to do deeply nested updates
         updates = dict(
-            (k, v)
+            (k, getattr(self, k))
             for k, v in six.iteritems(self._validated_data)
             if getattr(self, k) != v
         )
@@ -556,6 +558,7 @@ class DynaModel(object):
         # update our local attrs to match what we updated
         for key, val in six.iteritems(resp['Attributes']):
             setattr(self, key, val)
+            self._validated_data[key] = val
 
         post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                          updates=kwargs)

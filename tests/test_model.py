@@ -389,27 +389,52 @@ def test_sparse_indexes(dynamo_local):
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo='first', bar='one')
-        first.Table = MagicMock()
-        first.Table.hash_key = 'foo'
-        first.Table.range_key = 'bar'
+        first.put = MagicMock()
+        first.update_item = MagicMock()
         return first
 
     # the first time to a non-partial save and put should be called
     first = get_first()
     first.save()
-    assert first.Table.put.called_once()
-    assert first.Table.update.not_called()
+    first.update_item.assert_not_called()
 
     # next do a partial save without any changed and again with a change
     # put should not be called, and update should only be called once dispite save being called twice
     first = get_first()
     first.save(partial=True)
+
     first.baz = 'changed'
+    first.update_item.return_value = {'Attributes': {'baz': 'changed'}}
     first.save(partial=True)
-    assert first.Table.put.not_called()
-    assert first.Table.update.called_with(
-        call(conditions=None, update_item_kwargs=None, baz='changed'),
+    first.put.assert_not_called()
+
+    baz_update_call = call(
+        # no conditions should we set
+        conditions=None,
+        # our ReturnValues should be set to return updates values
+        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        # the the we changed should be included
+        baz='changed',
+        # and so should the primary key
+        foo='first',
+        bar='one',
     )
+    first.update_item.assert_has_calls([baz_update_call])
+
+    # do it again, and just count should be sent
+    first.count = 999
+    first.update_item.return_value = {'Attributes': {'count': 999}}
+    first.save(partial=True)
+    first.put.assert_not_called()
+
+    count_update_call = call(
+        conditions=None,
+        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        count=999,
+        foo='first',
+        bar='one',
+    )
+    first.update_item.assert_has_calls([baz_update_call, count_update_call])
 
 
 def test_explicit_schema_parents():
