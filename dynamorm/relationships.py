@@ -95,10 +95,15 @@ class OneToOne(Relationship):
     """
     BackReferenceClass = 'self'
 
-    other_inst = None
+    def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference,
+                 auto_create=True):
+        super(OneToOne, self).__init__(other=other, query=query, index=index, back_query=back_query,
+                                       back_index=back_index, back_reference=back_reference)
+        self.other_inst = None
+        self.auto_create = auto_create
 
     def __get__(self, obj, owner):
-        self.get_other_inst(obj)
+        self.get_other_inst(obj, create_missing=self.auto_create)
         return self.other_inst
 
     def __set__(self, obj, new_instance):
@@ -113,7 +118,7 @@ class OneToOne(Relationship):
 
     def __delete__(self, obj):
         if self.other_inst is None:
-            self.get_other_inst(obj)
+            self.get_other_inst(obj, create_missing=False)
 
         if self.other_inst:
             self.other_inst.delete()
@@ -132,7 +137,9 @@ class OneToOne(Relationship):
         try:
             self.other_inst = next(results)
         except StopIteration:
-            self.other_inst = None
+            if create_missing:
+                query['partial'] = True
+                self.other_inst = self.other(**query)
 
     def assign(self, value):
         return self.back_query(value)
