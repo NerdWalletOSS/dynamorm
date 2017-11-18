@@ -48,11 +48,9 @@ def test_one_to_one(dynamo_local, request):
     request.addfinalizer(Sparse.Table.delete)
 
     item = Sparse(thing='foo', version=1)
+    item.details = Details(attr1='this is attr1')
 
-    # when accessing a one-to-one relationship that doesn't exist it will be automatically created
-    item.details.attr1 = 'this is attr1'
-
-    # when saving an object with a one-to-one relationship both sides will be saved
+    # saving one side of the relationship also saves the other
     item.save()
 
     details = Details.get(thing_version='foo:1')
