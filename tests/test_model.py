@@ -384,16 +384,15 @@ def test_sparse_indexes(dynamo_local):
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo='first', bar='one')
-        first.Table = MagicMock()
-        first.Table.hash_key = 'foo'
-        first.Table.range_key = 'bar'
+        first.update_item = MagicMock()
+        first.put = MagicMock()
         return first
 
     # the first time to a non-partial save and put should be called
     first = get_first()
     first.save()
-    assert first.Table.put.called_once()
-    assert first.Table.update.not_called()
+    first.put.assert_called_once()
+    first.update_item.assert_not_called()
 
     # next do a partial save without any changed and again with a change
     # put should not be called, and update should only be called once dispite save being called twice
@@ -401,10 +400,8 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     first.save(partial=True)
     first.baz = 'changed'
     first.save(partial=True)
-    assert first.Table.put.not_called()
-    assert first.Table.update.called_with(
-        call(conditions=None, update_item_kwargs=None, baz='changed'),
-    )
+    first.put.assert_not_called()
+    first.update_item.assert_called_with(conditions=None, update_item_kwargs=None, baz='changed')
 
 
 def test_explicit_schema_parents():
