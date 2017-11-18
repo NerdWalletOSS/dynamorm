@@ -501,7 +501,6 @@ class DynaModel(object):
 
         if not updates:
             log.warn("Partial save on %s produced nothing to update", self)
-            return
 
         return self.update(update_item_kwargs=kwargs, **updates)
 
@@ -552,22 +551,26 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        self._add_hash_key_values(kwargs)
+        is_noop = not kwargs
+        resp = None
 
-        try:
-            update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
-        except TypeError:
-            update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
+        self._add_hash_key_values(kwargs)
 
         pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                         updates=kwargs)
 
-        resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+        if not is_noop:
+            try:
+                update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
+            except TypeError:
+                update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
 
-        # update our local attrs to match what we updated
-        for key, val in six.iteritems(resp['Attributes']):
-            setattr(self, key, val)
-            self._validated_data[key] = val
+            resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+
+            # update our local attrs to match what we updated
+            for key, val in six.iteritems(resp['Attributes']):
+                setattr(self, key, val)
+                self._validated_data[key] = val
 
         post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                          updates=kwargs)

@@ -163,6 +163,7 @@ class OneToOne(Relationship):
         if self.other_inst:
             self.other_inst.save(partial=True)
 
+
 class OneToMany(Relationship):
     """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"
     instances of another model.

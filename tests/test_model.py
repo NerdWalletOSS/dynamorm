@@ -173,6 +173,7 @@ def test_missing_field_validation():
     with pytest.raises(ValidationError):
         model.validate()
 
+
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
     class Model(DynaModel):

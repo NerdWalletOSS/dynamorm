@@ -12,6 +12,11 @@ if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
 else:
     from schematics.types import StringType as String, IntType as Number
 
+try:
+    from unittest.mock import MagicMock, call
+except ImportError:
+    from mock import MagicMock, call
+
 
 def test_one_to_one(dynamo_local, request):
     class Details(DynaModel):
@@ -56,7 +61,7 @@ def test_one_to_one(dynamo_local, request):
     item.details.attr1 = 'this is attr1'
 
     # when saving an object with a one-to-one relationship both sides will be saved
-    # the first time we call .save we should get a validation error from the pre_save signal since we're missing attr2
+    # when we call .save we should get a validation error from the pre_save signal since we're missing attr2
     with pytest.raises(ValidationError):
         item.save()
 
@@ -79,7 +84,30 @@ def test_one_to_one(dynamo_local, request):
 
     # test deleting the details
     del item.details
-    assert Details.get(thing_version='foo:1') is None
+    assert Details.get(thing_version='foo:1', consistent=True) is None
+
+    # reload the item
+    item = Sparse.get(thing='foo', version=1)
+    item.details.attr1 = 'this is attr1'
+    item.details.attr2 = 1
+    item.save()
+
+    # change something on the details
+    item.details.attr2 = 10
+
+    # do a partial save on the item, and the details should use update_item to update themselves
+    item.details.put = MagicMock()
+    item.details.update_item = MagicMock()
+    item.save(partial=True)
+    item.details.put.assert_not_called()
+    item.details.update_item.assert_has_calls([
+        call(
+            conditions=None,
+            update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+            attr2=10,
+            thing_version='foo:1'
+        )
+    ])
 
 
 def test_one_to_many(dynamo_local, request):
