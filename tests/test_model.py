@@ -384,8 +384,11 @@ def test_sparse_indexes(dynamo_local):
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo='first', bar='one')
-        first.update_item = MagicMock()
         first.put = MagicMock()
+        first.update_item = MagicMock(side_effect=[
+            {'Attributes': {'baz': 'changed'}},
+            {'Attributes': {'bbq': 10}},
+        ])
         return first
 
     # the first time to a non-partial save and put should be called
@@ -401,7 +404,33 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     first.baz = 'changed'
     first.save(partial=True)
     first.put.assert_not_called()
-    first.update_item.assert_called_with(conditions=None, update_item_kwargs=None, baz='changed')
+
+    baz_update_call = call(
+        # no conditions should we set
+        conditions=None,
+        # our ReturnValues should be set to return updates values
+        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        # the the we changed should be included
+        baz='changed',
+        # and so should the primary key
+        foo='first',
+        bar='one',
+    )
+    first.update_item.assert_has_calls([baz_update_call])
+
+    # do it again, and just count should be sent
+    first.count = 999
+    first.save(partial=True)
+    first.put.assert_not_called()
+
+    count_update_call = call(
+        conditions=None,
+        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        count=999,
+        foo='first',
+        bar='one',
+    )
+    first.update_item.assert_has_calls([baz_update_call, count_update_call])
 
 
 def test_explicit_schema_parents():
