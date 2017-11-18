@@ -394,7 +394,6 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     # the first time to a non-partial save and put should be called
     first = get_first()
     first.save()
-    first.put.assert_called_once()
     first.update_item.assert_not_called()
 
     # next do a partial save without any changed and again with a change
