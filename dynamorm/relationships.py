@@ -7,7 +7,7 @@ You must provide the queries that make up the basis for the relationship(s).
 """
 import six
 
-from .signals import post_save, post_update
+from .signals import pre_save, post_save, pre_update, post_update
 
 
 @six.python_2_unicode_compatible
@@ -103,7 +103,8 @@ class OneToOne(Relationship):
         self.auto_create = auto_create
 
     def __get__(self, obj, owner):
-        self.get_other_inst(obj, create_missing=self.auto_create)
+        if self.other_inst is None:
+            self.get_other_inst(obj, create_missing=self.auto_create)
         return self.other_inst
 
     def __set__(self, obj, new_instance):
@@ -127,7 +128,9 @@ class OneToOne(Relationship):
     def set_this_model(self, model):
         super(OneToOne, self).set_this_model(model)
 
+        pre_save.connect(self.pre_save, sender=model)
         post_save.connect(self.post_save, sender=model)
+        pre_update.connect(self.pre_update, sender=model)
         post_update.connect(self.post_update, sender=model)
 
     def get_other_inst(self, obj, create_missing=False):
@@ -144,14 +147,21 @@ class OneToOne(Relationship):
     def assign(self, value):
         return self.back_query(value)
 
+    def pre_save(self, sender, instance, put_kwargs):
+        if self.other_inst:
+            self.other_inst.validate()
+
     def post_save(self, sender, instance, put_kwargs):
         if self.other_inst:
             self.other_inst.save(partial=False)
 
+    def pre_update(self, sender, instance, conditions, update_item_kwargs, updates):
+        if self.other_inst:
+            self.other_inst.validate()
+
     def post_update(self, sender, instance, conditions, update_item_kwargs, updates):
         if self.other_inst:
             self.other_inst.save(partial=True)
-
 
 class OneToMany(Relationship):
     """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"

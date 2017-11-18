@@ -1,6 +1,9 @@
 import datetime
 import os
 
+import pytest
+
+from dynamorm.exceptions import ValidationError
 from dynamorm.model import DynaModel, GlobalIndex, ProjectKeys
 from dynamorm.relationships import OneToOne, OneToMany, ManyToOne
 
@@ -21,7 +24,7 @@ def test_one_to_one(dynamo_local, request):
         class Schema:
             thing_version = String(required=True)
             attr1 = String()
-            attr2 = Number()
+            attr2 = Number(required=True)
             # ... lots more attrs ...
 
     class Sparse(DynaModel):
@@ -53,17 +56,26 @@ def test_one_to_one(dynamo_local, request):
     item.details.attr1 = 'this is attr1'
 
     # when saving an object with a one-to-one relationship both sides will be saved
+    # the first time we call .save we should get a validation error from the pre_save signal since we're missing attr2
+    with pytest.raises(ValidationError):
+        item.save()
+
+    assert Details.get(thing_version='foo:1', consistent=True) is None
+
+    # set it, and the save should succeed
+    item.details.attr2 = 1
     item.save()
 
-    details = Details.get(thing_version='foo:1')
+    details = Details.get(thing_version='foo:1', consistent=True)
     assert details.attr1 == 'this is attr1'
 
     # test replacing the details
-    item.details = Details(attr1='new attr1', partial=True)
+    item.details = Details(attr1='new attr1', attr2=2, partial=True)
     item.save()
 
     details = Details.get(thing_version='foo:1')
     assert details.attr1 == 'new attr1'
+    assert details.attr2 == 2
 
     # test deleting the details
     del item.details

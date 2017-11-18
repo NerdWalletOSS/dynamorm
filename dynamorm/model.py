@@ -462,6 +462,15 @@ class DynaModel(object):
                 pass
         return self.Schema.dynamorm_validate(obj, native=native)
 
+    def validate(self):
+        """Validate this instance
+
+        We do this as a "native"/load/deserialization since Marshmallow ONLY raises validation errors for
+        required/allow_none/validate(s) during deserialization.  See the note at:
+        https://marshmallow.readthedocs.io/en/latest/quickstart.html#validation
+        """
+        return self.to_dict(native=True)
+
     def save(self, partial=False, **kwargs):
         """Save this instance to the table
 

@@ -157,6 +157,22 @@ def test_number_hash_key(dynamo_local, request):
     model.save()
 
 
+def test_missing_field_validation():
+    class Model(DynaModel):
+        class Table:
+            name = 'table'
+            hash_key = 'foo'
+            read = 1
+            write = 1
+
+        class Schema:
+            foo = String(required=True)
+            baz = String(required=True)
+
+    model = Model(foo='foo', partial=True)
+    with pytest.raises(ValidationError):
+        model.validate()
+
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
     class Model(DynaModel):
