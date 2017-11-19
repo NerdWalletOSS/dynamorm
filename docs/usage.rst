@@ -10,7 +10,7 @@ represented as instances of the class, as well as class level methods to interac
     Not all functionality is covered in this documentation yet.  See `the tests`_ for all "supported" functionality
     (like: batch puts, unique puts, etc).
 
-.. _the tests: https://github.com/NerdWallet/DynamORM/tree/master/tests
+.. _the tests: https://github.com/NerdWalletOSS/DynamORM/tree/master/tests
 
 
 Setting up Boto3
@@ -21,24 +21,67 @@ Make sure you have `configured boto3`_ and can access DynamoDB from the Python c
 .. code-block:: python
 
     import boto3
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb')
     list(dynamodb.tables.all())  # --> ['table1', 'table2', 'etc...']
 
 .. _configured boto3: https://boto3.readthedocs.io/en/latest/guide/quickstart.html#configuration
 
 
-Using Dynamo Local
-~~~~~~~~~~~~~~~~~~
+Configuring the Boto3 resource
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you're using `Dynamo Local`_ for development you will need to configure DynamORM appropriately by manually calling
-``get_resource`` on any model's ``Table`` object, which takes the same parameters as ``boto3.resource``.  The
-``dynamodb`` boto resource is shared globally by all models, so it only needs to be done once.  For example:
+The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
+region selection.  If you would instead like to configure these properties at run-time you can do this by passing the
+configuration to the ``Table.get_resource`` method on any of your models (once you've defined them -- below).
 
 .. code-block:: python
 
     MyModel.Table.get_resource(
-        aws_access_key_id="anything",
-        aws_secret_access_key="anything",
+        region_name='us-east-2'
+    )
+
+The `boto3 resource`_ for DynamoDB is **globally** shared between all models, so you only need to call this once on a
+single model and all models will use the configured resource.  Anything you pass to the ``Table.get_resource`` call is
+passed directly into the ``boto3.resource('dynamodb')`` call, so anything supported by the underlying resource is also
+supported here.
+
+Calling ``Table.get_resource`` is often done as part of your framework startup / initialization.  For example, if you
+were using DynamORM with `Flask`_ you would call it when you create the instance of your "app":
+
+.. code-block:: python
+
+    import json
+
+    from flask import Flask
+    from myapp.models import MyModel
+
+    # Create the WSGI app
+    app = Flask(__name__)
+
+    # Configure Dynamo access
+    MyModel.Table.get_resource(
+        region_name='us-east-2'
+    )
+
+    @app.route("/")
+    def hello():
+        return json.dumps(MyModel.scan())
+
+
+.. _boto3 resource: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#service-resource
+.. _Flask: http://flask.pocoo.org/
+
+
+Using Dynamo Local
+~~~~~~~~~~~~~~~~~~
+
+If you're using `Dynamo Local`_ for development you can use the following config for the table resource:
+
+.. code-block:: python
+
+    MyModel.Table.get_resource(
+        aws_access_key_id="-",
+        aws_secret_access_key="-",
         region_name="us-west-2",
         endpoint_url="http://localhost:8000"
     )
@@ -52,6 +95,9 @@ Defining your Models -- Tables & Schemas
 .. automodule:: dynamorm.model
     :noindex:
 
+.. autoclass:: dynamorm.model.DynaModel
+    :noindex:
+
 
 Table Data Model
 ----------------
@@ -59,6 +105,8 @@ Table Data Model
 .. automodule:: dynamorm.table
     :noindex:
 
+
+.. _creating-new-documents:
 
 Creating new documents
 ----------------------
@@ -118,6 +166,14 @@ To fetch an existing document based on its primary key you use the ``.get`` clas
     thing1 = Thing.get(id="thing1")
     assert thing1.color == 'purple'
 
+To do a `Consistent Read`_ just pass ``consistent=True``:
+
+.. code-block:: python
+
+    thing1 = Thing.get(id="thing1", consistent=True)
+    assert thing1.color == 'purple'
+
+.. _Consistent Read: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html
 
 Querying
 ~~~~~~~~
@@ -164,11 +220,25 @@ Scanning works exactly the same as querying: comparison operators are specified 
     Book.scan(author__ne="Mr. Bar")
 
 
+.. _q-objects:
+
+``Q`` objects
+~~~~~~~~~~~~~
+
+.. autofunction:: dynamorm.table.Q
+    :noindex:
+
+See the :py:func:`dynamorm.model.DynaModel.scan` docs for more examples.
+
+
 Indexes
 ~~~~~~~
 
-Indexes provide different ways to query & scan your data.  They are defined on your Model alongside the main Table
-definition as inner classes inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+By default the hash & range keys of your table make up the "Primary Index".  `Secondary Indexes`_ provide different ways
+to query & scan your data.  They are defined on your Model alongside the main Table definition as inner classes
+inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+
+.. _Secondary Indexes: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SecondaryIndexes.html
 
 Here's an excerpt from the model used in the readme:
 
@@ -195,10 +265,125 @@ The query & scan semantics on the Index are the same as on the main table.
 .. code-block:: python
 
     Book.ByAuthor.query(author='Some Author')
+    Book.ByAuthor.query(author__ne='Some Author')
 
-Indexes uses "projection" to determine which attributes of your documents are available in the index.  Using the
-``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't have all
-of the require attributes.
+Indexes uses "projection" to determine which attributes of your documents are available in the index.  The
+``ProjectAll`` projection puts ALL attributes from your Table into the Index.  The ``ProjectKeys`` projection puts just
+the keys from the table (and also the keys from the index themselves) into the index.  The ``ProjectInclude('attr1',
+'attr2')`` projection allows you to specify which attributes you wish to project.
+
+Using the ``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't
+have all of the require attributes.
 
 A common pattern is to define a "sparse index" with just the keys (``ProjectKeys``), load the keys of the documents you
 want from the index and then do a batch get to fetch them all from the main table.
+
+
+Updating documents
+------------------
+
+There are a number of ways to send updates back to the Table from your Model classes and indexes.  The
+:ref:`creating-new-documents` section already showed you the :py:func:`dynamorm.model.DynaModel.save` methods for
+creating new documents.  ``save`` can also be used to update existing documents:
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.in_print = False
+    book.save()
+
+When you call ``.save()`` on an instance the WHOLE document is put back into the table as save simply invokes the
+:py:func:`dynamorm.model.DynaModel.put` function.  This means that if you have large models it may cost you more in
+Write Capacity Units to put the whole document back.
+
+You can also do a "partial save" by passing ``partial=True`` when calling save, in which case the
+:py:func:`dynamorm.model.DynaModel.update` function will be used to only send the attributes that have been modified
+since the document was loaded.  The following two code blocks will result in the same operations:
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.in_print = False
+    book.save(partial=True)
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.update(in_print=False)
+
+Doing partial saves (``.save(partial=True)``) is a very convenient way to work with existing instances, but using the
+:py:func:`dynamorm.model.DynaModel.update` directly allows for you to also send `Update Expressions`_ and `Condition
+Expressions`_ with the update.  Combined with consistent reads, this allows you to do things like acquire locks that
+ensure race conditions cannot happen:
+
+.. code-block:: python
+
+    class Lock(DynaModel):
+        class Table:
+            name = 'locks'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+            updated = Integer(required=True, default=0)
+            key = String()
+            is_locked = Boolean(default=False)
+
+        @classmethod
+        def lock(self, name, key):
+            inst = cls.get(name=name, consistent=True)
+
+            if inst is None:
+                inst = Lock(name=name)
+                inst.save()
+
+            if not inst.is_locked:
+                inst.update(
+                    is_locked=True,
+                    key=key,
+                    updated=time.time(),
+                    conditions=dict(
+                        updated=inst.updated,
+                    )
+                )
+            return inst
+
+        @classmethod
+        def unlock(cls, name, key):
+            inst = cls.get(name=name, consistent=True)
+
+            if key == inst.key:
+                inst.update(
+                    is_locked=False,
+                    key=None,
+                    updated=time.time(),
+                    conditions=dict(
+                        updated=inst.updated,
+                    )
+                )
+
+            return inst
+
+    lock = Lock.lock('my-lock', 'my-key')
+    if lock.key != 'my-key':
+        print("Failed to lock!")
+    else:
+        print("Lock acquired!")
+
+
+Just like Scanning or Querying a table, you can use :ref:`q-objects` for your update expressions.
+
+.. _Update Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
+.. _Condition Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html
+
+
+Relationships
+-------------
+
+.. automodule:: dynamorm.relationships
+    :noindex:

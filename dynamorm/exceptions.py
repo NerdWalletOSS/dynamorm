@@ -1,5 +1,7 @@
 import logging
 
+import six
+
 log = logging.getLogger(__name__)
 
 
@@ -13,6 +15,7 @@ class DynaModelException(DynamoException):
     """Base exception for DynaModel problems"""
 
 
+@six.python_2_unicode_compatible
 class ValidationError(DynaModelException):
     """Schema validation failed"""
     def __init__(self, raw, schema_name, errors, *args, **kwargs):
@@ -20,12 +23,6 @@ class ValidationError(DynaModelException):
         self.errors = errors
         self.raw = raw
         self.schema_name = schema_name
-
-    def __unicode__(self):
-        log.debug('Validation failure for data: {0}'.format(self.raw))
-        return 'Validation failed for schema {0}. Errors: {1}'.format(
-            self.schema_name, self.errors
-        )
 
     def __str__(self):
         log.debug('Validation failure for data: {0}'.format(self.raw))

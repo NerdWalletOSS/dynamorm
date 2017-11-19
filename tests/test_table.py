@@ -218,6 +218,13 @@ def test_update(TestModel, TestModel_entries, dynamo_local):
     assert two.baz == 'yay'
 
 
+def test_query_instead_of_get(TestModel, TestModel_entries, dynamo_local):
+    two_results = list(TestModel.query(foo="first", bar="two"))
+    assert len(two_results) == 1
+    two = two_results[0]
+    assert two.baz == 'wtf'
+
+
 def test_update_no_range(TestModelTwo, TestModelTwo_table, dynamo_local):
     TestModelTwo.put({'foo': 'foo', 'bar': 'bar'})
     thing = TestModelTwo.get(foo='foo')

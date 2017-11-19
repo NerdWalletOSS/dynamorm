@@ -1,9 +1,5 @@
 """Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
 or Schematics schema that is used for validating and marshalling your data.
-
-.. autoclass:: DynaModel
-    :noindex:
-
 """
 
 import inspect
@@ -11,6 +7,9 @@ import logging
 
 import six
 
+from .exceptions import DynaModelException
+from .indexes import Index
+from .relationships import Relationship
 from .signals import (
     model_prepared,
     pre_init, post_init,
@@ -19,7 +18,6 @@ from .signals import (
     pre_delete, post_delete
 )
 from .table import DynamoTable3
-from .exceptions import DynaModelException
 
 log = logging.getLogger(__name__)
 
@@ -58,9 +56,22 @@ class DynaModelMeta(type):
                 name=name
             ))
 
-        # transform the Schema
-        # to allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
-        # dict and see if the item comes from either of them and lazily import our local Model implementation
+        # collect our indexes & relationships
+        indexes = dict(
+            (name, val)
+            for name, val in six.iteritems(attrs)
+            if inspect.isclass(val) and issubclass(val, Index)
+        )
+
+        attrs['relationships'] = dict(
+            (name, val)
+            for name, val in six.iteritems(attrs)
+            if isinstance(val, Relationship)
+        )
+
+        # Transform the Schema.
+        # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
+        # dict and see if the item comes from either of them and lazily import our local Model implementation.
         if should_transform('Schema'):
             for schema_item in six.itervalues(attrs['Schema'].__dict__):
                 try:
@@ -92,21 +103,12 @@ class DynaModelMeta(type):
             SchemaClass = type(
                 '{name}Schema'.format(name=name),
                 (Schema,) + attrs['Schema'].__bases__,
-                dict(attrs['Schema'].__dict__),
+                dict(attrs['Schema'].__dict__)
             )
             attrs['Schema'] = SchemaClass
 
-        indexes = {}
-
         # transform the Table
         if should_transform('Table'):
-            # collect our indexes
-            indexes = dict(
-                (name, val)
-                for name, val in six.iteritems(attrs)
-                if inspect.isclass(val) and issubclass(val, Index)
-            )
-
             TableClass = type(
                 '{name}Table'.format(name=name),
                 (DynamoTable3,),
@@ -117,15 +119,18 @@ class DynaModelMeta(type):
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
+        # give the Schema and Table objects a reference back to the model
+        model.Schema._model = model
+        model.Table._model = model
+
         # Put the instantiated indexes back into our attrs.  We instantiate the Index class that's in the attrs and
         # provide the actual Index object from our table as the parameter.
         for name, klass in six.iteritems(indexes):
             index = klass(model, model.Table.indexes[klass.name])
             setattr(model, name, index)
 
-        # give the Schema and Table objects a reference back to the model
-        model.Schema._model = model
-        model.Table._model = model
+        for relationship in six.itervalues(model.relationships):
+            relationship.set_this_model(model)
 
         model_prepared.send(model)
 
@@ -203,9 +208,25 @@ class DynaModel(object):
         """
         pre_init.send(self.__class__, instance=self, partial=partial, raw=raw)
 
+        # When creating models you can pass in values to the relationships defined on the model, we remove the value
+        # from raw (since it would be ignored when validating anyway), and instead leverage the relationship to
+        # determine if we should add any new values to raw to represent the relationship
+        relationships = {}
+        for name, relationship in six.iteritems(self.relationships):
+            new_value = raw.pop(name, None)
+            if new_value is not None:
+                relationships[name] = new_value
+
+                to_assign = relationship.assign(new_value)
+                if to_assign:
+                    raw.update(to_assign)
+
         self._raw = raw
         self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
         for k, v in six.iteritems(self._validated_data):
+            setattr(self, k, v)
+
+        for k, v in six.iteritems(relationships):
             setattr(self, k, v)
 
         post_init.send(self.__class__, instance=self, partial=partial, raw=raw)
@@ -442,6 +463,15 @@ class DynaModel(object):
                 pass
         return self.Schema.dynamorm_validate(obj, native=native)
 
+    def validate(self):
+        """Validate this instance
+
+        We do this as a "native"/load/deserialization since Marshmallow ONLY raises validation errors for
+        required/allow_none/validate(s) during deserialization.  See the note at:
+        https://marshmallow.readthedocs.io/en/latest/quickstart.html#validation
+        """
+        return self.to_dict(native=True)
+
     def save(self, partial=False, **kwargs):
         """Save this instance to the table
 
@@ -472,7 +502,6 @@ class DynaModel(object):
 
         if not updates:
             log.warn("Partial save on %s produced nothing to update", self)
-            return
 
         return self.update(update_item_kwargs=kwargs, **updates)
 
@@ -523,22 +552,26 @@ class DynaModel(object):
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
-        self._add_hash_key_values(kwargs)
+        is_noop = not kwargs
+        resp = None
 
-        try:
-            update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
-        except TypeError:
-            update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
+        self._add_hash_key_values(kwargs)
 
         pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                         updates=kwargs)
 
-        resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+        if not is_noop:
+            try:
+                update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
+            except TypeError:
+                update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
 
-        # update our local attrs to match what we updated
-        for key, val in six.iteritems(resp['Attributes']):
-            setattr(self, key, val)
-            self._validated_data[key] = val
+            resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+
+            # update our local attrs to match what we updated
+            for key, val in six.iteritems(resp['Attributes']):
+                setattr(self, key, val)
+                self._validated_data[key] = val
 
         post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                          updates=kwargs)
@@ -553,80 +586,3 @@ class DynaModel(object):
         resp = self.Table.delete_item(**delete_item_kwargs)
         post_delete.send(self.__class__, instance=self)
         return resp
-
-
-class Index(object):
-    def __init__(self, model, index):
-        self.model = model
-        self.index = index
-
-    def query(self, query_kwargs=None, **kwargs):
-        """Execute a query on this index
-
-        See DynaModel.query for documentation on how to pass query arguments.
-        """
-        try:
-            query_kwargs['IndexName'] = self.index.name
-        except TypeError:
-            query_kwargs = {'IndexName': self.index.name}
-
-        return self.model.query(query_kwargs=query_kwargs, partial=self.projection.partial, **kwargs)
-
-    def scan(self, scan_kwargs=None, **kwargs):
-        """Execute a scan on this index
-
-        See DynaModel.scan for documentation on how to pass scan arguments.
-        """
-        try:
-            scan_kwargs['IndexName'] = self.index.name
-        except TypeError:
-            scan_kwargs = {'IndexName': self.index.name}
-
-        return self.model.scan(scan_kwargs=scan_kwargs, partial=self.projection.partial, **kwargs)
-
-
-class LocalIndex(Index):
-    """Represents a Local Secondary Index on your table"""
-    pass
-
-
-class GlobalIndex(Index):
-    """Represents a Local Secondary Index on your table"""
-    pass
-
-
-class Projection(object):
-    pass
-
-
-class ProjectAll(Projection):
-    """Project all attributes from the Table into the Index
-
-    Documents loaded using this projection will be fully validated by the schema.
-    """
-    partial = False
-
-
-class ProjectKeys(Projection):
-    """Project the keys from the Table into the Index.
-
-    Documents loaded using this projection will be partially validated by the schema.
-    """
-    partial = True
-
-
-class ProjectInclude(Projection):
-    """Project the specified attributes into the Index.
-
-    Documents loaded using this projection will be partially validated by the schema.
-
-    .. code-block:: python
-
-        class ByAuthor(GlobalIndex):
-            ...
-            projection = ProjectInclude('some_attr', 'other_attr')
-    """
-    partial = True
-
-    def __init__(self, *include):
-        self.include = include
