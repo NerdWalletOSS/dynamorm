@@ -175,6 +175,11 @@ def test_missing_field_validation():
     with pytest.raises(ValidationError):
         model.validate()
 
+    try:
+        model.validate()
+    except ValidationError as exc:
+        assert str(exc).startswith("Validation failed for schema ModelSchema. Errors: {'baz'")
+
 
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
