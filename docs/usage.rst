@@ -80,8 +80,8 @@ If you're using `Dynamo Local`_ for development you can use the following config
 .. code-block:: python
 
     MyModel.Table.get_resource(
-        aws_access_key_id="anything",
-        aws_secret_access_key="anything",
+        aws_access_key_id="-",
+        aws_secret_access_key="-",
         region_name="us-west-2",
         endpoint_url="http://localhost:8000"
     )
@@ -95,6 +95,8 @@ Defining your Models -- Tables & Schemas
 .. automodule:: dynamorm.model
     :noindex:
 
+.. autoclass:: dynamorm.model.DynaModel
+
 
 Table Data Model
 ----------------
@@ -102,6 +104,8 @@ Table Data Model
 .. automodule:: dynamorm.table
     :noindex:
 
+
+.. _creating-new-documents:
 
 Creating new documents
 ----------------------
@@ -161,6 +165,14 @@ To fetch an existing document based on its primary key you use the ``.get`` clas
     thing1 = Thing.get(id="thing1")
     assert thing1.color == 'purple'
 
+To do a `Consistent Read`_ just pass ``consistent=True``:
+
+.. code-block:: python
+
+    thing1 = Thing.get(id="thing1", consistent=True)
+    assert thing1.color == 'purple'
+
+.. _Consistent Read: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html
 
 Querying
 ~~~~~~~~
@@ -207,11 +219,24 @@ Scanning works exactly the same as querying: comparison operators are specified 
     Book.scan(author__ne="Mr. Bar")
 
 
+.. _q-objects:
+
+``Q`` objects
+~~~~~~~~~~~~~
+
+.. autofunction:: dynamorm.table.Q
+
+See the :py:func:`dynamorm.model.DynaModel.scan` docs for more examples.
+
+
 Indexes
 ~~~~~~~
 
-Indexes provide different ways to query & scan your data.  They are defined on your Model alongside the main Table
-definition as inner classes inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+By default the hash & range keys of your table make up the "Primary Index".  `Secondary Indexes`_ provide different ways
+to query & scan your data.  They are defined on your Model alongside the main Table definition as inner classes
+inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+
+.. _Secondary Indexes: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SecondaryIndexes.html
 
 Here's an excerpt from the model used in the readme:
 
@@ -238,10 +263,112 @@ The query & scan semantics on the Index are the same as on the main table.
 .. code-block:: python
 
     Book.ByAuthor.query(author='Some Author')
+    Book.ByAuthor.query(author__ne='Some Author')
 
-Indexes uses "projection" to determine which attributes of your documents are available in the index.  Using the
-``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't have all
-of the require attributes.
+Indexes uses "projection" to determine which attributes of your documents are available in the index.  The
+``ProjectAll`` projection puts ALL attributes from your Table into the Index.  The ``ProjectKeys`` projection puts just
+the keys from the table (and also the keys from the index themselves) into the index.  The ``ProjectInclude('attr1',
+'attr2')`` projection allows you to specify which attributes you wish to project.
+
+Using the ``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't
+have all of the require attributes.
 
 A common pattern is to define a "sparse index" with just the keys (``ProjectKeys``), load the keys of the documents you
 want from the index and then do a batch get to fetch them all from the main table.
+
+
+Updating documents
+------------------
+
+There are a number of ways to send updates back to the Table from your Model classes and indexes.  The
+:ref:`creating-new-documents` section already showed you the :py:func:`dynamorm.model.DynaModel.save` methods for
+creating new documents.  ``save`` can also be used to update existing documents:
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.in_print = False
+    book.save()
+
+When you call ``.save()`` on an instance the WHOLE document is put back into the table as save simply invokes the
+:py:func:`dynamorm.model.DynaModel.put` function.  This means that if you have large models it may cost you more in
+Write Capacity Units to put the whole document back.
+
+You can also do a "partial save" by passing ``partial=True`` when calling save, in which case the
+:py:func:`dynamorm.model.DynaModel.update` function will be used to only send the attributes that have been modified
+since the document was loaded.  The following two code blocks will result in the same operations:
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.in_print = False
+    book.save(partial=True)
+
+.. code-block:: python
+
+    # Our book is no longer in print
+    book = Book.get(isbn='1234567890')
+    book.update(in_print=False)
+
+Doing partial saves (``.save(partial=True)``) is a very convenient way to work with existing instances, but using the
+:py:func:`dynamorm.model.DynaModel.update` directly allows for you to also send `Update Expressions`_ and `Condition
+Expressions`_ with the update.  Combined with consistent reads, this allows you to do things like acquire locks that
+ensure race conditions cannot happen:
+
+.. code-block:: python
+
+    class Lock(DynaModel):
+        class Table:
+            name = 'locks'
+            hash_key = 'lock_id'
+            read = 1
+            write = 1
+
+        class Schema:
+            lock_id = String(required=True)
+            last_updated = Integer(required=True, default=0)
+            lock_key = String()
+            is_locked = Boolean(default=False)
+
+        def lock(self, key):
+            # Make sure we're not locked currently
+            if self.is_locked:
+                return
+
+            lock.update(
+                is_locked=True,
+                lock_key=key,
+                last_updated=time.time(),
+                conditions=dict(
+                    last_updated=self.last_updated,
+                )
+            )
+
+        def unlock(self, key):
+            if key != self.key:
+                return
+
+            lock.update(
+                is_locked=False,
+                lock_key=None,
+                last_updated=time.time(),
+                conditions=dict(
+                    last_updated=self.last_updated,
+                )
+            )
+
+
+    lock = Lock.get('my-lock', consistent=True)
+    lock.lock('my-key')
+    if not lock.is_locked or lock.lock_key != 'my-key':
+        print("Failed to lock!")
+    else:
+        print("Lock acquired!")
+
+
+Just like Scanning or Querying a table, you can use :ref:`q-objects` for your update expressions.
+
+.. _Update Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
+.. _Condition Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html
