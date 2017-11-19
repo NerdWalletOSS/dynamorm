@@ -98,6 +98,11 @@ def test_one_to_one(dynamo_local, request):
     del item.details
     assert Details.get(thing_version='foo:1', consistent=True) is None
 
+    # also ensure that trying to delete a non-existent related object raises an error
+    item = Sparse.get(thing='foo', version=1)
+    with pytest.raises(AttributeError):
+        del item.details
+
     # reload the item
     item = Sparse.get(thing='foo', version=1)
     item.details.attr1 = 'this is attr1'

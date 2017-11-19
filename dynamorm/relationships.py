@@ -122,9 +122,11 @@ class OneToOne(Relationship):
         if self.other_inst is None:
             self.get_other_inst(obj, create_missing=False)
 
-        if self.other_inst:
-            self.other_inst.delete()
-            self.other_inst = None
+        if not self.other_inst:
+            raise AttributeError("No other instance to delete")
+
+        self.other_inst.delete()
+        self.other_inst = None
 
     def set_this_model(self, model):
         super(OneToOne, self).set_this_model(model)
