@@ -4,7 +4,8 @@ import os
 import pytest
 
 from dynamorm.exceptions import ValidationError
-from dynamorm.model import DynaModel, GlobalIndex, ProjectKeys
+from dynamorm.model import DynaModel
+from dynamorm.indexes import GlobalIndex, ProjectKeys
 from dynamorm.relationships import OneToOne, OneToMany, ManyToOne
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):

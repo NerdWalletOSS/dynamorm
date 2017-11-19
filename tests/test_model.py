@@ -1,8 +1,10 @@
 import os
 import pytest
 
-from dynamorm.model import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
+from dynamorm.model import DynaModel
+from dynamorm.indexes import GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException, ValidationError
+
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Integer as Number
     from marshmallow import validates, ValidationError as SchemaValidationError

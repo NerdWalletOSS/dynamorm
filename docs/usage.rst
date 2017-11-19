@@ -10,7 +10,7 @@ represented as instances of the class, as well as class level methods to interac
     Not all functionality is covered in this documentation yet.  See `the tests`_ for all "supported" functionality
     (like: batch puts, unique puts, etc).
 
-.. _the tests: https://github.com/NerdWallet/DynamORM/tree/master/tests
+.. _the tests: https://github.com/NerdWalletOSS/DynamORM/tree/master/tests
 
 
 Setting up Boto3
@@ -21,18 +21,61 @@ Make sure you have `configured boto3`_ and can access DynamoDB from the Python c
 .. code-block:: python
 
     import boto3
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb')
     list(dynamodb.tables.all())  # --> ['table1', 'table2', 'etc...']
 
 .. _configured boto3: https://boto3.readthedocs.io/en/latest/guide/quickstart.html#configuration
 
 
+Configuring the Boto3 resource
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
+region selection.  If you would instead like to configure these properties at run-time you can do this by passing the
+configuration to the ``Table.get_resource`` method on any of your models (once you've defined them -- below).
+
+.. code-block:: python
+
+    MyModel.Table.get_resource(
+        region_name='us-east-2'
+    )
+
+The `boto3 resource`_ for DynamoDB is **globally** shared between all models, so you only need to call this once on a
+single model and all models will use the configured resource.  Anything you pass to the ``Table.get_resource`` call is
+passed directly into the ``boto3.resource('dynamodb')`` call, so anything supported by the underlying resource is also
+supported here.
+
+Calling ``Table.get_resource`` is often done as part of your framework startup / initialization.  For example, if you
+were using DynamORM with `Flask`_ you would call it when you create the instance of your "app":
+
+.. code-block:: python
+
+    import json
+
+    from flask import Flask
+    from myapp.models import MyModel
+
+    # Create the WSGI app
+    app = Flask(__name__)
+
+    # Configure Dynamo access
+    MyModel.Table.get_resource(
+        region_name='us-east-2'
+    )
+
+    @app.route("/")
+    def hello():
+        return json.dumps(MyModel.scan())
+
+
+.. _boto3 resource: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#service-resource
+.. _Flask: http://flask.pocoo.org/
+
+
 Using Dynamo Local
 ~~~~~~~~~~~~~~~~~~
 
-If you're using `Dynamo Local`_ for development you will need to configure DynamORM appropriately by manually calling
-``get_resource`` on any model's ``Table`` object, which takes the same parameters as ``boto3.resource``.  The
-``dynamodb`` boto resource is shared globally by all models, so it only needs to be done once.  For example:
+If you're using `Dynamo Local`_ for development you can use the following config for the table resource:
 
 .. code-block:: python
 

@@ -25,9 +25,10 @@ The project has two goals:
    etc) means that we can always provide best-practices for queries and take advantages of new features without needing
    to refactor any application logic.
 
-2. **Delegate schema validation and serialization to more focused libraries**.  Building ORM semantics is "easy", doing
-   data validation and serialization is not.  We support both `Marshmallow`_ and `Schematics`_ for building your object
-   schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in your code.
+2. **Delegate schema validation and serialization to more focused libraries**.  Building "ORM" semantics is "easy",
+   doing data validation and serialization is not.  We support both `Marshmallow`_ and `Schematics`_ for building your
+   object schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in
+   your code.
 
 .. _DynamoDB: http://aws.amazon.com/dynamodb/
 .. _Dynamo v1 in boto to Dynamo v2 in boto: http://boto.cloudhackers.com/en/latest/migrations/dynamodb_v1_to_v2.html
@@ -36,11 +37,12 @@ The project has two goals:
 .. _Schematics: https://schematics.readthedocs.io/en/latest/
 
 
-Supported Versions
-------------------
+Supported Schema Validation Libraries
+-------------------------------------
 
-* Schematics >= 2.0
-* Marshmallow >= 2.0
+* `Schematics`_ >= 2.0
+* `Marshmallow`_ >= 2.0
+
 
 Example
 -------
