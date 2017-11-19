@@ -29,7 +29,7 @@ class DefaultBackReference(object):
 
 class Relationship(object):
     BackReferenceClass = None
-    BackReferenceTemplate = '{back_reference}'
+    BackReferenceTemplate = None
 
     def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference):
         self.this = None
@@ -94,6 +94,7 @@ class OneToOne(Relationship):
     items will be lazily fetched only as they are accessed.
     """
     BackReferenceClass = 'self'
+    BackReferenceTemplate = '{back_reference}'
 
     def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference,
                  auto_create=True):
@@ -170,6 +171,7 @@ class OneToMany(Relationship):
     instances of another model.
     """
     BackReferenceClass = OneToOne
+    BackReferenceTemplate = '{back_reference}'
 
     def __get__(self, obj, owner):
         return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
@@ -181,16 +183,12 @@ class ManyToOne(OneToOne):
     BackReferenceTemplate = '{back_reference}s'
 
 
-class ManyToMany(Relationship):
-    """XXX TODO"""
-    BackReferenceClass = 'self'
-    BackReferenceTemplate = '{back_reference}s'
-
-    def __get__(self, obj, owner):
-        return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
-
+# XXX TODO: ManyToMany
 
 class QuerySet(object):
+    # XXX TODO: QuerySet should be moved to it's own namespace and should also be leveraged by the model classes so that
+    # when you query on a Table or Index you get back one of these.  This will allow you to call .count() and .filter()
+    # on existing queries to further refine them.
     def __init__(self, model, query, index=None):
         self.model = model
         self.query = query
