@@ -88,7 +88,13 @@ def test_one_to_one(dynamo_local, request):
     assert details.attr2 == 2
     assert details.sparse.thing == 'foo'
 
+    # trying to set a value to the relationship that's not the type of our other model should raise a TypeError
+    with pytest.raises(TypeError):
+        item.details = 1
+
     # test deleting the details
+    # reload the item first to ensure that the __delete__ method can successfully fetch not yet loaded relationships
+    item = Sparse.get(thing='foo', version=1)
     del item.details
     assert Details.get(thing_version='foo:1', consistent=True) is None
 
