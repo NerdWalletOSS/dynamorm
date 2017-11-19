@@ -12,6 +12,19 @@ DynamORM API
 .. automodule:: dynamorm.model
     :members:
 
+
+``dynamorm.table``
+--------------------
+.. automodule:: dynamorm.table
+    :members:
+
+
+``dynamorm.relationships``
+--------------------------
+.. automodule:: dynamorm.relationships
+    :members:
+
+
 ``dynamorm.signals``
 --------------------
 .. automodule:: dynamorm.signals
@@ -35,12 +48,6 @@ DynamORM API
     :annotation:
 .. autodata:: post_delete
     :annotation:
-
-
-``dynamorm.table``
---------------------
-.. automodule:: dynamorm.table
-    :members:
 
 
 ``dynamorm.exceptions``

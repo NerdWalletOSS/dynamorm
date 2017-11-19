@@ -1,10 +1,120 @@
 """Relationships leverage the native tables & indexes in DynamoDB to allow more concise definition and access of related
-objects.
+objects in your Python code.
 
-They are defined outside of the Schema on the base DynaModel object.
+You define relationships along side your Schema and Indexes on your model, and must provide the query used to map the
+related models together.  You can also supply a "back reference" query to have the other side of the relationship also
+have a relationship back to the defining model.
 
-You must provide the queries that make up the basis for the relationship(s).
+DynamORM provides the following relationship types:
+
+* :py:class:`dynamorm.relationships.OneToOne` - Useful when you have a large number of attributes to store and you want
+  to break them up over multiple tables for performance in querying.
+
+* :py:class:`dynamorm.relationships.OneToMany` / :py:class:`dynamorm.relationships.ManyToOne` - Useful when you have an
+  instance of one model that has a collection of related instances of another model.  You use ``OneToMany`` or
+  ``ManyToOne`` depending on which side of the relationship you are defining the attribute on.  You'll to use both
+  interchangeably based on how your models are laid out since you need to pass a reference to the other model into the
+  relationship.
+
+
+Here's an example of how you could model the `Forum Application`_ from the DynamoDB Examples:
+
+.. _Forum Application: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SampleData.CreateTables.html#SampleData.CreateTables2
+
+.. code-block:: python
+
+    class Reply(DynaModel):
+        class Table:
+            name = 'replies'
+            hash_key = 'forum_thread'
+            range_key = 'created'
+            read = 1
+            write = 1
+
+        class ByUser(GlobalIndex):
+            name = 'replies-by-user'
+            hash_key = 'user_name'
+            range_key = 'message'
+            projection = ProjectKeys()
+            read = 1
+            write = 1
+
+        class Schema:
+            forum_thread = String(required=True)
+            created = String(required=True)
+            user_name = String(required=True)
+            message = String()
+
+    class User(DynaModel):
+        class Table:
+            name = 'users'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+        replies = OneToMany(
+            Reply,
+            index='ByUser',
+            query=lambda user: dict(user_name=user.name),
+            back_query=lambda reply: dict(name=reply.user_name)
+        )
+
+    class Thread(DynaModel):
+        class Table:
+            name = 'threads'
+            hash_key = 'forum_name'
+            range_key = 'subject'
+            read = 1
+            write = 1
+
+        class ByUser(GlobalIndex):
+            name = 'threads-by-user'
+            hash_key = 'user_name'
+            range_key = 'subject'
+            projection = ProjectKeys()
+            read = 1
+            write = 1
+
+        class Schema:
+            forum_name = String(required=True)
+            user_name = String(required=True)
+            subject = String(required=True)
+
+        user = ManyToOne(
+            User,
+            query=lambda thread: dict(name=thread.user_name),
+            back_index='ByUser',
+            back_query=lambda user: dict(user_name=user.name)
+        )
+        replies = OneToMany(
+            Reply,
+            query=lambda thread: dict(forum_thread='{0}\\n{1}'.format(thread.forum_name, thread.subject)),
+            back_query=lambda reply: dict(
+                forum_name=reply.forum_thread.split('\\n')[0],
+                subject=reply.forum_thread.split('\\n')[1]
+            )
+        )
+
+    class Forum(DynaModel):
+        class Table:
+            name = 'forums'
+            hash_key = 'name'
+            read = 1
+            write = 1
+
+        class Schema:
+            name = String(required=True)
+
+        threads = OneToMany(
+            Thread,
+            query=lambda forum: dict(forum_name=forum.name),
+            back_query=lambda thread: dict(name=thread.forum_name)
+        )
 """
+
 import six
 
 from .signals import pre_save, post_save, pre_update, post_update
@@ -85,7 +195,7 @@ class Relationship(object):
 
 
 class OneToOne(Relationship):
-    """A One-to-One relationship is where two models (tables) have items that have a relation to exactly one model in
+    """A One-to-One relationship is where two models (tables) have items that have a relation to exactly one instance in
     the other model.
 
     It is a useful pattern when you wish to split up large tables with many attributes where your "main" table is

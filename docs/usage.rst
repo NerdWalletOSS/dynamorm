@@ -96,6 +96,7 @@ Defining your Models -- Tables & Schemas
     :noindex:
 
 .. autoclass:: dynamorm.model.DynaModel
+    :noindex:
 
 
 Table Data Model
@@ -225,6 +226,7 @@ Scanning works exactly the same as querying: comparison operators are specified 
 ~~~~~~~~~~~~~
 
 .. autofunction:: dynamorm.table.Q
+    :noindex:
 
 See the :py:func:`dynamorm.model.DynaModel.scan` docs for more examples.
 
@@ -322,47 +324,53 @@ ensure race conditions cannot happen:
     class Lock(DynaModel):
         class Table:
             name = 'locks'
-            hash_key = 'lock_id'
+            hash_key = 'name'
             read = 1
             write = 1
 
         class Schema:
-            lock_id = String(required=True)
-            last_updated = Integer(required=True, default=0)
-            lock_key = String()
+            name = String(required=True)
+            updated = Integer(required=True, default=0)
+            key = String()
             is_locked = Boolean(default=False)
 
-        def lock(self, key):
-            # Make sure we're not locked currently
-            if self.is_locked:
-                return
+        @classmethod
+        def lock(self, name, key):
+            inst = cls.get(name=name, consistent=True)
 
-            lock.update(
-                is_locked=True,
-                lock_key=key,
-                last_updated=time.time(),
-                conditions=dict(
-                    last_updated=self.last_updated,
+            if inst is None:
+                inst = Lock(name=name)
+                inst.save()
+
+            if not inst.is_locked:
+                inst.update(
+                    is_locked=True,
+                    key=key,
+                    updated=time.time(),
+                    conditions=dict(
+                        updated=inst.updated,
+                    )
                 )
-            )
+            return inst
 
-        def unlock(self, key):
-            if key != self.key:
-                return
+        @classmethod
+        def unlock(cls, name, key):
+            inst = cls.get(name=name, consistent=True)
 
-            lock.update(
-                is_locked=False,
-                lock_key=None,
-                last_updated=time.time(),
-                conditions=dict(
-                    last_updated=self.last_updated,
+            if key == inst.key:
+                inst.update(
+                    is_locked=False,
+                    key=None,
+                    updated=time.time(),
+                    conditions=dict(
+                        updated=inst.updated,
+                    )
                 )
-            )
 
+            return inst
 
-    lock = Lock.get('my-lock', consistent=True)
-    lock.lock('my-key')
-    if not lock.is_locked or lock.lock_key != 'my-key':
+    lock = Lock.lock('my-lock', 'my-key')
+    if lock.key != 'my-key':
         print("Failed to lock!")
     else:
         print("Lock acquired!")
@@ -372,3 +380,10 @@ Just like Scanning or Querying a table, you can use :ref:`q-objects` for your up
 
 .. _Update Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
 .. _Condition Expressions: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html
+
+
+Relationships
+-------------
+
+.. automodule:: dynamorm.relationships
+    :noindex:
