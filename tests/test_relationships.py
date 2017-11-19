@@ -47,7 +47,11 @@ def test_one_to_one(dynamo_local, request):
 
         details = OneToOne(
             Details,
-            query=lambda sparse: dict(thing_version='{0}:{1}'.format(sparse.thing, sparse.version))
+            query=lambda sparse: dict(thing_version='{0}:{1}'.format(sparse.thing, sparse.version)),
+            back_query=lambda details: dict(
+                thing=details.thing_version.split(':')[0],
+                version=details.thing_version.split(':')[1]
+            )
         )
 
     Details.Table.create()
@@ -82,6 +86,7 @@ def test_one_to_one(dynamo_local, request):
     details = Details.get(thing_version='foo:1')
     assert details.attr1 == 'new attr1'
     assert details.attr2 == 2
+    assert details.sparse.thing == 'foo'
 
     # test deleting the details
     del item.details

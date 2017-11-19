@@ -128,10 +128,11 @@ class OneToOne(Relationship):
     def set_this_model(self, model):
         super(OneToOne, self).set_this_model(model)
 
-        pre_save.connect(self.pre_save, sender=model)
-        post_save.connect(self.post_save, sender=model)
-        pre_update.connect(self.pre_update, sender=model)
-        post_update.connect(self.post_update, sender=model)
+        if self.back_reference:
+            pre_save.connect(self.pre_save, sender=model)
+            post_save.connect(self.post_save, sender=model)
+            pre_update.connect(self.pre_update, sender=model)
+            post_update.connect(self.post_update, sender=model)
 
     def get_other_inst(self, obj, create_missing=False):
         query = self.query(obj)
