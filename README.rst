@@ -15,6 +15,8 @@ DynamORM
 
 *This package is a work in progress -- Feedback / Suggestions / Etc welcomed!*
 
+Python + DynamoDB ♡
+
 DynamORM (pronounced *Dynamo-R-M*) is a Python object & relation mapping library for Amazon's `DynamoDB`_ service.
 
 The project has two goals:
