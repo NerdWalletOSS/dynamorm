@@ -167,6 +167,14 @@ def test_query(TestModel, TestModel_entries, dynamo_local):
     assert results[1].count == 333
 
 
+def test_query_filter(TestModel, TestModel_entries, dynamo_local):
+    """Querying with non PK kwargs should return the expected values"""
+    results = list(TestModel.query(foo="first", count__gt=200))
+    assert len(results) == 2
+    assert results[0].count == 333
+    assert results[1].count == 222
+
+
 def test_scan(TestModel, TestModel_entries, dynamo_local):
     """Scanning should return the expected values"""
     results = list(TestModel.scan(count__gt=200))
