@@ -582,16 +582,17 @@ class DynamoTable3(DynamoCommon3):
             return response['Item']
 
     def query(self, query_kwargs=None, *args, **kwargs):
-        if query_kwargs is None:
-            query_kwargs = {}
+        query_kwargs = query_kwargs or {}
+        filter_kwargs = {}
 
         if 'IndexName' in query_kwargs:
             attr_fields = self.index_attribute_fields(index_name=query_kwargs['IndexName'])
         else:
             attr_fields = self.table_attribute_fields
 
-        filter_kwargs = {}
-        for full_key, value in six.iteritems(kwargs):
+        while len(kwargs):
+            full_key, value = kwargs.popitem()
+
             try:
                 key, op = full_key.split('__')
             except ValueError:
@@ -603,12 +604,12 @@ class DynamoTable3(DynamoCommon3):
                 continue
 
             key = Key(key)
-            op = getattr(key, op)
+            key_expression = get_expression(key, op, value)
 
-            if 'KeyConditionExpression' in query_kwargs:
-                query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & op(value)
-            else:
-                query_kwargs['KeyConditionExpression'] = op(value)
+            try:
+                query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & key_expression
+            except (KeyError, TypeError):
+                query_kwargs['KeyConditionExpression'] = key_expression
 
         if 'KeyConditionExpression' not in query_kwargs:
             raise InvalidSchemaField("Primary key must be specified for queries")
@@ -659,6 +660,23 @@ def remove_nones(in_dict):
         return in_dict
 
 
+def get_expression(attr, op, value):
+    op = getattr(attr, op)
+    try:
+        return op(value)
+    except TypeError:
+        # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
+        # doesn't take an arg or takes multiple args. If our value is True then we try to re-call the op
+        # function without any arguments, if our value is a list we use it as the arguments for the function,
+        # otherwise we bubble it up.
+        if value is True:
+            return op()
+        elif isinstance(value, collections.Iterable):
+            return op(*value)
+        else:
+            raise
+
+
 def Q(**mapping):
     """A Q object represents an AND'd together query using boto3's Attr object, based on a set of keyword arguments that
     support the full access to the operations (eq, ne, between, etc) as well as nested attributes.
@@ -684,21 +702,7 @@ def Q(**mapping):
 
         assert len(parts) == 0, "Left over parts after parsing query attr"
 
-        op = getattr(attr, op)
-        try:
-            attr_expression = op(value)
-        except TypeError:
-            # A TypeError calling our attr op likely means we're invoking exists, not_exists or another op that
-            # doesn't take an arg or takes multiple args. If our value is True then we try to re-call the op
-            # function without any arguments, if our value is a list we use it as the arguments for the function,
-            # otherwise we bubble it up.
-            if value is True:
-                attr_expression = op()
-            elif isinstance(value, collections.Iterable):
-                attr_expression = op(*value)
-            else:
-                raise
-
+        attr_expression = get_expression(attr, op, value)
         try:
             expression = expression & attr_expression
         except TypeError:
