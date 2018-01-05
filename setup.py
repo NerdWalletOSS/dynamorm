@@ -18,7 +18,7 @@ setup(
         'boto3>=1.3,<2.0',
         'six',
     ],
-    packages=['dynamorm'],
+    packages=['dynamorm', 'dynamorm.types'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
