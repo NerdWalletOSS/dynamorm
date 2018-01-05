@@ -581,27 +581,26 @@ class DynamoTable3(DynamoCommon3):
         if 'Item' in response:
             return response['Item']
 
-    def query(self, query_kwargs=None, **kwargs):
-        assert len(kwargs) in (1, 2), "Query only takes 1 or 2 keyword arguments"
-
+    def query(self, query_kwargs=None, *args, **kwargs):
         if query_kwargs is None:
             query_kwargs = {}
 
-        while len(kwargs):
-            key, value = kwargs.popitem()
+        if 'IndexName' in query_kwargs:
+            attr_fields = self.index_attribute_fields(index_name=query_kwargs['IndexName'])
+        else:
+            attr_fields = self.table_attribute_fields
 
+        filter_kwargs = {}
+        for full_key, value in six.iteritems(kwargs):
             try:
-                key, op = key.split('__')
+                key, op = full_key.split('__')
             except ValueError:
+                key = full_key
                 op = 'eq'
 
-            if 'IndexName' in query_kwargs:
-                attr_fields = self.index_attribute_fields(index_name=query_kwargs['IndexName'])
-            else:
-                attr_fields = self.table_attribute_fields
-
             if key not in attr_fields:
-                raise InvalidSchemaField("{0} is not a valid hash or range key".format(key))
+                filter_kwargs[full_key] = value
+                continue
 
             key = Key(key)
             op = getattr(key, op)
@@ -610,6 +609,19 @@ class DynamoTable3(DynamoCommon3):
                 query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & op(value)
             else:
                 query_kwargs['KeyConditionExpression'] = op(value)
+
+        if 'KeyConditionExpression' not in query_kwargs:
+            raise InvalidSchemaField("Primary key must be specified for queries")
+
+        filter_expression = Q(**filter_kwargs)
+        for arg in args:
+            try:
+                filter_expression = filter_expression & arg
+            except TypeError:
+                filter_expression = arg
+
+        if filter_expression:
+            query_kwargs['FilterExpression'] = filter_expression
 
         log.debug("Query: %s", query_kwargs)
         return self.table.query(**query_kwargs)
