@@ -174,6 +174,14 @@ def test_query_filter(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 333
     assert results[1].count == 222
 
+    # This is *ugly* since in py2 you need to pass the positional args first (for the non-PK filters)
+    # and then the keyword args for the PK query.
+    results = list(TestModel.query(
+        Q(count__gt=222) | Q(count__lt=222), ~Q(count=111),
+        foo="first"
+    ))
+    assert len(results) == 1
+
 
 def test_scan(TestModel, TestModel_entries, dynamo_local):
     """Scanning should return the expected values"""

@@ -581,8 +581,8 @@ class DynamoTable3(DynamoCommon3):
         if 'Item' in response:
             return response['Item']
 
-    def query(self, query_kwargs=None, *args, **kwargs):
-        query_kwargs = query_kwargs or {}
+    def query(self, *args, **kwargs):
+        query_kwargs = kwargs.pop('query_kwargs', {})
         filter_kwargs = {}
 
         if 'IndexName' in query_kwargs:

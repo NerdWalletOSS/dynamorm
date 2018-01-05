@@ -341,7 +341,7 @@ class DynaModel(object):
             yield cls.new_from_raw(item, partial=attrs is not None)
 
     @classmethod
-    def query(cls, **kwargs):
+    def query(cls, *args, **kwargs):
         """Execute a query on our table based on our keys
 
         You supply the key(s) to query based on as keyword arguments::
@@ -359,7 +359,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls._yield_items('query', **kwargs)
+        return cls._yield_items('query', *args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
