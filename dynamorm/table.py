@@ -39,6 +39,7 @@ projection  True      object  An instance of of :class:`dynamorm.model.ProjectAl
 """
 
 import collections
+import json
 import logging
 import time
 import warnings
@@ -76,25 +77,6 @@ class DynamoCommon3(object):
 
         if self.range_key and self.range_key not in self.schema.dynamorm_fields():
             raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
-
-    @staticmethod
-    def get_resource(**kwargs):
-        """Return the boto3 dynamodb resource, create it if it doesn't exist
-
-        The resource is stored globally on the ``DynamoCommon3`` class and is shared between all models. To influence
-        the connection parameters you just need to call ``get_resource`` on any model with the correct kwargs BEFORE you
-        use any of the models.
-        """
-        try:
-            return DynamoCommon3._resource
-        except AttributeError:
-            DynamoCommon3._resource = boto3.resource('dynamodb', **kwargs)
-            return DynamoCommon3._resource
-
-    @property
-    def resource(self):
-        """Return the boto3 resource"""
-        return self.get_resource()
 
     @property
     def key_schema(self):
@@ -137,6 +119,10 @@ class DynamoIndex3(DynamoCommon3):
         self.schema = schema
 
         super(DynamoIndex3, self).__init__()
+
+    @property
+    def resource(self):
+        return self.table.resource
 
     @property
     def index_args(self):
@@ -185,6 +171,10 @@ class DynamoTable3(DynamoCommon3):
     This is built in such a way that in the future, when Amazon releases future boto versions, a new DynamoTable class
     can be authored that implements the same methods but maps through to the new semantics.
     """
+
+    session_kwargs = None
+    resource_kwargs = None
+
     def __init__(self, schema, indexes=None):
         self.schema = schema
 
@@ -208,6 +198,30 @@ class DynamoTable3(DynamoCommon3):
 
                 self.indexes[klass.name] = new_class(self, schema)
 
+    @property
+    def resource(self):
+        return self.get_resource()
+
+    @classmethod
+    def get_resource(cls, **kwargs):
+        """Return the boto3 resource"""
+        resource_id = hash(json.dumps(cls.resource_kwargs, sort_keys=True))
+
+        try:
+            return DynamoTable3._resources[resource_id]
+        except KeyError:
+            pass
+        except AttributeError:
+            DynamoTable3._resources = {}
+
+        boto3_session = boto3.Session(**(cls.session_kwargs or {}))
+
+        for key, val in six.iteritems(cls.resource_kwargs or {}):
+            kwargs.setdefault(key, val)
+
+        DynamoTable3._resources[resource_id] = boto3_session.resource('dynamodb', **kwargs)
+        return DynamoTable3._resources[resource_id]
+
     @classmethod
     def get_table(cls, name):
         """Return the boto3 Table object for this model, create it if it doesn't exist
@@ -217,8 +231,10 @@ class DynamoTable3(DynamoCommon3):
         try:
             return cls._table
         except AttributeError:
-            cls._table = cls.get_resource().Table(name)
-            return cls._table
+            pass
+
+        cls._table = cls.get_resource().Table(name)
+        return cls._table
 
     @property
     def table(self):

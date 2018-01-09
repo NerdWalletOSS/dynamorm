@@ -7,6 +7,7 @@ import pytest
 
 from dynamorm import DynaModel, GlobalIndex, LocalIndex, ProjectAll, ProjectKeys, ProjectInclude
 from dynamorm import local
+from dynamorm.table import DynamoTable3
 
 log = logging.getLogger(__name__)
 
@@ -226,11 +227,11 @@ def TestModelTwo_table(request, TestModelTwo, dynamo_local):
 
 
 @pytest.fixture(scope='session')
-def dynamo_local(request, TestModel):
+def dynamo_local(request):
     """Connect to a local dynamo instance"""
     dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
     dynamo_local_ = local.DynamoLocal(dynamo_local_dir)
-    TestModel.Table.get_resource(
+    DynamoTable3.get_resource(
         aws_access_key_id="anything",
         aws_secret_access_key="anything",
         region_name="us-west-2",
