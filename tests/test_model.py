@@ -3,7 +3,13 @@ import pytest
 
 from dynamorm.model import DynaModel
 from dynamorm.indexes import GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
-from dynamorm.exceptions import InvalidSchemaField, MissingTableAttribute, DynaModelException, ValidationError
+from dynamorm.exceptions import (
+    DynaModelException,
+    HashKeyExists,
+    InvalidSchemaField,
+    MissingTableAttribute,
+    ValidationError,
+)
 
 if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
     from marshmallow.fields import String, Integer as Number
@@ -460,6 +466,15 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     )
     first.update_item.assert_has_calls([baz_update_call, count_update_call])
 
+
+def test_unique_save(TestModel, TestModel_entries, dynamo_local):
+    first = TestModel(foo='first', bar='one', baz='uno')
+    first.save()
+    
+    second = TestModel(foo='first', bar='one', baz='uno')
+    with pytest.raises(HashKeyExists):
+        second.save(unique=True)
+    second.save()
 
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""

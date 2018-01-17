@@ -472,11 +472,14 @@ class DynaModel(object):
         """
         return self.to_dict(native=True)
 
-    def save(self, partial=False, **kwargs):
+    def save(self, partial=False, unique=False, **kwargs):
         """Save this instance to the table
 
-        :param bool partial: When False the whole document will be ``.put`` to the table.  When True only values that
-                             have changed since the document was loaded will sent to the table via an ``.update``.
+        :param bool partial: When False the whole document will be ``.put`` or ``.put_unique`` to the table.
+                             When True only values that have changed since the document was loaded will sent
+                             to the table via an ``.update``.
+        :param bool unique: Only relevant if partial=False, ignored otherwise. When False, the document will
+                            be ``.put`` to the table.  When True, the document will be ``.put_unique``.
         :param \*\*kwargs: When partial is False these are passed through to the put method on the table.  When partial
                            is True these become the kwargs for update_item.  See ``.put`` & ``.update`` for more
                            details.
@@ -486,7 +489,10 @@ class DynaModel(object):
         if not partial:
             pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             as_dict = self.to_dict()
-            resp = self.put(as_dict, **kwargs)
+            if unique:
+                resp = self.put_unique(as_dict, **kwargs)
+            else:
+                resp = self.put(as_dict, **kwargs)
             self._validated_data = as_dict
             post_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             return resp
