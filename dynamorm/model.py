@@ -485,6 +485,8 @@ class DynaModel(object):
                            details.
 
         The attributes on the item go through validation, so this may raise :class:`ValidationError`.
+
+        TODO - Support unique, partial saves.
         """
         if not partial:
             pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)

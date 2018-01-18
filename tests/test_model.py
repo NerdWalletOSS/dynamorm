@@ -470,11 +470,12 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
 def test_unique_save(TestModel, TestModel_entries, dynamo_local):
     first = TestModel(foo='first', bar='one', baz='uno')
     first.save()
-    
+
     second = TestModel(foo='first', bar='one', baz='uno')
     with pytest.raises(HashKeyExists):
         second.save(unique=True)
     second.save()
+
 
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
