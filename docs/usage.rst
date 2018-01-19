@@ -34,7 +34,7 @@ The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/conf
 region selection.  You can provide explicit configuration for `boto3 sessions`_ and `boto3 resources`_ as part of your
 ``Table`` definition.
 
-For example, if you develop against a local dynamo service your models make look something like:
+For example, if you develop against a local dynamo service your models may look something like:
 
 .. code-block:: python
 
