@@ -31,19 +31,29 @@ Configuring the Boto3 resource
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
-region selection.  You can provide explicit configuration for boto3 sessions and resources as part of your ``Table``
-definition.
+region selection.  You can provide explicit configuration for `boto3 sessions`_ and `boto3 resources`_ as part of your
+``Table`` definition.
+
+For example, if you develop against a local dynamo service your models make look something like:
 
 .. code-block:: python
 
 
     class MyModel(DynaModel):
         class Table:
-            resource_kwargs = {
+            session_kwargs = {
                 'region_name': 'us-east-2'
             }
+            resource_kwargs = {
+                'endpoint_url': 'http://localhost:33333'
+            }
 
-.. _boto3 resource: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#service-resource
+
+You would obviously want the session and resource configuration to come from some sort of configuration provider that
+could provide the correct options depending on where your application is being run.
+
+.. _boto3 sessions: http://boto3.readthedocs.io/en/latest/reference/core/session.html
+.. _boto3 resources: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#service-resource
 .. _Flask: http://flask.pocoo.org/
 
 
