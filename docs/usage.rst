@@ -31,14 +31,17 @@ Configuring the Boto3 resource
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
-region selection.  If you would instead like to configure these properties at run-time you can do this by passing the
-configuration to the ``Table.get_resource`` method on any of your models (once you've defined them -- below).
+region selection.  You can provide explicitly configuration for boto3 sessions and resources as part of your ``Table``
+definition.
 
 .. code-block:: python
 
-    MyModel.Table.get_resource(
-        region_name='us-east-2'
-    )
+
+    class MyModel(DynaModel):
+        class Table:
+            resource_kwargs = {
+                'region_name': 'us-east-2'
+            }
 
 The `boto3 resource`_ for DynamoDB is **globally** shared between all models, so you only need to call this once on a
 single model and all models will use the configured resource.  Anything you pass to the ``Table.get_resource`` call is
