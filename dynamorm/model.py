@@ -111,7 +111,7 @@ class DynaModelMeta(type):
         if should_transform('Table'):
             TableClass = type(
                 '{name}Table'.format(name=name),
-                (DynamoTable3,),
+                (DynamoTable3,) + attrs['Table'].__bases__,
                 dict(attrs['Table'].__dict__)
             )
             attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)

@@ -539,3 +539,41 @@ def test_schema_parents_mro():
 
     assert 'bar' in Model.Schema.dynamorm_fields()
     assert isinstance(Model.Schema.dynamorm_fields()['bar'], String)
+
+
+def test_table_config(TestModel, dynamo_local):
+    class MyModel(DynaModel):
+        class Table:
+            name = 'mymodel'
+            hash_key = 'foo'
+            read = 10
+            write = 10
+
+            resource_kwargs = {
+                'region_name': 'us-east-2'
+            }
+
+        class Schema:
+            foo = String(required=True)
+
+    class OtherModel(DynaModel):
+        class Table:
+            name = 'othermodel'
+            hash_key = 'foo'
+            read = 10
+            write = 10
+
+        class Schema:
+            foo = String(required=True)
+
+    # dynamo_local sets up the default table config to point to us-west-2
+    # So any models, like TestModel, that don't specify a config end up pointing there
+    assert TestModel.Table.resource.meta.client.meta.region_name == 'us-west-2'
+
+    # Our first model above has explicit resource kwargs, as such it should get a different resource with our explicitly
+    # configured region name
+    assert MyModel.Table.resource.meta.client.meta.region_name == 'us-east-2'
+
+    # Tables that share the same resource kwargs share the same resources
+    assert MyModel.Table.resource is not TestModel.Table.resource
+    assert OtherModel.Table.resource is TestModel.Table.resource
