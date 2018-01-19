@@ -31,7 +31,7 @@ Configuring the Boto3 resource
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
-region selection.  You can provide explicitly configuration for boto3 sessions and resources as part of your ``Table``
+region selection.  You can provide explicit configuration for boto3 sessions and resources as part of your ``Table``
 definition.
 
 .. code-block:: python
