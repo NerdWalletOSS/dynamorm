@@ -596,4 +596,4 @@ def test_field_subclassing():
         class Schema:
             foo = SubSubclassedString(required=True)
 
-    assert MyModel.Schema.fields['foo']
+    assert isinstance(MyModel.Schema.dynamorm_fields()['foo'], String)
