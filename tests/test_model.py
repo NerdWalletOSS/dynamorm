@@ -586,6 +586,9 @@ def test_field_subclassing():
     class SubSubclassedString(SubclassedString):
         pass
 
+    class Mixin(object):
+        foo = SubSubclassedString(required=True)
+
     class MyModel(DynaModel):
         class Table:
             name = 'mymodel'
@@ -593,7 +596,7 @@ def test_field_subclassing():
             read = 10
             write = 10
 
-        class Schema:
-            foo = SubSubclassedString(required=True)
+        class Schema(Mixin):
+            pass
 
     assert isinstance(MyModel.Schema.dynamorm_fields()['foo'], String)

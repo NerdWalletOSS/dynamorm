@@ -4,6 +4,7 @@ or Schematics schema that is used for validating and marshalling your data.
 
 import inspect
 import logging
+import sys
 
 import six
 
@@ -70,33 +71,22 @@ class DynaModelMeta(type):
         )
 
         # Transform the Schema.
-        # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
-        # dict and see if the item comes from either of them and lazily import our local Model implementation.
         if should_transform('Schema'):
-            def module_name_startswith_in_mro(obj, name):
-                for klass in obj.__class__.__mro__:
-                    if klass.__module__.startswith(name):
-                        return True
+            if 'marshmallow' in sys.modules:
+                from .types._marshmallow import Schema
+            elif 'schematics' in sys.modules:
+                from .types._schematics import Schema
 
-            for schema_item in six.itervalues(attrs['Schema'].__dict__):
-                if module_name_startswith_in_mro(schema_item, 'marshmallow.'):
-                    from .types._marshmallow import Schema
-                    break
-                elif module_name_startswith_in_mro(schema_item, 'schematics.'):
-                    from .types._schematics import Schema
+                # Pull all of our fields up onto the main schema, obeying MRO
+                # This is done to ensure that "mixin" class fields get properly declared for Schematics
+                def pull_up_fields(cls):
+                    for base in reversed(cls.__bases__):
+                        for k, v in six.iteritems(base.__dict__):
+                            if isinstance(v, Schema.base_field_type()):
+                                setattr(attrs['Schema'], k, v)
+                        pull_up_fields(base)
 
-                    # Pull all of our fields up onto the main schema, obeying MRO
-                    # This is done to ensure that "mixin" class fields get properly declared for Schematics
-                    def pull_up_fields(cls):
-                        for base in reversed(cls.__bases__):
-                            for k, v in six.iteritems(base.__dict__):
-                                if isinstance(v, Schema.base_field_type()):
-                                    setattr(attrs['Schema'], k, v)
-                            pull_up_fields(base)
-
-                    pull_up_fields(attrs['Schema'])
-
-                    break
+                pull_up_fields(attrs['Schema'])
             else:
                 raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
 
