@@ -73,16 +73,16 @@ class DynaModelMeta(type):
         # To allow both schematics and marshmallow to be installed and select the correct model we peek inside of the
         # dict and see if the item comes from either of them and lazily import our local Model implementation.
         if should_transform('Schema'):
-            for schema_item in six.itervalues(attrs['Schema'].__dict__):
-                try:
-                    module_name = schema_item.__module__
-                except AttributeError:
-                    continue
+            def module_name_startswith_in_mro(obj, name):
+                for klass in obj.__class__.__mro__:
+                    if klass.__module__.startswith(name):
+                        return True
 
-                if module_name.startswith('marshmallow.'):
+            for schema_item in six.itervalues(attrs['Schema'].__dict__):
+                if module_name_startswith_in_mro(schema_item, 'marshmallow.'):
                     from .types._marshmallow import Schema
                     break
-                elif module_name.startswith('schematics.'):
+                elif module_name_startswith_in_mro(schema_item, 'schematics.'):
                     from .types._schematics import Schema
 
                     # Pull all of our fields up onto the main schema, obeying MRO
