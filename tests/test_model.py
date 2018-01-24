@@ -577,3 +577,23 @@ def test_table_config(TestModel, dynamo_local):
     # Tables that share the same resource kwargs share the same resources
     assert MyModel.Table.resource is not TestModel.Table.resource
     assert OtherModel.Table.resource is TestModel.Table.resource
+
+
+def test_field_subclassing():
+    class SubclassedString(String):
+        pass
+
+    class SubSubclassedString(SubclassedString):
+        pass
+
+    class MyModel(DynaModel):
+        class Table:
+            name = 'mymodel'
+            hash_key = 'foo'
+            read = 10
+            write = 10
+
+        class Schema:
+            foo = SubSubclassedString(required=True)
+
+    assert isinstance(MyModel.Schema.dynamorm_fields()['foo'], String)
