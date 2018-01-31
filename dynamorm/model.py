@@ -462,7 +462,7 @@ class DynaModel(object):
         """
         return self.to_dict(native=True)
 
-    def save(self, partial=False, unique=False, **kwargs):
+    def save(self, partial=False, unique=False, return_all=False, **kwargs):
         """Save this instance to the table
 
         :param bool partial: When False the whole document will be ``.put`` or ``.put_unique`` to the table.
@@ -470,6 +470,7 @@ class DynaModel(object):
                              to the table via an ``.update``.
         :param bool unique: Only relevant if partial=False, ignored otherwise. When False, the document will
                             be ``.put`` to the table.  When True, the document will be ``.put_unique``.
+        :param bool return_all: Only used for partial saves.  Passed through to ``.update``.
         :param \*\*kwargs: When partial is False these are passed through to the put method on the table.  When partial
                            is True these become the kwargs for update_item.  See ``.put`` & ``.update`` for more
                            details.
@@ -501,7 +502,7 @@ class DynaModel(object):
         if not updates:
             log.warn("Partial save on %s produced nothing to update", self)
 
-        return self.update(update_item_kwargs=kwargs, **updates)
+        return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
     def _add_hash_key_values(self, hash_dict):
         """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
@@ -512,7 +513,7 @@ class DynaModel(object):
         except (AttributeError, TypeError):
             pass
 
-    def update(self, conditions=None, update_item_kwargs=None, **kwargs):
+    def update(self, conditions=None, update_item_kwargs=None, return_all=False, **kwargs):
         """Update this instance in the table
 
         New values are set via kwargs to this function:
@@ -546,7 +547,9 @@ class DynaModel(object):
 
         If your update conditions do not match then a dynamorm.exceptions.ConditionFailed exception will be raised.
 
-        As long as the update succeeds the attrs on this instance will be updated to match their new values.
+        As long as the update succeeds the attrs on this instance will be updated to match their new values.  If you set
+        ``return_all`` to true then we will update all of the attributes on the object with the current values in
+        Dyanmo, rather than just those you updated.
 
         .. expressions supported by Dynamo: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.OperatorsAndFunctions.html
         """
@@ -559,10 +562,14 @@ class DynaModel(object):
                         updates=kwargs)
 
         if not is_noop:
+            if return_all is True:
+                return_values = 'ALL_NEW'
+            else:
+                return_values = 'UPDATED_NEW'
             try:
-                update_item_kwargs['ReturnValues'] = 'UPDATED_NEW'
+                update_item_kwargs['ReturnValues'] = return_values
             except TypeError:
-                update_item_kwargs = {'ReturnValues': 'UPDATED_NEW'}
+                update_item_kwargs = {'ReturnValues': return_values}
 
             resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
