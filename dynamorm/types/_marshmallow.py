@@ -1,3 +1,5 @@
+import six
+
 from marshmallow import Schema as MarshmallowSchema
 from marshmallow import fields
 
@@ -29,6 +31,14 @@ class Schema(MarshmallowSchema, DynamORMSchema):
             data, errors = cls(partial=partial).dump(obj)
         if errors:
             raise ValidationError(obj, cls.__name__, errors)
+
+        # When asking for partial native objects (during model init) we want to return None values
+        # This ensures our object has all attributes and we can track partial saves properly
+        if partial and native:
+            for name in six.iterkeys(cls().fields):
+                if name not in data:
+                    data[name] = None
+
         return data
 
     @staticmethod

@@ -12,7 +12,7 @@ python:
   - pypy
 
 env:
-  - SERIALIZATION_PKG="marshmallow==2.13.5"
+  - SERIALIZATION_PKG="marshmallow==2.15.0"
   - SERIALIZATION_PKG="schematics==2.0.1"
 
 install: false

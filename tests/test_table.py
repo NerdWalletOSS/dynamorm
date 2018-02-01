@@ -506,11 +506,7 @@ def test_indexes_query(TestModel, TestModel_entries, dynamo_local):
 
     # we project count into the ByBaz index, but not when
     assert results[0].count == 111
-
-    if is_marshmallow():
-        assert not hasattr(results[0], 'when')
-    else:
-        assert results[0].when is None
+    assert results[0].when is None
 
     # ByBar only has a hash_key not a range key
     results = list(TestModel.ByBar.query(bar='three'))

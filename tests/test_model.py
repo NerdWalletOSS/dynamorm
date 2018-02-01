@@ -11,7 +11,12 @@ from dynamorm.exceptions import (
     ValidationError,
 )
 
-if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+
+def is_marshmallow():
+    return os.environ.get('SERIALIZATION_PKG', '').startswith('marshmallow')
+
+
+if is_marshmallow():
     from marshmallow.fields import String, Integer as Number
     from marshmallow import validates, ValidationError as SchemaValidationError
 else:
@@ -467,6 +472,14 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     first.update_item.assert_has_calls([baz_update_call, count_update_call])
 
 
+def test_partial_save_with_return_all(TestModel, TestModel_entries, dynamo_local):
+    model_to_patch = TestModel(foo='first', bar='one', partial=True)
+    assert model_to_patch.baz is None
+    model_to_patch.count = 12345
+    model_to_patch.save(partial=True, return_all=True)
+    assert model_to_patch.baz == 'bbq'
+
+
 def test_unique_save(TestModel, TestModel_entries, dynamo_local):
     first = TestModel(foo='first', bar='one', baz='uno')
     first.save()
@@ -482,7 +495,7 @@ def test_explicit_schema_parents():
     class SuperMixin(object):
         bbq = String()
 
-    if 'marshmallow' in (os.getenv('SERIALIZATION_PKG') or ''):
+    if is_marshmallow():
         class Mixin(SuperMixin):
             is_mixin = True
             bar = String()
