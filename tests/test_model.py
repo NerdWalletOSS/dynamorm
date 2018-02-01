@@ -474,11 +474,7 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
 
 def test_partial_save_with_return_all(TestModel, TestModel_entries, dynamo_local):
     model_to_patch = TestModel(foo='first', bar='one', partial=True)
-    if is_marshmallow():
-        with pytest.raises(AttributeError):
-            assert model_to_patch.baz is None
-    else:
-        assert model_to_patch.baz is None
+    assert model_to_patch.baz is None
     model_to_patch.count = 12345
     model_to_patch.save(partial=True, return_all=True)
     assert model_to_patch.baz == 'bbq'
