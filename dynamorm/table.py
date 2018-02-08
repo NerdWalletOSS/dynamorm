@@ -205,22 +205,12 @@ class DynamoTable3(DynamoCommon3):
     @classmethod
     def get_resource(cls, **kwargs):
         """Return the boto3 resource"""
-        resource_id = hash(json.dumps(cls.resource_kwargs, sort_keys=True))
-
-        try:
-            return DynamoTable3._resources[resource_id]
-        except KeyError:
-            pass
-        except AttributeError:
-            DynamoTable3._resources = {}
-
         boto3_session = boto3.Session(**(cls.session_kwargs or {}))
 
         for key, val in six.iteritems(cls.resource_kwargs or {}):
             kwargs.setdefault(key, val)
 
-        DynamoTable3._resources[resource_id] = boto3_session.resource('dynamodb', **kwargs)
-        return DynamoTable3._resources[resource_id]
+        return boto3_session.resource('dynamodb', **kwargs)
 
     @classmethod
     def get_table(cls, name):
