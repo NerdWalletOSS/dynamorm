@@ -205,6 +205,9 @@ class DynamoTable3(DynamoCommon3):
     @classmethod
     def get_resource(cls, **kwargs):
         """Return the boto3 resource"""
+        if kwargs and not cls.resource_kwargs:
+            cls.resource_kwargs = kwargs
+
         boto3_session = boto3.Session(**(cls.session_kwargs or {}))
 
         for key, val in six.iteritems(cls.resource_kwargs or {}):
