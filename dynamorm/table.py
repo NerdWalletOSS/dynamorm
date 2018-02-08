@@ -39,7 +39,6 @@ projection  True      object  An instance of of :class:`dynamorm.model.ProjectAl
 """
 
 import collections
-import json
 import logging
 import time
 import warnings
