@@ -587,10 +587,6 @@ def test_table_config(TestModel, dynamo_local):
     # configured region name
     assert MyModel.Table.resource.meta.client.meta.region_name == 'us-east-2'
 
-    # Tables that share the same resource kwargs share the same resources
-    assert MyModel.Table.resource is not TestModel.Table.resource
-    assert OtherModel.Table.resource is TestModel.Table.resource
-
 
 def test_field_subclassing():
     class SubclassedString(String):

@@ -39,7 +39,6 @@ projection  True      object  An instance of of :class:`dynamorm.model.ProjectAl
 """
 
 import collections
-import json
 import logging
 import time
 import warnings
@@ -204,23 +203,24 @@ class DynamoTable3(DynamoCommon3):
 
     @classmethod
     def get_resource(cls, **kwargs):
-        """Return the boto3 resource"""
-        resource_id = hash(json.dumps(cls.resource_kwargs, sort_keys=True))
+        """Return the boto3 resource
 
-        try:
-            return DynamoTable3._resources[resource_id]
-        except KeyError:
-            pass
-        except AttributeError:
-            DynamoTable3._resources = {}
+        If you provide **kwargs here and the class doesn't have any resource_kwargs defined then the ones passed will
+        permanently override the resource_kwargs on the class.
+
+        This is useful for bootstrapping test resources against a Dynamo local instance as a call to
+        ``DynamoTable3.get_resource`` will end up replacing the resource_kwargs on all classes that do not define their
+        own.
+        """
+        if kwargs and not cls.resource_kwargs:
+            cls.resource_kwargs = kwargs
 
         boto3_session = boto3.Session(**(cls.session_kwargs or {}))
 
         for key, val in six.iteritems(cls.resource_kwargs or {}):
             kwargs.setdefault(key, val)
 
-        DynamoTable3._resources[resource_id] = boto3_session.resource('dynamodb', **kwargs)
-        return DynamoTable3._resources[resource_id]
+        return boto3_session.resource('dynamodb', **kwargs)
 
     @classmethod
     def get_table(cls, name):
