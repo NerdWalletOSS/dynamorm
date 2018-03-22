@@ -9,6 +9,7 @@ import pytest
 
 from dynamorm import Q
 
+from dynamorm.table import DynamoTable3
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
@@ -519,3 +520,26 @@ def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
 
     results = list(TestModel.ByBar.scan())
     assert len(results) == 3
+
+
+def test_config():
+    class TestTable(DynamoTable3):
+        resource_kwargs = {
+            'region_name': 'us-west-2',
+            'config': {
+                'connect_timeout': 1,
+            }
+        }
+
+    resource = TestTable.get_resource()
+    assert resource.meta.client.meta.config.connect_timeout == 1
+
+    class BadConfigTable(DynamoTable3):
+        resource_kwargs = {
+            'config': {
+                'foo': True
+            }
+        }
+
+    with pytest.raises(TypeError):
+        BadConfigTable.get_resource()

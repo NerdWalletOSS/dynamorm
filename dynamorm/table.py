@@ -205,7 +205,7 @@ class DynamoTable3(DynamoCommon3):
     def get_resource(cls, **kwargs):
         """Return the boto3 resource
 
-        If you provide **kwargs here and the class doesn't have any resource_kwargs defined then the ones passed will
+        If you provide kwargs here and the class doesn't have any resource_kwargs defined then the ones passed will
         permanently override the resource_kwargs on the class.
 
         This is useful for bootstrapping test resources against a Dynamo local instance as a call to
@@ -219,6 +219,17 @@ class DynamoTable3(DynamoCommon3):
 
         for key, val in six.iteritems(cls.resource_kwargs or {}):
             kwargs.setdefault(key, val)
+
+        # allow for dict based resource config that we convert into a botocore Config object
+        # https://botocore.readthedocs.io/en/stable/reference/config.html
+        try:
+            resource_config = kwargs['config']
+        except KeyError:
+            # no 'config' provided in the kwargs
+            pass
+        else:
+            if isinstance(resource_config, dict):
+                kwargs['config'] = botocore.config.Config(**resource_config)
 
         return boto3_session.resource('dynamodb', **kwargs)
 
