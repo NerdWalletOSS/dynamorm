@@ -220,6 +220,17 @@ class DynamoTable3(DynamoCommon3):
         for key, val in six.iteritems(cls.resource_kwargs or {}):
             kwargs.setdefault(key, val)
 
+        # allow for dict based resource config that we convert into a botocore Config object
+        # https://botocore.readthedocs.io/en/stable/reference/config.html
+        try:
+            resource_config = kwargs['config']
+        except KeyError:
+            # no 'config' provided in the kwargs
+            pass
+        else:
+            if isinstance(resource_config, dict):
+                kwargs['config'] = botocore.config.Config(**resource_config)
+
         return boto3_session.resource('dynamodb', **kwargs)
 
     @classmethod

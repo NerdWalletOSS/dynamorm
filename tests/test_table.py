@@ -5,10 +5,12 @@ import os
 
 from decimal import Decimal
 
+import botocore
 import pytest
 
 from dynamorm import Q
 
+from dynanorm.table import DynamoTable3
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
@@ -519,3 +521,15 @@ def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
 
     results = list(TestModel.ByBar.scan())
     assert len(results) == 3
+
+
+def test_config():
+    class TestTable(DynamoTable3):
+        """get_resource modifies it's class when given kwargs, so we use this to avoid mutating the base class"""
+        pass
+
+    resource = TestTable.get_resource(config={'retries': {'max_attempts': 1}})
+    assert resource.meta.client.meta.config.retries['max_attempts'] == 3
+
+    with pytest.raises(botocore.exceptions.InvalidRetryConfigurationError):
+        TestTable.get_resource(config={'foo': True})
