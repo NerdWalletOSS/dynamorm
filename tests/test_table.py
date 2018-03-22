@@ -10,7 +10,7 @@ import pytest
 
 from dynamorm import Q
 
-from dynanorm.table import DynamoTable3
+from dynamorm.table import DynamoTable3
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
