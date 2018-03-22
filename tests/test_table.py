@@ -5,7 +5,6 @@ import os
 
 from decimal import Decimal
 
-import botocore
 import pytest
 
 from dynamorm import Q
