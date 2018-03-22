@@ -525,11 +525,23 @@ def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
 
 def test_config():
     class TestTable(DynamoTable3):
-        """get_resource modifies it's class when given kwargs, so we use this to avoid mutating the base class"""
-        pass
+        resource_kwargs = {
+            'config': {
+                'retries': {
+                    'max_attempts': 1
+                }
+            }
+        }
 
-    resource = TestTable.get_resource(config={'retries': {'max_attempts': 1}})
-    assert resource.meta.client.meta.config.retries['max_attempts'] == 3
+    resource = TestTable.get_resource()
+    assert resource.meta.client.meta.config.retries['max_attempts'] == 1
+
+    class BadConfigTable(DynamoTable3):
+        resource_kwargs = {
+            'config': {
+                'foo': True
+            }
+        }
 
     with pytest.raises(botocore.exceptions.InvalidRetryConfigurationError):
-        TestTable.get_resource(config={'foo': True})
+        TestTable.get_resource()
