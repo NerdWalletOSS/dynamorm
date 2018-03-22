@@ -526,15 +526,14 @@ def test_indexes_scan(TestModel, TestModel_entries, dynamo_local):
 def test_config():
     class TestTable(DynamoTable3):
         resource_kwargs = {
+            'region_name': 'us-west-2',
             'config': {
-                'retries': {
-                    'max_attempts': 1
-                }
+                'connect_timeout': 1,
             }
         }
 
     resource = TestTable.get_resource()
-    assert resource.meta.client.meta.config.retries['max_attempts'] == 1
+    assert resource.meta.client.meta.config.connect_timeout == 1
 
     class BadConfigTable(DynamoTable3):
         resource_kwargs = {
@@ -543,5 +542,5 @@ def test_config():
             }
         }
 
-    with pytest.raises(botocore.exceptions.InvalidRetryConfigurationError):
-        TestTable.get_resource()
+    with pytest.raises(TypeError):
+        BadConfigTable.get_resource()
