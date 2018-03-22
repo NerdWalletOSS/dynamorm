@@ -1,7 +1,8 @@
 *.pyc
 .*.sw[op]
 
-build/
+./build/
+./configs/
 dist/
 .cache/
 .eggs/
