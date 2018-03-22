@@ -205,7 +205,7 @@ class DynamoTable3(DynamoCommon3):
     def get_resource(cls, **kwargs):
         """Return the boto3 resource
 
-        If you provide **kwargs here and the class doesn't have any resource_kwargs defined then the ones passed will
+        If you provide kwargs here and the class doesn't have any resource_kwargs defined then the ones passed will
         permanently override the resource_kwargs on the class.
 
         This is useful for bootstrapping test resources against a Dynamo local instance as a call to
