@@ -285,7 +285,11 @@ class DynaModel(object):
         :params update_item_kwargs: A dict of other kwargs that are passed through to update_item
         :params \*\*kwargs: Includes your hash/range key/val to match on as well as any keys to update
         """
-        cls.Schema.dynamorm_validate(kwargs, partial=True)
+        kwargs.update(dict(
+            (k, v)
+            for k, v in six.iteritems(cls.Schema.dynamorm_validate(kwargs, partial=True))
+            if k in kwargs
+        ))
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
         return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
