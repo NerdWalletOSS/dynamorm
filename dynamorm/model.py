@@ -578,7 +578,9 @@ class DynaModel(object):
             resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
 
             # update our local attrs to match what we updated
-            for key, val in six.iteritems(resp['Attributes']):
+            partial_model = self.new_from_raw(resp['Attributes'], partial=True)
+            for key, _ in six.iteritems(resp['Attributes']):
+                val = getattr(partial_model, key)
                 setattr(self, key, val)
                 self._validated_data[key] = val
 
