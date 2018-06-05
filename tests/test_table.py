@@ -341,8 +341,8 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
 
     two.update(things=['foo'])
     assert two.things == ['foo']
-    two.update(things__append=[1])
-    assert two.things == ['foo', 1]
+    two.update(things__append=['bar'])
+    assert two.things == ['foo', 'bar']
 
     assert two.count == 222
     two.update(count__plus=10)
