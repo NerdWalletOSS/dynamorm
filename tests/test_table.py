@@ -341,8 +341,12 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
 
     two.update(things=['foo'])
     assert two.things == ['foo']
-    two.update(things__append=[1])
-    assert two.things == ['foo', 1]
+    two.update(things__append=['bar'])
+    assert two.things == ['foo', 'bar']
+
+    DT = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
+    two.update(created=DT)
+    assert isinstance(two.created, datetime.datetime)
 
     assert two.count == 222
     two.update(count__plus=10)
