@@ -327,6 +327,22 @@ def test_update_invalid_fields(TestModel, TestModel_entries, dynamo_local):
         )
 
 
+def test_schema_field_removed_update_return_all(TestModel, TestModel_table, dynamo_local):
+    """Simulate a schema change with field removed and make sure we can update the record
+       and return all columns with new schema
+    """
+    data = {'foo': '1', 'bar': '2', 'old_schema_key': 10, 'baz': 'baz'}
+    TestModel.Table.put(data)
+    item = TestModel.get(foo='1', bar='2')
+    item.update(baz='bbs', return_all=True)
+
+    assert item.foo == '1'
+    assert item.bar == '2'
+    assert item.baz == 'bbs'
+    # Old unrecognized column should be dropped
+    assert not hasattr(item, 'old_schema_key')
+
+
 def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     two = TestModel.get(foo='first', bar='two')
     assert two.child == {'sub': 'two'}

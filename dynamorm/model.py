@@ -580,9 +580,12 @@ class DynaModel(object):
             # update our local attrs to match what we updated
             partial_model = self.new_from_raw(resp['Attributes'], partial=True)
             for key, _ in six.iteritems(resp['Attributes']):
-                val = getattr(partial_model, key)
-                setattr(self, key, val)
-                self._validated_data[key] = val
+                # elsewhere in Dynamorm, models can be created without all fields (non-"strict" mode in Schematics),
+                # so we drop unknown keys here to be consistent
+                if hasattr(partial_model, key):
+                    val = getattr(partial_model, key)
+                    setattr(self, key, val)
+                    self._validated_data[key] = val
 
         post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
                          updates=kwargs)
