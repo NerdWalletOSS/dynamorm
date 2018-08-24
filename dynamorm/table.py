@@ -19,6 +19,9 @@ read       True      int   The provisioned read throughput.
 
 write      True      int   The provisioned write throughput.
 
+stream     False     str   The stream view type, either None or one of:
+                           'NEW_IMAGE'|'OLD_IMAGE'|'NEW_AND_OLD_IMAGES'|'KEYS_ONLY'
+
 =========  ========  ====  ===========
 
 
@@ -174,6 +177,8 @@ class DynamoTable3(DynamoCommon3):
     session_kwargs = None
     resource_kwargs = None
 
+    stream = None
+
     def __init__(self, schema, indexes=None):
         self.schema = schema
 
@@ -196,6 +201,9 @@ class DynamoTable3(DynamoCommon3):
                 ))
 
                 self.indexes[klass.name] = new_class(self, schema)
+
+        if self.stream and self.stream not in ['NEW_IMAGE', 'OLD_IMAGE', 'NEW_AND_OLD_IMAGES', 'KEYS_ONLY']:
+            raise ConditionFailed("Stream parameter '{0}' is invalid".format(self.stream))
 
     @property
     def resource(self):
@@ -304,6 +312,23 @@ class DynamoTable3(DynamoCommon3):
 
         return defs
 
+    @property
+    def stream_specification(self):
+        """Return an appropriate StreamSpecification, based on the stream attribute"""
+        spec = {}
+
+        if self.stream:
+            spec = {
+                'StreamEnabled': True,
+                'StreamViewType': self.stream,
+            }
+        else:
+            spec = {
+                'StreamEnabled': False,
+            }
+
+        return spec
+
     def create(self, wait=True):
         """DEPRECATED -- shim"""
         warnings.warn("DynamoTable3.create has been deprecated, please use DynamoTable3.create_table",
@@ -328,6 +353,7 @@ class DynamoTable3(DynamoCommon3):
             KeySchema=self.key_schema,
             AttributeDefinitions=self.attribute_definitions,
             ProvisionedThroughput=self.provisioned_throughput,
+            StreamSpecification=self.stream_specification,
             **index_args
         )
         if wait:
@@ -418,6 +444,17 @@ class DynamoTable3(DynamoCommon3):
                      ),
                      self.provisioned_throughput)
             do_update(ProvisionedThroughput=self.provisioned_throughput)
+            return self.update_table()
+
+        # check if we're going to modify the stream
+        if self.stream_specification != (table.stream_specification or {'StreamEnabled': False}):
+            log.info("Updating stream on table %s (%s -> %s)",
+                     self.name,
+                     table.stream_specification['StreamViewType']
+                         if table.stream_specification and 'StreamEnabled' in table.stream_specification
+                         else 'NONE',
+                     self.stream)
+            do_update(StreamSpecification=self.stream_specification)
             return self.update_table()
 
         # Now for the global indexes, turn the data strucutre into a real dictionary so we can look things up by name
