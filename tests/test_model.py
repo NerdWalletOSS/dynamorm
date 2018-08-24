@@ -314,6 +314,7 @@ def test_update_table(dynamo_local):
             range_key = 'bar'
             read = 5
             write = 5
+            stream = 'NEW_AND_OLD_IMAGES'
 
         class Schema:
             foo = String(required=True)
@@ -358,6 +359,7 @@ def test_update_table(dynamo_local):
             range_key = 'bar'
             read = 10
             write = 10
+            stream = 'NEW_IMAGE'
 
         class Index2(GlobalIndex):
             name = 'index2'
@@ -379,11 +381,13 @@ def test_update_table(dynamo_local):
     # * changing throughput
     # * adding index1
     # * adding index2
-    assert TableV2.Table.update_table() == 3
+    # * removing stream
+    assert TableV2.Table.update_table() == 4
 
     # updating to v2 result in 1 change
     # * deleting index 1
-    assert TableV3.Table.update_table() == 1
+    # * adding stream
+    assert TableV3.Table.update_table() == 2 
 
     # should now be a no-op
     assert TableV3.Table.update_table() == 0
