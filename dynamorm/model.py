@@ -579,9 +579,6 @@ class ReadIterator(six.Iterator):
         self.recursive = recursive
         self.kwargs = kwargs
 
-        # XXX
-        self.recursive = True
-
         self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
         self.resp = None
         self.index = -1

@@ -391,7 +391,7 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     # XXX support REMOVE in a different function
 
 
-def test_read_iterator(TestModel, mocker):
+def test_read_iterator_recursive(TestModel, mocker):
     # Mock out Dynamo responses as each having only one item to test auto-paging
     side_effects = [
         {
@@ -407,7 +407,7 @@ def test_read_iterator(TestModel, mocker):
         },
     ]
     mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
-    results = list(ReadIterator(TestModel, 'scan', dynamo_kwargs={"Limit": 1}))
+    results = list(ReadIterator(TestModel, 'scan', recursive=True, dynamo_kwargs={"Limit": 1}))
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 2
@@ -415,7 +415,7 @@ def test_read_iterator(TestModel, mocker):
     assert results[1].count == 222
 
     mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
-    results = list(ReadIterator(TestModel, 'query', dynamo_kwargs={"Limit": 1}))
+    results = list(ReadIterator(TestModel, 'query', recursive=True, dynamo_kwargs={"Limit": 1}))
 
     assert TestModel.Table.query.call_count == 2
     assert len(results) == 2
@@ -429,7 +429,25 @@ def test_read_iterator_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local,
     except TypeError:
         # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
         mocker.spy(TestModel.Table, 'scan')
-    results = list(ReadIterator(TestModel, 'scan'))
+    results = ReadIterator(TestModel, 'scan')
+
+    assert TestModel.Table.scan.call_count == 0
+    assert len(list(results)) == 3322
+    assert TestModel.Table.scan.call_count == 1
+
+    results = ReadIterator(TestModel, 'scan', last=results.last)
+
+    assert len(list(results)) == 678
+    assert TestModel.Table.scan.call_count == 2
+
+
+def test_read_iterator_xlarge_recursive(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
+    try:
+        mocker.spy(TestModel.Table.__class__, 'scan')
+    except TypeError:
+        # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
+        mocker.spy(TestModel.Table, 'scan')
+    results = list(ReadIterator(TestModel, 'scan', recursive=True))
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 4000
