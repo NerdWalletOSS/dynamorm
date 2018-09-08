@@ -407,7 +407,7 @@ def test_read_iterator(TestModel, mocker):
         },
     ]
     mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
-    results = list(ReadIterator(TestModel, 'scan', dynamo_kwargs={"Limit": 2}))
+    results = list(ReadIterator(TestModel, 'scan', dynamo_kwargs={"Limit": 1}))
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 2
@@ -415,7 +415,7 @@ def test_read_iterator(TestModel, mocker):
     assert results[1].count == 222
 
     mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
-    results = list(ReadIterator(TestModel, 'query', dynamo_kwargs={"Limit": 2}))
+    results = list(ReadIterator(TestModel, 'query', dynamo_kwargs={"Limit": 1}))
 
     assert TestModel.Table.query.call_count == 2
     assert len(results) == 2

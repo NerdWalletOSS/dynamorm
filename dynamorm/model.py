@@ -353,7 +353,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'query', *args, **kwargs)
+        return ReadIterator(cls, 'query', args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
@@ -407,7 +407,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'scan', *args, **kwargs)
+        return ReadIterator(cls, 'scan', args, **kwargs)
 
     def to_dict(self, native=False):
         obj = {}
@@ -564,29 +564,44 @@ class DynaModel(object):
 
 
 class ReadIterator(six.Iterator):
-    """ReadIterator is a custom iterator that it used by query & scan operations ... TODO
+    """ReadIterator provides an iterator object that 
 
     :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
     :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
     :param \*\*kwargs: The key(s) and value(s) to filter based on
     """
-    def __init__(self, model, method_name, *args, **kwargs):
-        self.last_key = None
-        self.resp = None
+    def __init__(self, model, method_name, args=None, partial=False, last=None, recursive=False, **kwargs):
         self.model = model
         self.method_name = method_name
-        self.args = args
+        self.args = tuple() if args is None else tuple(args)
+        self.partial = partial
+        self.last = last
+        self.recursive = recursive
         self.kwargs = kwargs
-        self.partial = self.kwargs.pop('partial', False)
+
+        # XXX
+        self.recursive = True
+
         self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
+        self.resp = None
+        self.index = -1
+
+        # If a Limit is specified we must not operate in recursive mode
+        if self.dynamo_kwargs_key in self.kwargs and 'Limit' in self.kwargs[self.dynamo_kwargs_key]:
+            self.recursive = False
 
     def __iter__(self):
         return self
 
-    def _get_resp(self, next_index=-1):
-        self.index = next_index
+    def _get_resp(self):
+        if self.last:
+            try:
+                self.kwargs[self.dynamo_kwargs_key]['ExclusiveStartKey'] = self.last
+            except KeyError:
+                self.kwargs[self.dynamo_kwargs_key] = {'ExclusiveStartKey': self.last}
         method = getattr(self.model.Table, self.method_name)
         self.resp = method(*self.args, **self.kwargs)
+        self.last = self.resp.get('LastEvaluatedKey', None)
 
     def __next__(self):
         if self.resp is None:
@@ -594,27 +609,14 @@ class ReadIterator(six.Iterator):
 
         self.index += 1
         if self.index == self.resp['Count']:
-            # Stop if no further pages
-            if 'LastEvaluatedKey' not in self.resp:
+            if not self.recursive or self.last is None:
                 raise StopIteration
 
-            try:
-                # Reduce limit by amount scanned for subsequent calls
-                self.kwargs[self.dynamo_kwargs_key]['Limit'] -= self.resp['ScannedCount']
-
-                # Stop if we've reached the limit set by the caller
-                if self.kwargs[self.dynamo_kwargs_key]['Limit'] <= 0:
-                    raise StopIteration
-            except KeyError:
-                pass
-
-            # Update calling kwargs with offset key
-            try:
-                self.kwargs[self.dynamo_kwargs_key]['ExclusiveStartKey'] = self.resp['LastEvaluatedKey']
-            except KeyError:
-                self.kwargs[self.dynamo_kwargs_key] = {'ExclusiveStartKey': self.resp['LastEvaluatedKey']}
-
-            self._get_resp(next_index=0)
+            # Our last marker is not None and we are in recursive mode
+            # Reset our response state and re-call next
+            self.resp = None
+            self.index = -1
+            return self.__next__()
 
         raw = self.resp['Items'][self.index]
         return self.model.new_from_raw(raw, partial=self.partial)
