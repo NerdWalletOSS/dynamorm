@@ -178,7 +178,7 @@ entries with the ``isbn`` field that start with a specific value you would use t
 
 .. code-block:: python
 
-    Book.query(isbn__begins_with="12345")
+    books = Book.query(isbn__begins_with="12345")
 
 You can find the full list of supported comparison operators in the `Table query docs`_.
 
@@ -195,14 +195,71 @@ Scanning
 
 .. _Table scan docs: https://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.scan
 
-Scanning works exactly the same as querying: comparison operators are specified using the "double-under" syntax
-(``<field>__<operator>``).
+Scanning works exactly the same as querying.
 
 .. code-block:: python
 
     # Scan based on attributes
     Book.scan(author="Mr. Bar")
     Book.scan(author__ne="Mr. Bar")
+
+
+.. _read-iterators:
+
+Read Iterator object
+~~~~~~~~~~~~~~~~~~~~
+
+Calling ``.query`` or ``.scan`` will return an ``ReadIterator`` object that will not actually send the API call to
+DynamoDB until you try to access an item in the object by iterating (``for book in books:``, ``list(books)``, etc...).
+
+
+Paging (``.last`` & ``.again``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. epigraph::
+
+    A single Query operation will read up to the maximum number of items set (if using the Limit parameter) or a maximum
+    of 1 MB of data and then apply any filtering to the results
+
+    -- `Table query docs`_
+
+When you query a table with many items, or with a limit, the iterator object will set its ``.last`` attribute to the key
+of the last item it received.  You can pass that item into a subsequent query via the ``start()`` method, or if you have
+the existing iterator object simply call ``.again()``.
+
+.. code-block:: python
+
+    books = Book.scan()
+    print(list(books))
+
+    if books.last:
+        print("The last book seen was: {}".format(books.last))
+        print(list(books.again()))
+
+
+.. code-block:: python
+
+    last = get_last_from_request()
+    books = Book.scan().start(last)
+
+
+Limiting (``.limit``)
+^^^^^^^^^^^^^^^^^^^^^
+
+.. epigraph::
+
+    The maximum number of items to evaluate (not necessarily the number of matching items). If DynamoDB processes the
+    number of items up to the limit while processing the results, it stops the operation and returns the matching values
+    up to that point.
+
+    -- `Table query docs`_
+
+You can also use the ``limit()`` method on the iterator object to apply a Limit to your query.
+
+.. code-block:: python
+
+    books = Book.scan().limit(1)
+    assert len(books) == 1
 
 
 .. _q-objects:

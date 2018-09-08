@@ -18,7 +18,7 @@ from .signals import (
     pre_update, post_update,
     pre_delete, post_delete
 )
-from .table import DynamoTable3
+from .table import DynamoTable3, ReadIterator
 
 log = logging.getLogger(__name__)
 
@@ -353,7 +353,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'query', args, **kwargs)
+        return ReadIterator(cls, 'query', *args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
@@ -407,7 +407,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'scan', args, **kwargs)
+        return ReadIterator(cls, 'scan', *args, **kwargs)
 
     def to_dict(self, native=False):
         obj = {}
@@ -561,59 +561,3 @@ class DynaModel(object):
         resp = self.Table.delete_item(**delete_item_kwargs)
         post_delete.send(self.__class__, instance=self)
         return resp
-
-
-class ReadIterator(six.Iterator):
-    """ReadIterator provides an iterator object that 
-
-    :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
-    :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
-    :param \*\*kwargs: The key(s) and value(s) to filter based on
-    """
-    def __init__(self, model, method_name, args=None, partial=False, last=None, recursive=False, **kwargs):
-        self.model = model
-        self.method_name = method_name
-        self.args = tuple() if args is None else tuple(args)
-        self.partial = partial
-        self.last = last
-        self.recursive = recursive
-        self.kwargs = kwargs
-
-        self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
-        self.resp = None
-        self.index = -1
-
-        # If a Limit is specified we must not operate in recursive mode
-        if self.dynamo_kwargs_key in self.kwargs and 'Limit' in self.kwargs[self.dynamo_kwargs_key]:
-            self.recursive = False
-
-    def __iter__(self):
-        return self
-
-    def _get_resp(self):
-        if self.last:
-            try:
-                self.kwargs[self.dynamo_kwargs_key]['ExclusiveStartKey'] = self.last
-            except KeyError:
-                self.kwargs[self.dynamo_kwargs_key] = {'ExclusiveStartKey': self.last}
-        method = getattr(self.model.Table, self.method_name)
-        self.resp = method(*self.args, **self.kwargs)
-        self.last = self.resp.get('LastEvaluatedKey', None)
-
-    def __next__(self):
-        if self.resp is None:
-            self._get_resp()
-
-        self.index += 1
-        if self.index == self.resp['Count']:
-            if not self.recursive or self.last is None:
-                raise StopIteration
-
-            # Our last marker is not None and we are in recursive mode
-            # Reset our response state and re-call next
-            self.resp = None
-            self.index = -1
-            return self.__next__()
-
-        raw = self.resp['Items'][self.index]
-        return self.model.new_from_raw(raw, partial=self.partial)

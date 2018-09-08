@@ -773,3 +773,118 @@ def Q(**mapping):
             expression = attr_expression
 
     return expression
+
+
+class ReadIterator(six.Iterator):
+    """ReadIterator provides an iterator object that wraps a model and a method (either scan or query).
+
+    Since it is an object we can attach attributes and functions to it that are useful to the caller.
+
+    .. code-block:: python
+
+        # Scan through a model, one at a time.  Don't do this!
+        results = MyModel.scan().limit(1)
+        for model in results:
+            print model.id
+
+        # The next time you call scan (or query) pass the .last attribute of your previous results
+        # in as the last argument
+        results = MyModel.scan().start(results.last).limit(1)
+        for model in results:
+            print model.id
+
+        # ...
+
+    :param model: The Model class to wrap
+    :param method_name: The Model.Table.<method_name> that should be called (one of: 'scan','query')
+    :param \*args: Q objects, passed through to scan or query
+    :param \*\*kwargs: filters, passed through to scan or query
+    """
+    def __init__(self, model, method_name, *args, **kwargs):
+        self.model = model
+        self.method_name = method_name
+        self.args = args
+        self.kwargs = kwargs
+
+        self._partial = False
+        self._recursive = False
+        self.last = None
+        self.resp = None
+        self.index = -1
+
+        self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
+        if self.dynamo_kwargs_key not in self.kwargs:
+            self.kwargs[self.dynamo_kwargs_key] = {}
+        self.dynamo_kwargs = self.kwargs[self.dynamo_kwargs_key]
+
+    def __iter__(self):
+        """We're the iterator"""
+        return self
+
+    def _get_resp(self):
+        """Helper to get the response object from scan or query"""
+        method = getattr(self.model.Table, self.method_name)
+        self.resp = method(*self.args, **self.kwargs)
+
+        # Store the last key from query
+        self.last = self.resp.get('LastEvaluatedKey', None)
+
+    def __next__(self):
+        """Called for each iteration of this object"""
+        # If we don't have a resp object, go get it
+        if self.resp is None:
+            self._get_resp()
+
+        # If a Limit is specified we must not operate in recursive mode
+        if 'Limit' in self.dynamo_kwargs:
+            self._recursive = False
+
+        # Increment which record we're going to pull from the items
+        self.index += 1
+
+        if self.index == self.resp['Count']:
+            # If we have no more items them we're done as long as we're not in recursive mode
+            # And if we are in recursive mode we're done if the resp didn't contain a last key
+            if not self._recursive or self.last is None:
+                raise StopIteration
+
+            # Our last marker is not None and we are in recursive mode
+            # Reset our response state and re-call next
+            self.again()
+            return self.__next__()
+
+        # Grab the raw item from the response and return it as a new instance of our model
+        raw = self.resp['Items'][self.index]
+        return self.model.new_from_raw(raw, partial=self._partial)
+
+    def limit(self, limit):
+        """Set the limit value"""
+        self.dynamo_kwargs['Limit'] = limit
+        return self
+
+    def start(self, last):
+        """Set the last value"""
+        self.dynamo_kwargs['ExclusiveStartKey'] = last
+        return self
+
+    def recursive(self, recursive):
+        """Set the recursive value"""
+        self._recursive = bool(recursive)
+        return self
+
+    def partial(self, partial):
+        """Set the partial value"""
+        self._partial = bool(partial)
+        return self
+
+    def again(self):
+        """Call this to reset the iterator so that you can iterate over it again.
+
+        If the previous invocation has a LastEvaluatedKey then this will resume from the next item.  Otherwise it will
+        re-do the previous invocation.
+        """
+        self.resp = None
+        self.index = -1
+        if self.last:
+            return self.start(self.last)
+        return self
