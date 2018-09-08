@@ -353,7 +353,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls._yield_items('query', *args, **kwargs)
+        return ReadIterator(cls, 'query', *args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
@@ -407,46 +407,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls._yield_items('scan', *args, **kwargs)
-
-    @classmethod
-    def _yield_items(cls, method_name, *args, **kwargs):
-        """Private helper method to yield items from a scan or query response
-
-        :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
-        :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
-        :param \*\*kwargs: The key(s) and value(s) to filter based on
-        """
-        partial = kwargs.pop('partial', False)
-        method = getattr(cls.Table, method_name)
-        dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
-
-        while True:
-            # Fetch and yield values
-            resp = method(*args, **kwargs)
-            for raw in resp['Items']:
-                if raw is not None:
-                    yield cls.new_from_raw(raw, partial=partial)
-
-            # Stop if no further pages
-            if 'LastEvaluatedKey' not in resp:
-                break
-
-            try:
-                # Reduce limit by amount scanned for subsequent calls
-                kwargs[dynamo_kwargs_key]['Limit'] -= resp['ScannedCount']
-
-                # Stop if we've reached the limit set by the caller
-                if kwargs[dynamo_kwargs_key]['Limit'] <= 0:
-                    break
-            except KeyError:
-                pass
-
-            # Update calling kwargs with offset key
-            try:
-                kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
-            except KeyError:
-                kwargs[dynamo_kwargs_key] = {'ExclusiveStartKey': resp['LastEvaluatedKey']}
+        return ReadIterator(cls, 'scan', *args, **kwargs)
 
     def to_dict(self, native=False):
         obj = {}
@@ -504,7 +465,7 @@ class DynaModel(object):
         )
 
         if not updates:
-            log.warn("Partial save on %s produced nothing to update", self)
+            log.warning("Partial save on %s produced nothing to update", self)
 
         return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
@@ -600,3 +561,60 @@ class DynaModel(object):
         resp = self.Table.delete_item(**delete_item_kwargs)
         post_delete.send(self.__class__, instance=self)
         return resp
+
+
+class ReadIterator(six.Iterator):
+    """ReadIterator is a custom iterator that it used by query & scan operations ... TODO
+
+    :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
+    :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
+    :param \*\*kwargs: The key(s) and value(s) to filter based on
+    """
+    def __init__(self, model, method_name, *args, **kwargs):
+        self.last_key = None
+        self.resp = None
+        self.model = model
+        self.method_name = method_name
+        self.args = args
+        self.kwargs = kwargs
+        self.partial = self.kwargs.pop('partial', False)
+        self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
+
+    def __iter__(self):
+        return self
+
+    def _get_resp(self, next_index=-1):
+        self.index = next_index
+        method = getattr(self.model.Table, self.method_name)
+        self.resp = method(*self.args, **self.kwargs)
+
+    def __next__(self):
+        if self.resp is None:
+            self._get_resp()
+
+        self.index += 1
+        if self.index == self.resp['Count']:
+            # Stop if no further pages
+            if 'LastEvaluatedKey' not in self.resp:
+                raise StopIteration
+
+            try:
+                # Reduce limit by amount scanned for subsequent calls
+                self.kwargs[self.dynamo_kwargs_key]['Limit'] -= self.resp['ScannedCount']
+
+                # Stop if we've reached the limit set by the caller
+                if self.kwargs[self.dynamo_kwargs_key]['Limit'] <= 0:
+                    raise StopIteration
+            except KeyError:
+                pass
+
+            # Update calling kwargs with offset key
+            try:
+                self.kwargs[self.dynamo_kwargs_key]['ExclusiveStartKey'] = self.resp['LastEvaluatedKey']
+            except KeyError:
+                self.kwargs[self.dynamo_kwargs_key] = {'ExclusiveStartKey': self.resp['LastEvaluatedKey']}
+
+            self._get_resp(next_index=0)
+
+        raw = self.resp['Items'][self.index]
+        return self.model.new_from_raw(raw, partial=self.partial)

@@ -9,6 +9,7 @@ import pytest
 
 from dynamorm import Q
 
+from dynamorm.model import ReadIterator
 from dynamorm.table import DynamoTable3
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
@@ -390,18 +391,23 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     # XXX support REMOVE in a different function
 
 
-def test_yield_items(TestModel, mocker):
+def test_read_iterator(TestModel, mocker):
     # Mock out Dynamo responses as each having only one item to test auto-paging
-    side_effects = [{
-        'Items': [{'bar': 'one', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('111'), 'foo': 'first'}],
-        'LastEvaluatedKey': {'cookie_id': 'ec477c69-8bc5-4e14-995d-37a73e8eb185', 'created_at': Decimal('1490000000')},
-        'ScannedCount': 1
-        }, {
-        'Items': [{'bar': 'two', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('222'), 'foo': 'second'}],
-        'ScannedCount': 1
-    }]
+    side_effects = [
+        {
+            'Items': [{'bar': 'one', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('111'), 'foo': 'first'}],
+            'LastEvaluatedKey': {'cookie_id': 'ec477c69-8bc5-4e14-995d-37a73e8eb185', 'created_at': Decimal('1490000000')},
+            'Count': 1,
+            'ScannedCount': 1
+        },
+        {
+            'Items': [{'bar': 'two', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('222'), 'foo': 'second'}],
+            'Count': 1,
+            'ScannedCount': 1
+        },
+    ]
     mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
-    results = list(TestModel._yield_items('scan', dynamo_kwargs={"Limit": 2}))
+    results = list(ReadIterator(TestModel, 'scan', dynamo_kwargs={"Limit": 2}))
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 2
@@ -409,7 +415,7 @@ def test_yield_items(TestModel, mocker):
     assert results[1].count == 222
 
     mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
-    results = list(TestModel._yield_items('query', dynamo_kwargs={"Limit": 2}))
+    results = list(ReadIterator(TestModel, 'query', dynamo_kwargs={"Limit": 2}))
 
     assert TestModel.Table.query.call_count == 2
     assert len(results) == 2
@@ -417,13 +423,13 @@ def test_yield_items(TestModel, mocker):
     assert results[1].count == 222
 
 
-def test_yield_items_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
+def test_read_iterator_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
     try:
         mocker.spy(TestModel.Table.__class__, 'scan')
     except TypeError:
         # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
         mocker.spy(TestModel.Table, 'scan')
-    results = list(TestModel._yield_items('scan'))
+    results = list(ReadIterator(TestModel, 'scan'))
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 4000
