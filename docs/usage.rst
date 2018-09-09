@@ -212,8 +212,13 @@ Read Iterator object
 Calling ``.query`` or ``.scan`` will return an ``ReadIterator`` object that will not actually send the API call to
 DynamoDB until you try to access an item in the object by iterating (``for book in books:``, ``list(books)``, etc...).
 
-The iterator object has a number of methods on it that can be used to influence its behavior.  All of these methods are
-"chained methods", meaning that they return the iterator object such that you can change them together.
+The iterator object has a number of methods on it that can be used to influence its behavior.  All of the methods
+described here are "chained methods", meaning that they return the iterator object such that you can chain them
+together.
+
+.. code-block:: python
+
+    next_10_books = Book.query(hash_key=the_hash_key).start(previous_last).limit(10)
 
 
 Paging (``.last`` & ``.again``)
