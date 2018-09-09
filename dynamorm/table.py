@@ -837,6 +837,10 @@ class ReadIterator(six.Iterator):
 
         # If a Limit is specified we must not operate in recursive mode
         if 'Limit' in self.dynamo_kwargs:
+            log.warning(
+                "ReadIterator was invoked with both a limit and the recursive flag set. "
+                "The recursive flag will be ignored"
+            )
             self._recursive = False
 
         # Increment which record we're going to pull from the items
