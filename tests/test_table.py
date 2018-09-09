@@ -414,7 +414,7 @@ def test_read_iterator_recursive(TestModel, TestModel_entries_xlarge, dynamo_loc
     except TypeError:
         # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
         mocker.spy(TestModel.Table, 'scan')
-    results = list(ReadIterator(TestModel, 'scan').recursive(True))
+    results = list(ReadIterator(TestModel, 'scan').recursive())
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 4000

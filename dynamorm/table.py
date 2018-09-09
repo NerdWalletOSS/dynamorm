@@ -867,13 +867,13 @@ class ReadIterator(six.Iterator):
         self.dynamo_kwargs['ExclusiveStartKey'] = last
         return self
 
-    def recursive(self, recursive):
-        """Set the recursive value"""
-        self._recursive = bool(recursive)
+    def recursive(self):
+        """Set the recursive value to True for this iterator"""
+        self._recursive = True
         return self
 
     def partial(self, partial):
-        """Set the partial value"""
+        """Set the partial value for this iterator"""
         self._partial = bool(partial)
         return self
 

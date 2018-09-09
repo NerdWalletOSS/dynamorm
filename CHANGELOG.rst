@@ -7,7 +7,7 @@ https://github.com/NerdWalletOSS/dynamorm/pull/61
 
   ``Model.query`` and ``Model.scan`` no longer return ALL available items.
   Instead they stop at each 1Mb page.  You can keep the existing behavior by
-  adding a ``.recursive(True)`` call to the return value.
+  adding a ``.recursive()`` call to the return value.
 
   Before::
 
@@ -15,7 +15,7 @@ https://github.com/NerdWalletOSS/dynamorm/pull/61
 
   After::
 
-      books = Books.scan().recursive(True)
+      books = Books.scan().recursive()
 
 * This version introduces the ``ReadIterator`` object which is returned from
   query and scan operations.  This object exposes functions that allow for
