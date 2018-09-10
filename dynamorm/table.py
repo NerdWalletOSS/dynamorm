@@ -892,7 +892,8 @@ class ReadIterator(six.Iterator):
         for attri, attr in enumerate(attrs):
             name_parts = []
             for parti, part in enumerate(attr.split(".")):
-                # child.sub
+                # replace the attrs with expression attributes so we can use reserved names (like count)
+                # convert names like child.sub -> to #pe1_1.#pe1_2
                 pename = '#pe{}'.format('_'.join([str(attri), str(parti)]))
                 self.dynamo_kwargs['ExpressionAttributeNames'][pename] = part
                 name_parts.append(pename)
