@@ -796,13 +796,15 @@ class ReadIterator(six.Iterator):
         # ...
 
     :param model: The Model class to wrap
-    :param method_name: The Model.Table.<method_name> that should be called (one of: 'scan','query')
     :param \*args: Q objects, passed through to scan or query
     :param \*\*kwargs: filters, passed through to scan or query
     """
-    def __init__(self, model, method_name, *args, **kwargs):
+    METHOD_NAME = None
+
+    def __init__(self, model, *args, **kwargs):
+        assert self.METHOD_NAME, "Improper use of ReadIterator, please use a subclass with a method name set"
+
         self.model = model
-        self.method_name = method_name
         self.args = args
         self.kwargs = kwargs
 
@@ -812,7 +814,7 @@ class ReadIterator(six.Iterator):
         self.resp = None
         self.index = -1
 
-        self.dynamo_kwargs_key = '_'.join([self.method_name, 'kwargs'])
+        self.dynamo_kwargs_key = '_'.join([self.METHOD_NAME, 'kwargs'])
         if self.dynamo_kwargs_key not in self.kwargs:
             self.kwargs[self.dynamo_kwargs_key] = {}
         self.dynamo_kwargs = self.kwargs[self.dynamo_kwargs_key]
@@ -823,23 +825,24 @@ class ReadIterator(six.Iterator):
 
     def _get_resp(self):
         """Helper to get the response object from scan or query"""
-        method = getattr(self.model.Table, self.method_name)
-        self.resp = method(*self.args, **self.kwargs)
-
-        # Store the last key from query
-        self.last = self.resp.get('LastEvaluatedKey', None)
+        method = getattr(self.model.Table, self.METHOD_NAME)
+        return method(*self.args, **self.kwargs)
 
     def __next__(self):
         """Called for each iteration of this object"""
         # If we don't have a resp object, go get it
         if self.resp is None:
-            self._get_resp()
+            self.resp = self._get_resp()
+
+            # Store the last key from query
+            self.last = self.resp.get('LastEvaluatedKey', None)
 
         # If a Limit is specified we must not operate in recursive mode
         if 'Limit' in self.dynamo_kwargs:
             log.warning(
-                "ReadIterator was invoked with both a limit and the recursive flag set. "
-                "The recursive flag will be ignored"
+                "%s was invoked with both a limit and the recursive flag set. "
+                "The recursive flag will be ignored",
+                self.__class__.__name__
             )
             self._recursive = False
 
@@ -871,15 +874,54 @@ class ReadIterator(six.Iterator):
         self.dynamo_kwargs['ExclusiveStartKey'] = last
         return self
 
+    def consistent(self):
+        """Make this read a consistent one"""
+        self.dynamo_kwargs['ConsistentRead'] = True
+        return self
+
+    def specific_attributes(self, attrs):
+        """Return only specific attributes in the documents through a ProjectionExpression
+
+        This is a list of attribute names. See the documentation for more info:
+        https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html
+        """
+        if 'ExpressionAttributeNames' not in self.dynamo_kwargs:
+            self.dynamo_kwargs['ExpressionAttributeNames'] = {}
+
+        pe = []
+        for attri, attr in enumerate(attrs):
+            name_parts = []
+            for parti, part in enumerate(attr.split(".")):
+                # child.sub
+                pename = '#pe{}'.format('_'.join([str(attri), str(parti)]))
+                self.dynamo_kwargs['ExpressionAttributeNames'][pename] = part
+                name_parts.append(pename)
+            pe.append('.'.join(name_parts))
+
+        self.dynamo_kwargs['ProjectionExpression'] = ', '.join(pe)
+        self._partial = True
+        return self
+
     def recursive(self):
         """Set the recursive value to True for this iterator"""
         self._recursive = True
         return self
 
     def partial(self, partial):
-        """Set the partial value for this iterator"""
+        """Set the partial value for this iterator, which is used when creating new items from the response.
+
+        This is used by indexes"""
         self._partial = bool(partial)
         return self
+
+    def count(self):
+        """Return the count matching the current read
+
+        This triggers a new request to the table when it is invoked.
+        """
+        self.dynamo_kwargs['Select'] = 'COUNT'
+        resp = self._get_resp()
+        return resp['Count']
 
     def again(self):
         """Call this to reset the iterator so that you can iterate over it again.
@@ -891,4 +933,17 @@ class ReadIterator(six.Iterator):
         self.index = -1
         if self.last:
             return self.start(self.last)
+        return self
+
+
+class ScanIterator(ReadIterator):
+    METHOD_NAME = 'scan'
+
+
+class QueryIterator(ReadIterator):
+    METHOD_NAME = 'query'
+
+    def reverse(self):
+        """Return results from the query in reverse"""
+        self.dynamo_kwargs['ScanIndexForward'] = False
         return self

@@ -18,7 +18,7 @@ from .signals import (
     pre_update, post_update,
     pre_delete, post_delete
 )
-from .table import DynamoTable3, ReadIterator
+from .table import DynamoTable3, QueryIterator, ScanIterator
 
 log = logging.getLogger(__name__)
 
@@ -353,7 +353,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'query', *args, **kwargs)
+        return QueryIterator(cls, *args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
@@ -407,7 +407,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return ReadIterator(cls, 'scan', *args, **kwargs)
+        return ScanIterator(cls, *args, **kwargs)
 
     def to_dict(self, native=False):
         obj = {}
