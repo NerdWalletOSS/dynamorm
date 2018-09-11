@@ -212,17 +212,56 @@ Read Iterator object
 Calling ``.query`` or ``.scan`` will return a ``ReadIterator`` object that will not actually send the API call to
 DynamoDB until you try to access an item in the object by iterating (``for book in books:``, ``list(books)``, etc...).
 
-The iterator object has a number of methods on it that can be used to influence its behavior.  All of the methods
-described here are "chained methods", meaning that they return the iterator object such that you can chain them
-together.
+The iterator objects have a number of methods on them that can be used to influence their behavior.  All of the methods
+described here (except ``.count()``) are "chained methods", meaning that they return the iterator object such that you
+can chain them together.
 
 .. code-block:: python
 
     next_10_books = Book.query(hash_key=the_hash_key).start(previous_last).limit(10)
 
 
-Paging (``.last`` & ``.again``)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Returning the Count (``.count()``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Unlike the rest of the methods in this section, ``.count()`` is the only one that does not return the iterator object.
+Instead it changes the SELECT_ parameter to ``COUNT`` and immediately sends the request, returning the count.
+
+.. code-block:: python
+
+    books_matching_hash_key = Books.query(hash_key=the_hash_key).count()
+
+
+.. _SELECT: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html#DDB-Query-request-Select
+
+
+Requesting consistent results (``.consistent()``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Queries & scans return eventually consistent results by default.  You can use ``.consistent()`` to return results that
+ensure all in-flight writes finished and no new writes were launched.
+
+.. code-block:: python
+
+    Books.query(hash_key=the_hash_key).consistent()
+
+
+Changing the returned attributes (``.specific_attributes()``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, query & scan operations will return ALL attributes from the table or index.  If you'd like to change the
+attributes to only return subset of the attributes you can pass a list to ``.specific_attributes([...])``.  Each
+attribute passed in should match the syntax from `Specifying Item Attributes`_ in the docs.
+
+.. code-block:: python
+
+    Books.query(hash_key=the_hash_key).specific_attributes(['isbn', 'title', 'publisher.name'])
+
+.. _Specifying Item Attributes: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.Attributes.html
+
+
+Paging (``.last``, ``.start()`` & ``.again()``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. epigraph::
 
@@ -251,8 +290,8 @@ the existing iterator object simply call ``.again()``.
     books = Book.scan().start(last)
 
 
-Limiting (``.limit``)
-^^^^^^^^^^^^^^^^^^^^^
+Limiting (``.limit()``)
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. epigraph::
 
@@ -262,7 +301,7 @@ Limiting (``.limit``)
 
     -- `Table query docs`_
 
-You can also use the ``limit()`` method on the iterator object to apply a Limit to your query.
+You can also use the ``.limit()`` method on the iterator object to apply a Limit to your query.
 
 .. code-block:: python
 
