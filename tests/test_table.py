@@ -9,7 +9,7 @@ import pytest
 
 from dynamorm import Q
 
-from dynamorm.table import DynamoTable3
+from dynamorm.table import DynamoTable3, QueryIterator, ScanIterator
 from dynamorm.exceptions import HashKeyExists, InvalidSchemaField, ValidationError, ConditionFailed
 
 
@@ -130,11 +130,8 @@ def test_get_invalid_field(TestModel):
 
 def test_count(TestModel, TestModel_entries, dynamo_local):
     """Test the raw query/scan functions to allow things like Counting"""
-    resp = TestModel.Table.query(foo="first", query_kwargs=dict(Select='COUNT'))
-    assert resp['Count'] == 3
-
-    resp = TestModel.Table.scan(count__lt=250, scan_kwargs=dict(Select='COUNT'))
-    assert resp['Count'] == 2
+    assert QueryIterator(TestModel, foo="first").count() == 3
+    assert ScanIterator(TestModel, count__lt=250).count() == 2
 
 
 def test_query(TestModel, TestModel_entries, dynamo_local):
@@ -148,8 +145,7 @@ def test_query(TestModel, TestModel_entries, dynamo_local):
     assert results[2].count == 222
 
     # get the results in the opposite order
-    # XXX TODO: should this be eaiser?
-    results = list(TestModel.query(foo="first", query_kwargs={'ScanIndexForward': False}))
+    results = list(TestModel.query(foo="first").reverse())
     assert results[0].count == 222
 
     with pytest.raises(InvalidSchemaField):
@@ -162,7 +158,7 @@ def test_query(TestModel, TestModel_entries, dynamo_local):
     results = list(TestModel.query(foo="first", bar__begins_with="t"))
     assert len(results) == 2
 
-    results = list(TestModel.query(query_kwargs={"Limit": 2}, foo="first"))
+    results = list(TestModel.query(foo="first").limit(2))
     assert len(results) == 2
     assert results[0].count == 111
     assert results[1].count == 333
@@ -202,7 +198,7 @@ def test_scan(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 333
     assert results[1].count == 222
 
-    results = list(TestModel.scan(scan_kwargs={"Limit": 2}, count__gt=0))
+    results = list(TestModel.scan(count__gt=0).limit(2))
     assert len(results) == 2
     assert results[0].count == 111
     assert results[1].count == 333
@@ -390,43 +386,40 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     # XXX support REMOVE in a different function
 
 
-def test_yield_items(TestModel, mocker):
-    # Mock out Dynamo responses as each having only one item to test auto-paging
-    side_effects = [{
-        'Items': [{'bar': 'one', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('111'), 'foo': 'first'}],
-        'LastEvaluatedKey': {'cookie_id': 'ec477c69-8bc5-4e14-995d-37a73e8eb185', 'created_at': Decimal('1490000000')},
-        'ScannedCount': 1
-        }, {
-        'Items': [{'bar': 'two', 'baz': 'bbq', 'child': {'sub': 'one'}, 'count': Decimal('222'), 'foo': 'second'}],
-        'ScannedCount': 1
-    }]
-    mocker.patch.object(TestModel.Table.__class__, 'scan', side_effect=side_effects)
-    results = list(TestModel._yield_items('scan', dynamo_kwargs={"Limit": 2}))
-
-    assert TestModel.Table.scan.call_count == 2
-    assert len(results) == 2
-    assert results[0].count == 111
-    assert results[1].count == 222
-
-    mocker.patch.object(TestModel.Table.__class__, 'query', side_effect=side_effects)
-    results = list(TestModel._yield_items('query', dynamo_kwargs={"Limit": 2}))
-
-    assert TestModel.Table.query.call_count == 2
-    assert len(results) == 2
-    assert results[0].count == 111
-    assert results[1].count == 222
-
-
-def test_yield_items_xlarge(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
+def test_scan_iterator(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
     try:
         mocker.spy(TestModel.Table.__class__, 'scan')
     except TypeError:
         # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
         mocker.spy(TestModel.Table, 'scan')
-    results = list(TestModel._yield_items('scan'))
+    results = ScanIterator(TestModel)
+
+    assert TestModel.Table.scan.call_count == 0
+    assert len(list(results)) == 3322
+    assert TestModel.Table.scan.call_count == 1
+
+    results = ScanIterator(TestModel).start(results.last)
+
+    assert len(list(results)) == 678
+    assert TestModel.Table.scan.call_count == 2
+
+
+def test_scan_iterator_recursive(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
+    try:
+        mocker.spy(TestModel.Table.__class__, 'scan')
+    except TypeError:
+        # pypy doesn't allow us to spy on the dynamic class, so we need to spy on the instance
+        mocker.spy(TestModel.Table, 'scan')
+    results = list(ScanIterator(TestModel).recursive())
 
     assert TestModel.Table.scan.call_count == 2
     assert len(results) == 4000
+
+
+def test_specific_attributes(TestModel, TestModel_entries, dynamo_local):
+    results = list(TestModel.query(foo="first").specific_attributes(["foo", "bar", "count", "child.sub"]))
+    assert results[0].baz is None
+    assert results[0].child['sub'] == 'one'
 
 
 def test_overwrite(TestModel, TestModel_entries, dynamo_local):
@@ -435,8 +428,7 @@ def test_overwrite(TestModel, TestModel_entries, dynamo_local):
         {"foo": "first", "bar": "one", "baz": "omg", "count": 999, "child": {"sub": "zero"}},
     )
 
-    resp = TestModel.Table.query(foo="first", query_kwargs=dict(Select='COUNT'))
-    assert resp['Count'] == 3
+    assert TestModel.query(foo="first").count() == 3
 
     first_one = TestModel.get(foo="first", bar="one")
     assert first_one.count == 999

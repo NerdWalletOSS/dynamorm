@@ -15,7 +15,7 @@ class Index(object):
         except TypeError:
             query_kwargs = {'IndexName': self.index.name}
 
-        return self.model.query(query_kwargs=query_kwargs, partial=self.projection.partial, **kwargs)
+        return self.model.query(query_kwargs=query_kwargs, **kwargs).partial(self.projection.partial)
 
     def scan(self, scan_kwargs=None, **kwargs):
         """Execute a scan on this index
@@ -27,7 +27,7 @@ class Index(object):
         except TypeError:
             scan_kwargs = {'IndexName': self.index.name}
 
-        return self.model.scan(scan_kwargs=scan_kwargs, partial=self.projection.partial, **kwargs)
+        return self.model.scan(scan_kwargs=scan_kwargs, **kwargs).partial(self.projection.partial)
 
 
 class LocalIndex(Index):

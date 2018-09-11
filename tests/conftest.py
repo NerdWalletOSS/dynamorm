@@ -160,7 +160,7 @@ def TestModel():
 @pytest.fixture(scope='function')
 def TestModel_table(request, TestModel, dynamo_local):
     """Used with TestModel, creates and deletes the table around the test"""
-    TestModel.Table.create()
+    TestModel.Table.create_table()
     request.addfinalizer(TestModel.Table.delete)
 
 
@@ -222,7 +222,7 @@ def TestModelTwo():
 @pytest.fixture(scope='function')
 def TestModelTwo_table(request, TestModelTwo, dynamo_local):
     """Used with TestModel, creates and deletes the table around the test"""
-    TestModelTwo.Table.create()
+    TestModelTwo.Table.create_table()
     request.addfinalizer(TestModelTwo.Table.delete)
 
 

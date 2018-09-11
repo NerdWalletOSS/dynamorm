@@ -161,7 +161,7 @@ def test_number_hash_key(dynamo_local, request):
             foo = Number(required=True)
             baz = String(required=True)
 
-    Model.Table.create()
+    Model.Table.create_table()
     request.addfinalizer(Model.Table.delete)
 
     model = Model(foo=1, baz='foo')

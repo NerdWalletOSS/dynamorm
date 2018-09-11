@@ -54,10 +54,10 @@ def test_one_to_one(dynamo_local, request):
             )
         )
 
-    Details.Table.create()
+    Details.Table.create_table()
     request.addfinalizer(Details.Table.delete)
 
-    Sparse.Table.create()
+    Sparse.Table.create_table()
     request.addfinalizer(Sparse.Table.delete)
 
     item = Sparse(thing='foo', version=1)
@@ -219,16 +219,16 @@ def test_one_to_many(dynamo_local, request):
             back_query=lambda thread: dict(name=thread.forum_name)
         )
 
-    User.Table.create()
+    User.Table.create_table()
     request.addfinalizer(User.Table.delete)
 
-    Reply.Table.create()
+    Reply.Table.create_table()
     request.addfinalizer(Reply.Table.delete)
 
-    Thread.Table.create()
+    Thread.Table.create_table()
     request.addfinalizer(Thread.Table.delete)
 
-    Forum.Table.create()
+    Forum.Table.create_table()
     request.addfinalizer(Forum.Table.delete)
 
     alice = User(name='alice')

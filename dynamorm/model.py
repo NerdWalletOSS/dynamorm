@@ -18,7 +18,7 @@ from .signals import (
     pre_update, post_update,
     pre_delete, post_delete
 )
-from .table import DynamoTable3
+from .table import DynamoTable3, QueryIterator, ScanIterator
 
 log = logging.getLogger(__name__)
 
@@ -353,7 +353,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to query based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls._yield_items('query', *args, **kwargs)
+        return QueryIterator(cls, *args, **kwargs)
 
     @classmethod
     def scan(cls, *args, **kwargs):
@@ -407,46 +407,7 @@ class DynaModel(object):
         :param \*\*kwargs: The key(s) and value(s) to filter based on
         """  # noqa
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls._yield_items('scan', *args, **kwargs)
-
-    @classmethod
-    def _yield_items(cls, method_name, *args, **kwargs):
-        """Private helper method to yield items from a scan or query response
-
-        :param method_name: The cls.Table.<method_name> that should be called (one of: 'scan','query'))
-        :param dict dynamo_kwargs: Extra parameters that should be passed through from query_kwargs or scan_kwargs
-        :param \*\*kwargs: The key(s) and value(s) to filter based on
-        """
-        partial = kwargs.pop('partial', False)
-        method = getattr(cls.Table, method_name)
-        dynamo_kwargs_key = '_'.join([method_name, 'kwargs'])
-
-        while True:
-            # Fetch and yield values
-            resp = method(*args, **kwargs)
-            for raw in resp['Items']:
-                if raw is not None:
-                    yield cls.new_from_raw(raw, partial=partial)
-
-            # Stop if no further pages
-            if 'LastEvaluatedKey' not in resp:
-                break
-
-            try:
-                # Reduce limit by amount scanned for subsequent calls
-                kwargs[dynamo_kwargs_key]['Limit'] -= resp['ScannedCount']
-
-                # Stop if we've reached the limit set by the caller
-                if kwargs[dynamo_kwargs_key]['Limit'] <= 0:
-                    break
-            except KeyError:
-                pass
-
-            # Update calling kwargs with offset key
-            try:
-                kwargs[dynamo_kwargs_key]['ExclusiveStartKey'] = resp['LastEvaluatedKey']
-            except KeyError:
-                kwargs[dynamo_kwargs_key] = {'ExclusiveStartKey': resp['LastEvaluatedKey']}
+        return ScanIterator(cls, *args, **kwargs)
 
     def to_dict(self, native=False):
         obj = {}
@@ -504,7 +465,7 @@ class DynaModel(object):
         )
 
         if not updates:
-            log.warn("Partial save on %s produced nothing to update", self)
+            log.warning("Partial save on %s produced nothing to update", self)
 
         return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
