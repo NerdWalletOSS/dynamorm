@@ -309,8 +309,22 @@ You can also use the ``.limit()`` method on the iterator object to apply a Limit
     assert len(books) == 1
 
 
-Recursion (``.recursive``)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Reversing (``.reverse()`` - Queries Only)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To have the indexed scanned in reverse for your query, use ``.reverse()``
+
+.. note::
+
+    Scanning does not support reversing.
+
+.. code-block:: python
+
+    books = Book.query(hash_key=the_hash_key).reverse()
+
+
+Recursion (``.recursive()``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you wish to get ALL items from a query or scan without having to deal with paging your self, then you can use the
 ``recursive()`` method to have the iterator handle the paging for you.
