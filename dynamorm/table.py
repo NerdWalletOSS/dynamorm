@@ -671,7 +671,8 @@ class DynamoTable3(DynamoCommon3):
             key_expression = get_expression(key, op, value)
 
             try:
-                query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & key_expression
+                if not query_kwargs['KeyConditionExpression'] == key_expression:
+                    query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & key_expression
             except (KeyError, TypeError):
                 query_kwargs['KeyConditionExpression'] = key_expression
 
