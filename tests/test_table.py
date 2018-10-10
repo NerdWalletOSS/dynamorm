@@ -416,6 +416,14 @@ def test_scan_iterator_recursive(TestModel, TestModel_entries_xlarge, dynamo_loc
     assert len(results) == 4000
 
 
+def test_query_with_id_and_recursive(TestModel, TestModel_entries, dynamo_local):
+    """Ensure that a query with recursive works as expected
+
+    https://github.com/NerdWalletOSS/dynamorm/pull/63
+    """
+    assert len(list(TestModel.query(foo="first").recursive())) == 3
+
+
 def test_specific_attributes(TestModel, TestModel_entries, dynamo_local):
     results = list(TestModel.query(foo="first").specific_attributes(["foo", "bar", "count", "child.sub"]))
     assert results[0].baz is None
