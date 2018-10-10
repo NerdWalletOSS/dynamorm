@@ -171,6 +171,16 @@ def test_query_filter(TestModel, TestModel_entries, dynamo_local):
     assert results[0].count == 333
     assert results[1].count == 222
 
+    results = list(TestModel.query(foo="first", count__gte=222))
+    assert len(results) == 2
+    assert results[0].count == 333
+    assert results[1].count == 222
+
+    results = list(TestModel.query(foo="first", count__ge=222))
+    assert len(results) == 2
+    assert results[0].count == 333
+    assert results[1].count == 222
+
     # This is *ugly* since in py2 you need to pass the positional args first (for the non-PK filters)
     # and then the keyword args for the PK query.
     results = list(TestModel.query(
