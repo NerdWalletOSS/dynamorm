@@ -180,8 +180,9 @@ entries with the ``isbn`` field that start with a specific value you would use t
 
     books = Book.query(isbn__begins_with="12345")
 
-You can find the full list of supported comparison operators in the `Table query docs`_.
+You can find the full list of supported comparison operators in the `DynamoDB Condition docs`_.
 
+.. _DynamoDB Condition docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/customizations/dynamodb.html#dynamodb-conditions
 
 Scanning
 ~~~~~~~~
