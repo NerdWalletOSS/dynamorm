@@ -472,9 +472,10 @@ class DynaModel(object):
     def _add_hash_key_values(self, hash_dict):
         """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
         """
-        hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
+        as_dict = self.to_dict()
+        hash_dict[self.Table.hash_key] = as_dict[self.Table.hash_key]
         try:
-            hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
+            hash_dict[self.Table.range_key] = as_dict[self.Table.range_key]
         except (AttributeError, TypeError):
             pass
 
