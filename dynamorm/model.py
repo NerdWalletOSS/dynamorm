@@ -476,7 +476,7 @@ class DynaModel(object):
         hash_dict[self.Table.hash_key] = as_dict[self.Table.hash_key]
         try:
             hash_dict[self.Table.range_key] = as_dict[self.Table.range_key]
-        except (AttributeError, TypeError, ValueError):
+        except (AttributeError, TypeError, KeyError):
             pass
 
     def update(self, conditions=None, update_item_kwargs=None, return_all=False, **kwargs):
