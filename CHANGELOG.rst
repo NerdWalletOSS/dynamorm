@@ -1,3 +1,8 @@
+0.9.4
+##################
+
+* Fix serialisation to only happen once on save
+
 0.9.3 - 2019.04.30
 ##################
 

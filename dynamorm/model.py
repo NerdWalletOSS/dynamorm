@@ -446,7 +446,7 @@ class DynaModel(object):
         """
         if not partial:
             pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)
-            as_dict = self.to_dict()
+            as_dict = self.to_dict(native=True)
             if unique:
                 resp = self.put_unique(as_dict, **kwargs)
             else:

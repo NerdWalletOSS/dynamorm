@@ -1,8 +1,7 @@
+import enum
 import os
 import pytest
 
-from dynamorm.model import DynaModel
-from dynamorm.indexes import GlobalIndex, LocalIndex, ProjectAll, ProjectInclude
 from dynamorm.exceptions import (
     DynaModelException,
     HashKeyExists,
@@ -10,6 +9,8 @@ from dynamorm.exceptions import (
     MissingTableAttribute,
     ValidationError,
 )
+from dynamorm.indexes import GlobalIndex, GlobalIndex, LocalIndex, LocalIndex, ProjectAll, ProjectAll, ProjectInclude, ProjectInclude
+from dynamorm.model import DynaModel, DynaModel
 
 
 def is_marshmallow():
@@ -17,7 +18,7 @@ def is_marshmallow():
 
 
 if is_marshmallow():
-    from marshmallow.fields import String, Integer as Number
+    from marshmallow.fields import String, Integer as Number, Field
     from marshmallow import validates, ValidationError as SchemaValidationError
 else:
     from schematics.types import StringType as String, IntType as Number
@@ -150,6 +151,7 @@ def test_invalid_range_key():
 
 def test_number_hash_key(dynamo_local, request):
     """Test a number hash key and ensure the dynamo type gets set correctly"""
+
     class Model(DynaModel):
         class Table:
             name = 'table'
@@ -194,6 +196,7 @@ def test_missing_field_validation():
 
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
+
     class Model(DynaModel):
         class Table:
             name = 'table'
@@ -387,7 +390,7 @@ def test_update_table(dynamo_local):
     # updating to v2 result in 1 change
     # * deleting index 1
     # * adding stream
-    assert TableV3.Table.update_table() == 2 
+    assert TableV3.Table.update_table() == 2
 
     # should now be a no-op
     assert TableV3.Table.update_table() == 0
@@ -494,8 +497,48 @@ def test_unique_save(TestModel, TestModel_entries, dynamo_local):
     second.save()
 
 
+def test_save(dynamo_local):
+    class EnumField(Field):
+        """A test Enum field."""
+
+        def __init__(self, enum, *args, **kwargs):
+            self.enum = enum
+            super().__init__(*args, **kwargs)
+
+        def _serialize(self, value, attr, obj):
+            if value is None:
+                return None
+            else:
+                return value.value
+
+        def _deserialize(self, value, attr, data):
+            if value is None:
+                return None
+            else:
+                return self.enum(value)
+
+    class TestEnum(enum.Enum):
+        FIRST_THING = 'first_thing'
+        SECOND_THING = 'second_thing'
+
+    class TestEnumModel(DynaModel):
+        class Table:
+            name = 'jelly'
+            hash_key = 'foo'
+            read = 5
+            write = 5
+
+        class Schema:
+            foo = EnumField(TestEnum)
+
+    TestEnumModel.Table.create_table()
+    model = TestEnumModel(foo=TestEnum.FIRST_THING)
+    model.save()
+
+
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
+
     class SuperMixin(object):
         bbq = String()
 
@@ -537,6 +580,7 @@ def test_explicit_schema_parents():
 
 def test_schema_parents_mro():
     """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
+
     class MixinTwo(object):
         bar = Number()
 
