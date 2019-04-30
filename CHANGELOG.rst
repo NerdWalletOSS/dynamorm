@@ -1,3 +1,13 @@
+0.9.3 - 2019.04.30
+##################
+
+* Add extras_require to setup.py to specify minimum versions of schematics & marshmallow
+
+0.9.2
+#####
+
+* Documentation update
+
 0.9.1 - 2018.09.07
 ##################
 
