@@ -9,4 +9,4 @@ six==1.10.0
 
 # MANUALLY ADDED FOR TESTING
 schematics==2.0.1
-marshmallow==2.13.5
+marshmallow==2.19.2
