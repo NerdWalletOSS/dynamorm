@@ -4,25 +4,27 @@
 The attributes you define on your inner ``Table`` class map to underlying boto data structures.  This mapping is
 expressed through the following data model:
 
-=========  ========  ====  ===========
-Attribute  Required  Type  Description
-=========  ========  ====  ===========
-name       True      str   The name of the table, as stored in Dynamo.
+=========    ========  ====  ===========
+Attribute    Required  Type  Description
+=========    ========  ====  ===========
+name         True      str   The name of the table, as stored in Dynamo.
 
-hash_key   True      str   The name of the field to use as the hash key.
+hash_key     True      str   The name of the field to use as the hash key.
                            It must exist in the schema.
 
-range_key  False     str   The name of the field to use as the range_key, if one is used.
+range_key    False     str   The name of the field to use as the range_key, if one is used.
                            It must exist in the schema.
 
-read       True      int   The provisioned read throughput.
+read         Cond      int   The provisioned read throughput. Required for 'PROVISIONED' billing_mode (default).
 
-write      True      int   The provisioned write throughput.
+write        Cond      int   The provisioned write throughput. Required for 'PROVISIONED' billing_mode (default).
 
-stream     False     str   The stream view type, either None or one of:
-                           'NEW_IMAGE'|'OLD_IMAGE'|'NEW_AND_OLD_IMAGES'|'KEYS_ONLY'
+billing_mode True      str   The billing mode. One of: 'PROVISIONED'|'PAY_PER_REQUEST'
 
-=========  ========  ====  ===========
+stream       False     str   The stream view type, either None or one of:
+                             'NEW_IMAGE'|'OLD_IMAGE'|'NEW_AND_OLD_IMAGES'|'KEYS_ONLY'
+
+=========    ========  ====  ===========
 
 
 Indexes
@@ -68,6 +70,7 @@ class DynamoCommon3(object):
     range_key = None
     read = None
     write = None
+    billing_mode = 'PROVISIONED'
 
     def __init__(self):
         for attr in self.REQUIRED_ATTRS:
@@ -96,6 +99,9 @@ class DynamoCommon3(object):
     @property
     def provisioned_throughput(self):
         """Return an appropriate ProvisionedThroughput, based on our attributes"""
+        if self.billing_mode != 'PROVISIONED':
+            return None
+
         return {
             'ReadCapacityUnits': self.read,
             'WriteCapacityUnits': self.write
@@ -119,6 +125,7 @@ class DynamoIndex3(DynamoCommon3):
     def __init__(self, table, schema):
         self.table = table
         self.schema = schema
+        self.billing_mode = table.billing_mode
 
         super(DynamoIndex3, self).__init__()
 
@@ -163,7 +170,8 @@ class DynamoGlobalIndex3(DynamoIndex3):
     @property
     def index_args(self):
         args = super(DynamoGlobalIndex3, self).index_args
-        args['ProvisionedThroughput'] = self.provisioned_throughput
+        if self.billing_mode == 'PROVISIONED':
+            args['ProvisionedThroughput'] = self.provisioned_throughput
         return args
 
 
@@ -340,21 +348,28 @@ class DynamoTable3(DynamoCommon3):
 
         :param bool wait: If set to True, the default, this call will block until the table is created
         """
-        if not self.read or not self.write:
-            raise MissingTableAttribute("The read/write attributes are required to create a table")
+        if self.billing_mode not in ('PROVISIONED', 'PAY_PER_REQUEST'):
+            raise InvalidTableAttribute("valid values for billing_mode are: PROVISIONED|PAY_PER_REQUEST")
 
-        index_args = collections.defaultdict(list)
+        if self.billing_mode == 'PROVISIONED' and (not self.read or not self.write):
+            raise MissingTableAttribute("The read/write attributes are required to create "
+                                        "a table when billing_mode is 'PROVISIONED'")
+
+        extra_args = collections.defaultdict(list)
         for index in six.itervalues(self.indexes):
-            index_args[index.ARG_KEY].append(index.index_args)
+            extra_args[index.ARG_KEY].append(index.index_args)
+
+        if self.billing_mode == 'PROVISIONED':
+            extra_args['ProvisionedThroughput'] = self.provisioned_throughput
 
         log.info("Creating table %s", self.name)
         table = self.resource.create_table(
             TableName=self.name,
             KeySchema=self.key_schema,
             AttributeDefinitions=self.attribute_definitions,
-            ProvisionedThroughput=self.provisioned_throughput,
             StreamSpecification=self.stream_specification,
-            **index_args
+            BillingMode=self.billing_mode,
+            **extra_args
         )
         if wait:
             log.info("Waiting for table creation...")
@@ -430,8 +445,19 @@ class DynamoTable3(DynamoCommon3):
 
         wait_for_active()
 
+        billing_args = {}
+
+        # check if we're going to change our billing mode
+        current_billing_mode = table.billing_mode_summary['BillingMode']
+        if self.billing_mode != current_billing_mode:
+            log.info("Updating billing mode on table %s (%s -> %s)",
+                     self.name,
+                     current_billing_mode,
+                     self.billing_mode)
+            billing_args['BillingMode'] = self.billing_mode
+
         # check if we're going to change our capacity
-        if (self.read and self.write) and \
+        if (self.billing_mode == 'PROVISIONED' and self.read and self.write) and \
                 (self.read != table.provisioned_throughput['ReadCapacityUnits'] or
                  self.write != table.provisioned_throughput['WriteCapacityUnits']):
 
@@ -443,7 +469,10 @@ class DynamoTable3(DynamoCommon3):
                          if k.endswith('Units')
                      ),
                      self.provisioned_throughput)
-            do_update(ProvisionedThroughput=self.provisioned_throughput)
+            billing_args['ProvisionedThroughput'] = self.provisioned_throughput
+
+        if billing_args:
+            do_update(**billing_args)
             return self.update_table()
 
         # check if we're going to modify the stream
@@ -475,7 +504,9 @@ class DynamoTable3(DynamoCommon3):
         for index in six.itervalues(self.indexes):
             if index.name in existing_indexes:
                 current_capacity = existing_indexes[index.name]['ProvisionedThroughput']
-                if (index.read and index.write) and \
+                update_args = {}
+
+                if (index.billing_mode == 'PROVISIONED' and index.read and index.write) and \
                         (index.read != current_capacity['ReadCapacityUnits'] or
                          index.write != current_capacity['WriteCapacityUnits']):
 
@@ -484,7 +515,7 @@ class DynamoTable3(DynamoCommon3):
 
                     do_update(GlobalSecondaryIndexUpdates=[{
                         'Update': {
-                            'IndexName': index['IndexName'],
+                            'IndexName': index.name,
                             'ProvisionedThroughput': index.provisioned_throughput
                         }
                     }])
