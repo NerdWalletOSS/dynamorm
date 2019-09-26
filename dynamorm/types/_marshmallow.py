@@ -1,10 +1,35 @@
 import six
+from pkg_resources import parse_version
 
 from marshmallow import Schema as MarshmallowSchema
-from marshmallow import fields
+from marshmallow.exceptions import MarshmallowError
+from marshmallow import fields, __version__
 
 from .base import DynamORMSchema
 from ..exceptions import ValidationError
+
+marshmallow_version = parse_version(__version__)
+v3 = parse_version('3.0.0')
+
+def _validate(cls, obj, partial=False, native=False):
+    if native:
+        data, errors = cls().load(obj, partial=partial)
+    else:
+        data, errors = cls(partial=partial).dump(obj)
+    if errors:
+        raise ValidationError(obj, cls.__name__, errors)
+    return data
+
+
+def _v3_validate(cls, obj, partial=False, native=False):
+    try:
+        if native:
+            data = cls().load(obj, partial=partial)
+        else:
+            data = cls(partial=partial).dump(obj)
+    except MarshmallowError as e:
+        raise ValidationError(obj, cls.__name__, e)
+    return data
 
 
 class Schema(MarshmallowSchema, DynamORMSchema):
@@ -25,12 +50,10 @@ class Schema(MarshmallowSchema, DynamORMSchema):
 
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
-        if native:
-            data, errors = cls().load(obj, partial=partial)
+        if marshmallow_version >= v3:
+            data = _v3_validate(cls, obj, partial, native)
         else:
-            data, errors = cls(partial=partial).dump(obj)
-        if errors:
-            raise ValidationError(obj, cls.__name__, errors)
+            data = _validate(cls, obj, partial, native)
 
         # When asking for partial native objects (during model init) we want to return None values
         # This ensures our object has all attributes and we can track partial saves properly
