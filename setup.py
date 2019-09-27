@@ -18,7 +18,7 @@ setup(
         'six',
     ],
     extras_require={
-        'marshmallow': ['marshmallow>=2.15.1,<3'],
+        'marshmallow': ['marshmallow>=2.15.1,<4'],
         'schematics': ['schematics>=2.1.0,<3'],
     },
     packages=['dynamorm', 'dynamorm.types'],
