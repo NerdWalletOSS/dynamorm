@@ -17,6 +17,11 @@ env:
   - SERIALIZATION_PKG="marshmallow==3.2.0"
   - SERIALIZATION_PKG="schematics==2.1.0"
 
+matrix:
+  exclude:
+    - python: 2.7
+      env: SERIALIZATION_PKG="marshmallow==3.2.0"
+
 install: false
 script: ./build.sh
 after_success:
