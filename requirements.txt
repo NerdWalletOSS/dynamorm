@@ -8,5 +8,5 @@ s3transfer==0.1.10        # via boto3
 six==1.10.0
 
 # MANUALLY ADDED FOR TESTING
-schematics==2.0.1
+schematics==2.1.0
 marshmallow==2.19.2

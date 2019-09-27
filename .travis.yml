@@ -9,11 +9,12 @@ python:
   - 2.7
   - 3.5
   - 3.6
+  - 3.7
   - pypy
 
 env:
   - SERIALIZATION_PKG="marshmallow==2.15.0"
-  - SERIALIZATION_PKG="schematics==2.0.1"
+  - SERIALIZATION_PKG="schematics==2.1.0"
 
 install: false
 script: ./build.sh
@@ -27,6 +28,6 @@ deploy:
     secure: FcwdP+EvSobBQHBgg3EJJ8A1atMV1kA+5ObICRGV6HAB1ZigUil/8LSeiuDct9/GcQMnPK09U9pQpS5nm/YdqEW4hteIGg0FTcD7qphCUZX3CnP7f+svvXghWX+TfQ4m1BpvC+bShUJ+dI9vrzoh+DY6rxijcNElVvRZTA0DarwPXnFllogBF9G0wJxVbxMsoG5zWWCYeWfKZOojpkk0rCaGnR4Tl/5tnbiS/dSEEXnk60DGJFvW4aXK1CkHPv8wAiRNFKp4AfNL6WXQJcLfaZaj7STcU5AHvOsCFL7ojGKHjz2EkKLTSN+oa9L2nct36ZLv8nbzpDiPqBcteS0sVO40FqsgMp8+Ou6KFK9jIxGf7FuTf6we3f4sVEyaaRAZvmOX4cmieBnqB9YVv+njrYB2O7clJcCG3eypq7y5HelQ0lslzYlpWOvLG9Xo6qL0zUSl2PPgJx179WKncLSa0k/cWgNW9q1h2Vqc0+g64CPh8OjEjEhlmUAHBp/zfUyAMc9hZDlwLOU087R/0X6DznPlfpMO6/5Cb24wW6bU3XVnBteNhJrDj8aoR1lie5hjzldxLi2xngjPwqEHGz9FCx3FXeRKTPuk9aNH1xB+2S42jx42SR4ZiXrPmy06jhrpupnA0qkPsEsQ//5Dw9L/9mVeeQ9tm6PpgJdS2YELDsE=
   on:
     branch: master
-    python: 3.6
-    condition: $SERIALIZATION_PKG = schematics==2.0.1
+    python: 3.7
+    condition: $SERIALIZATION_PKG = schematics==2.1.0
   distributions: "sdist bdist_wheel"

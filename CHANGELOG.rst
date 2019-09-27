@@ -1,3 +1,9 @@
+0.9.4 - 2019.09.28
+##################
+
+* Bump minimum schematics version to 2.10
+* Ignore schematics warnings during test
+
 0.9.3 - 2019.04.30
 ##################
 
