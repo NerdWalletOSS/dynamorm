@@ -12,7 +12,7 @@ setup(
     author_email='evan@borgstrom.ca',
     url='https://github.com/NerdWalletOSS/DynamORM',
     license='Apache License Version 2.0',
-    python_requires='>=2.7, >=3.5, <4',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
     install_requires=[
         'blinker>=1.4,<2.0',
         'boto3>=1.3,<2.0',
