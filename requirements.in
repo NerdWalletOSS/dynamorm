@@ -1,3 +1,0 @@
--e .[marshmallow,schematics]
-marshmallow==3.2.0
-pip-tools

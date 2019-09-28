@@ -14,7 +14,7 @@ fi
 
 set -eux
 
-pip install -r requirements.txt
+pip install -e .
 pip install codecov pytest pytest-mock
 
 runtests() {
@@ -27,6 +27,7 @@ if [ ! -z "${SERIALIZATION_PKG:-}" ]; then
 else
     for pkg in marshmallow schematics; do
         export SERIALIZATION_PKG="${pkg}"
+        pip install -e .[${pkg}]
         runtests
     done
 fi
