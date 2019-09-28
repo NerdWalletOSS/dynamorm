@@ -11,16 +11,18 @@ from ..exceptions import ValidationError
 # Define different validation logic depending on the version of marshmallow we're using
 if parse_version(marshmallow_version) >= parse_version('3.0.0a1'):
     def _validate(cls, obj, partial=False, native=False):
+        """Validate using a Marshmallow v3+ schema"""
         try:
             if native:
-                data = cls().load(obj, partial=partial)
+                data = cls().load(obj, partial=partial, unknown="EXCLUDE")
             else:
-                data = cls(partial=partial).dump(obj)
+                data = cls(partial=partial, unknown="EXCLUDE").dump(obj)
         except MarshmallowError as e:
             raise ValidationError(obj, cls.__name__, e)
         return data
 else:
     def _validate(cls, obj, partial=False, native=False):
+        """Validate using a Marshmallow 2.x schema"""
         if native:
             data, errors = cls().load(obj, partial=partial)
         else:
