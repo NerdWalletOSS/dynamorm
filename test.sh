@@ -27,7 +27,7 @@ if [ ! -z "${SERIALIZATION_PKG:-}" ]; then
 else
     for pkg in marshmallow schematics; do
         export SERIALIZATION_PKG="${pkg}"
-	runtests
+        runtests
     done
 fi
 
