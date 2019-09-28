@@ -42,8 +42,8 @@ The project has two goals:
 Supported Schema Validation Libraries
 -------------------------------------
 
-* `Schematics`_ >= 2.0
-* `Marshmallow`_ >= 2.0
+* `Schematics`_ >= 2.1.0
+* `Marshmallow`_ >= 2.15.1
 
 
 Example
