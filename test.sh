@@ -14,14 +14,14 @@ fi
 
 set -eux
 
-pip install -e .
-pip install codecov pytest pytest-mock
-
 runtests() {
     coverage run --source=dynamorm $(which py.test) -v -W ignore::schematics.deprecated.SchematicsDeprecationWarning tests/
 }
 
+pip install codecov pytest pytest-mock
+
 if [ ! -z "${SERIALIZATION_PKG:-}" ]; then
+    pip install -e .
     pip install "${SERIALIZATION_PKG}"
     runtests
 else
