@@ -18,8 +18,8 @@ pip install ${SERIALIZATION_PKG}
 
 SERIALIZATION_PKG=${SERIALIZATION_PKG} coverage run --source=dynamorm $(which py.test) -v -W ignore::schematics.deprecated.SchematicsDeprecationWarning tests/
 
-# only build docs on py2.7
-if [ "${TRAVIS_PYTHON_VERSION}" = "2.7" ]; then
+# only build docs on py3.7
+if [ "${TRAVIS_PYTHON_VERSION}" = "3.7" ]; then
     pip install travis-sphinx
     travis-sphinx build --source docs
 

@@ -13,8 +13,17 @@ python:
   - pypy
 
 env:
-  - SERIALIZATION_PKG="marshmallow==2.15.0"
+  - SERIALIZATION_PKG="marshmallow==2.15.1"
+  - SERIALIZATION_PKG="marshmallow==3.2.0"
   - SERIALIZATION_PKG="schematics==2.1.0"
+
+matrix:
+  exclude:
+    # Python 2.7 (and pypy) are not supported in Marshmallow 3+
+    - python: 2.7
+      env: SERIALIZATION_PKG="marshmallow==3.2.0"
+    - python: pypy
+      env: SERIALIZATION_PKG="marshmallow==3.2.0"
 
 install: false
 script: ./build.sh

@@ -29,14 +29,14 @@ def TestModel():
                 'invalid': 'Not a valid timestamp'
             }
 
-            def _serialize(self, value, attr, obj):
+            def _serialize(self, value, attr, obj, **kwargs):
                 try:
                     value = time.mktime(value.timetuple())
                     return int(value * 1000000)
                 except (ValueError, AttributeError):
                     self.fail('invalid')
 
-            def _deserialize(self, value, attr, data):
+            def _deserialize(self, value, attr, data, **kwargs):
                 try:
                     return datetime.datetime.fromtimestamp(float(value) / 1000000)
                 except TypeError:
