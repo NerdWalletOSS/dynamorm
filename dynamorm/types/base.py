@@ -5,15 +5,18 @@ class DynamORMSchema(object):
     ``dynamorm_fields`` which returns a dictionary of key value pairs where keys are attributes and values are the
     type of the attribute, and ``field_to_dynamo_type`` which returns the dynamo type character for the input type.
     """
+
     @staticmethod
     def field_to_dynamo_type(field):
         """Returns the dynamo type character given the field."""
-        raise NotImplementedError('Child class must implement field_to_dynamo_type')
+        raise NotImplementedError("Child class must implement field_to_dynamo_type")
 
     @classmethod
     def dynamorm_fields(cls):
         """Returns a dictionary of key value pairs where keys are attributes and values are type classes"""
-        raise NotImplementedError('{0} class must implement dynamallow_fields'.format(cls.__name__))
+        raise NotImplementedError(
+            "{0} class must implement dynamallow_fields".format(cls.__name__)
+        )
 
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
@@ -28,9 +31,11 @@ class DynamORMSchema(object):
 
         On validation failure, this should raise ``dynamorm.exc.ValidationError``.
         """
-        raise NotImplementedError('{0} class must implement dynamallow_validate'.format(cls.__name__))
+        raise NotImplementedError(
+            "{0} class must implement dynamallow_validate".format(cls.__name__)
+        )
 
     @staticmethod
     def base_field_type():
         """Returns the class that all fields in the schema will inherit from"""
-        raise NotImplementedError('Child class must implement base_field_type')
+        raise NotImplementedError("Child class must implement base_field_type")

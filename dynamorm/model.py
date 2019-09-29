@@ -13,10 +13,14 @@ from .indexes import Index
 from .relationships import Relationship
 from .signals import (
     model_prepared,
-    pre_init, post_init,
-    pre_save, post_save,
-    pre_update, post_update,
-    pre_delete, post_delete
+    pre_init,
+    post_init,
+    pre_save,
+    post_save,
+    pre_update,
+    post_update,
+    pre_delete,
+    post_delete,
 )
 from .table import DynamoTable3, QueryIterator, ScanIterator
 
@@ -34,8 +38,9 @@ class DynaModelMeta(type):
     model named ``Foo`` the resulting ``Foo.Schema`` object would be an instance of a class named ``FooSchema``, rather
     than a class named ``Schema``
     """
+
     def __new__(cls, name, parents, attrs):
-        if name in ('DynaModel', 'DynaModelMeta'):
+        if name in ("DynaModel", "DynaModelMeta"):
             return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
         def should_transform(inner_class):
@@ -52,10 +57,11 @@ class DynaModelMeta(type):
                 except AttributeError:
                     pass
 
-            raise DynaModelException("You must define an inner '{inner}' class on your '{name}' class".format(
-                inner=inner_class,
-                name=name
-            ))
+            raise DynaModelException(
+                "You must define an inner '{inner}' class on your '{name}' class".format(
+                    inner=inner_class, name=name
+                )
+            )
 
         # collect our indexes & relationships
         indexes = dict(
@@ -64,17 +70,17 @@ class DynaModelMeta(type):
             if inspect.isclass(val) and issubclass(val, Index)
         )
 
-        attrs['relationships'] = dict(
+        attrs["relationships"] = dict(
             (name, val)
             for name, val in six.iteritems(attrs)
             if isinstance(val, Relationship)
         )
 
         # Transform the Schema.
-        if should_transform('Schema'):
-            if 'marshmallow' in sys.modules:
+        if should_transform("Schema"):
+            if "marshmallow" in sys.modules:
                 from .types._marshmallow import Schema
-            elif 'schematics' in sys.modules:
+            elif "schematics" in sys.modules:
                 from .types._schematics import Schema
 
                 # Pull all of our fields up onto the main schema, obeying MRO
@@ -83,28 +89,30 @@ class DynaModelMeta(type):
                     for base in reversed(cls.__bases__):
                         for k, v in six.iteritems(base.__dict__):
                             if isinstance(v, Schema.base_field_type()):
-                                setattr(attrs['Schema'], k, v)
+                                setattr(attrs["Schema"], k, v)
                         pull_up_fields(base)
 
-                pull_up_fields(attrs['Schema'])
+                pull_up_fields(attrs["Schema"])
             else:
-                raise DynaModelException("Unknown Schema definitions, we couldn't find any supported fields/types")
+                raise DynaModelException(
+                    "Unknown Schema definitions, we couldn't find any supported fields/types"
+                )
 
             SchemaClass = type(
-                '{name}Schema'.format(name=name),
-                (Schema,) + attrs['Schema'].__bases__,
-                dict(attrs['Schema'].__dict__)
+                "{name}Schema".format(name=name),
+                (Schema,) + attrs["Schema"].__bases__,
+                dict(attrs["Schema"].__dict__),
             )
-            attrs['Schema'] = SchemaClass
+            attrs["Schema"] = SchemaClass
 
         # transform the Table
-        if should_transform('Table'):
+        if should_transform("Table"):
             TableClass = type(
-                '{name}Table'.format(name=name),
-                (DynamoTable3,) + attrs['Table'].__bases__,
-                dict(attrs['Table'].__dict__)
+                "{name}Table".format(name=name),
+                (DynamoTable3,) + attrs["Table"].__bases__,
+                dict(attrs["Table"].__dict__),
             )
-            attrs['Table'] = TableClass(schema=attrs['Schema'], indexes=indexes)
+            attrs["Table"] = TableClass(schema=attrs["Schema"], indexes=indexes)
 
         # call our parent to get the new instance
         model = super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
@@ -212,7 +220,9 @@ class DynaModel(object):
                     raw.update(to_assign)
 
         self._raw = raw
-        self._validated_data = self.Schema.dynamorm_validate(raw, partial=partial, native=True)
+        self._validated_data = self.Schema.dynamorm_validate(
+            raw, partial=partial, native=True
+        )
         for k, v in six.iteritems(self._validated_data):
             setattr(self, k, v)
 
@@ -228,12 +238,16 @@ class DynaModel(object):
         marshalling we can accept the untransformed value and pass the transformed value through to the Dyanmo
         operation.
         """
+
         def normalize(key):
             try:
-                validated = cls.Schema.dynamorm_validate({key: kwargs[key]}, partial=True)
+                validated = cls.Schema.dynamorm_validate(
+                    {key: kwargs[key]}, partial=True
+                )
                 kwargs[key] = validated[key]
             except KeyError:
                 pass
+
         normalize(cls.Table.hash_key)
         normalize(cls.Table.range_key)
         return kwargs
@@ -273,9 +287,9 @@ class DynaModel(object):
                 {"hash_key": "three"},
             )
         """
-        return cls.Table.put_batch(*[
-            cls.Schema.dynamorm_validate(item) for item in items
-        ], **batch_kwargs)
+        return cls.Table.put_batch(
+            *[cls.Schema.dynamorm_validate(item) for item in items], **batch_kwargs
+        )
 
     @classmethod
     def update_item(cls, conditions=None, update_item_kwargs=None, **kwargs):
@@ -285,13 +299,19 @@ class DynaModel(object):
         :params update_item_kwargs: A dict of other kwargs that are passed through to update_item
         :params \*\*kwargs: Includes your hash/range key/val to match on as well as any keys to update
         """
-        kwargs.update(dict(
-            (k, v)
-            for k, v in six.iteritems(cls.Schema.dynamorm_validate(kwargs, partial=True))
-            if k in kwargs
-        ))
+        kwargs.update(
+            dict(
+                (k, v)
+                for k, v in six.iteritems(
+                    cls.Schema.dynamorm_validate(kwargs, partial=True)
+                )
+                if k in kwargs
+            )
+        )
         kwargs = cls._normalize_keys_in_kwargs(kwargs)
-        return cls.Table.update(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+        return cls.Table.update(
+            conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs
+        )
 
     @classmethod
     def new_from_raw(cls, raw, partial=False):
@@ -326,10 +346,7 @@ class DynaModel(object):
         :param bool consistent: If set to True then get_batch will be a consistent read
         :param str attrs: The projection expression of which attrs to fetch, if None all attrs will be fetched
         """
-        keys = (
-            cls._normalize_keys_in_kwargs(key)
-            for key in keys
-        )
+        keys = (cls._normalize_keys_in_kwargs(key) for key in keys)
         items = cls.Table.get_batch(keys, consistent=consistent, attrs=attrs)
         for item in items:
             yield cls.new_from_raw(item, partial=attrs is not None)
@@ -478,7 +495,9 @@ class DynaModel(object):
         except (AttributeError, TypeError):
             pass
 
-    def update(self, conditions=None, update_item_kwargs=None, return_all=False, **kwargs):
+    def update(
+        self, conditions=None, update_item_kwargs=None, return_all=False, **kwargs
+    ):
         """Update this instance in the table
 
         New values are set via kwargs to this function:
@@ -523,24 +542,31 @@ class DynaModel(object):
 
         self._add_hash_key_values(kwargs)
 
-        pre_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
-                        updates=kwargs)
+        pre_update.send(
+            self.__class__,
+            instance=self,
+            conditions=conditions,
+            update_item_kwargs=update_item_kwargs,
+            updates=kwargs,
+        )
 
         if not is_noop:
             if return_all is True:
-                return_values = 'ALL_NEW'
+                return_values = "ALL_NEW"
             else:
-                return_values = 'UPDATED_NEW'
+                return_values = "UPDATED_NEW"
             try:
-                update_item_kwargs['ReturnValues'] = return_values
+                update_item_kwargs["ReturnValues"] = return_values
             except TypeError:
-                update_item_kwargs = {'ReturnValues': return_values}
+                update_item_kwargs = {"ReturnValues": return_values}
 
-            resp = self.update_item(conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs)
+            resp = self.update_item(
+                conditions=conditions, update_item_kwargs=update_item_kwargs, **kwargs
+            )
 
             # update our local attrs to match what we updated
-            partial_model = self.new_from_raw(resp['Attributes'], partial=True)
-            for key, _ in six.iteritems(resp['Attributes']):
+            partial_model = self.new_from_raw(resp["Attributes"], partial=True)
+            for key, _ in six.iteritems(resp["Attributes"]):
                 # elsewhere in Dynamorm, models can be created without all fields (non-"strict" mode in Schematics),
                 # so we drop unknown keys here to be consistent
                 if hasattr(partial_model, key):
@@ -548,8 +574,13 @@ class DynaModel(object):
                     setattr(self, key, val)
                     self._validated_data[key] = val
 
-        post_update.send(self.__class__, instance=self, conditions=conditions, update_item_kwargs=update_item_kwargs,
-                         updates=kwargs)
+        post_update.send(
+            self.__class__,
+            instance=self,
+            conditions=conditions,
+            update_item_kwargs=update_item_kwargs,
+            updates=kwargs,
+        )
         return resp
 
     def delete(self):

@@ -13,7 +13,7 @@ from dynamorm.exceptions import (
 
 
 def is_marshmallow():
-    return os.environ.get('SERIALIZATION_PKG', '').startswith('marshmallow')
+    return os.environ.get("SERIALIZATION_PKG", "").startswith("marshmallow")
 
 
 if is_marshmallow():
@@ -32,6 +32,7 @@ except ImportError:
 def test_missing_inner_classes():
     """Classes must have both a Table and Schema inner class"""
     with pytest.raises(DynaModelException):
+
         class Model(DynaModel):
             pass
 
@@ -39,6 +40,7 @@ def test_missing_inner_classes():
 def test_missing_inner_schema_class():
     """Classes must have an inner Schema class"""
     with pytest.raises(DynaModelException):
+
         class Model(DynaModel):
             class Table:
                 pass
@@ -47,6 +49,7 @@ def test_missing_inner_schema_class():
 def test_missing_inner_table_class():
     """Classes must have an inner Table class"""
     with pytest.raises(DynaModelException):
+
         class Model(DynaModel):
             class Schema:
                 pass
@@ -55,8 +58,8 @@ def test_missing_inner_table_class():
 def test_parent_inner_classes():
     class Parent(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
+            name = "table"
+            hash_key = "foo"
             read = 1
             write = 1
 
@@ -72,9 +75,10 @@ def test_parent_inner_classes():
 def test_table_validation():
     """Defining a model with missing table attributes should raise exceptions"""
     with pytest.raises(MissingTableAttribute):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
+                name = "table"
 
             class Schema:
                 foo = String(required=True)
@@ -83,10 +87,11 @@ def test_table_validation():
 def test_table_create_validation():
     """You cannot create a table that is missing read/write attrs"""
     with pytest.raises(MissingTableAttribute):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
-                hash_key = 'foo'
+                name = "table"
+                hash_key = "foo"
                 read = 5
 
             class Schema:
@@ -95,10 +100,11 @@ def test_table_create_validation():
         Model.Table.create_table()
 
     with pytest.raises(MissingTableAttribute):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
-                hash_key = 'foo'
+                name = "table"
+                hash_key = "foo"
                 write = 5
 
             class Schema:
@@ -107,10 +113,11 @@ def test_table_create_validation():
         Model.Table.create_table()
 
     with pytest.raises(MissingTableAttribute):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
-                hash_key = 'foo'
+                name = "table"
+                hash_key = "foo"
 
             class Schema:
                 foo = String(required=True)
@@ -121,10 +128,11 @@ def test_table_create_validation():
 def test_invalid_hash_key():
     """Defining a model where ``hash_key`` in Table points to an invalid field should raise InvalidSchemaField"""
     with pytest.raises(InvalidSchemaField):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
-                hash_key = 'foo'
+                name = "table"
+                hash_key = "foo"
                 read = 1
                 write = 1
 
@@ -135,11 +143,12 @@ def test_invalid_hash_key():
 def test_invalid_range_key():
     """Defining a model where ``range_key`` in Table points to an invalid field should raise InvalidSchemaField"""
     with pytest.raises(InvalidSchemaField):
+
         class Model(DynaModel):
             class Table:
-                name = 'table'
-                hash_key = 'foo'
-                range_key = 'bar'
+                name = "table"
+                hash_key = "foo"
+                range_key = "bar"
                 read = 1
                 write = 1
 
@@ -150,10 +159,11 @@ def test_invalid_range_key():
 
 def test_number_hash_key(dynamo_local, request):
     """Test a number hash key and ensure the dynamo type gets set correctly"""
+
     class Model(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
+            name = "table"
+            hash_key = "foo"
             read = 1
             write = 1
 
@@ -164,8 +174,10 @@ def test_number_hash_key(dynamo_local, request):
     Model.Table.create_table()
     request.addfinalizer(Model.Table.delete)
 
-    model = Model(foo=1, baz='foo')
-    assert model.Table.attribute_definitions == [{'AttributeName': 'foo', 'AttributeType': 'N'}]
+    model = Model(foo=1, baz="foo")
+    assert model.Table.attribute_definitions == [
+        {"AttributeName": "foo", "AttributeType": "N"}
+    ]
 
     model.save()
 
@@ -173,8 +185,8 @@ def test_number_hash_key(dynamo_local, request):
 def test_missing_field_validation():
     class Model(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
+            name = "table"
+            hash_key = "foo"
             read = 1
             write = 1
 
@@ -182,40 +194,43 @@ def test_missing_field_validation():
             foo = String(required=True)
             baz = String(required=True)
 
-    model = Model(foo='foo', partial=True)
+    model = Model(foo="foo", partial=True)
     with pytest.raises(ValidationError):
         model.validate()
 
     try:
         model.validate()
     except ValidationError as exc:
-        assert str(exc).startswith("Validation failed for schema ModelSchema. Errors: {'baz'")
+        assert str(exc).startswith(
+            "Validation failed for schema ModelSchema. Errors: {'baz'"
+        )
 
 
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
+
     class Model(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
-            range_key = 'bar'
+            name = "table"
+            hash_key = "foo"
+            range_key = "bar"
             read = 1
             write = 1
 
         class Index(GlobalIndex):
-            name = 'test-idx'
-            hash_key = 'foo'
-            range_key = 'bar'
+            name = "test-idx"
+            hash_key = "foo"
+            range_key = "bar"
             projection = ProjectAll()
 
         class Schema:
             foo = String(required=True)
             bar = String(required=True)
 
-    model = Model(foo='hi', bar='there')
+    model = Model(foo="hi", bar="there")
 
-    assert 'test-idx' in model.Table.indexes
-    assert model.Index.index is model.Table.indexes['test-idx']
+    assert "test-idx" in model.Table.indexes
+    assert model.Index.index is model.Table.indexes["test-idx"]
     assert model.Index.index.table is model.Table
 
     assert model.Index.index.schema is model.Schema
@@ -228,18 +243,19 @@ def test_invalid_indexes():
     """Ensure validation happens for indexes"""
     for idx in (GlobalIndex, LocalIndex):
         with pytest.raises(MissingTableAttribute):
+
             class Model1(DynaModel):
                 class Table:
-                    name = 'table'
-                    hash_key = 'foo'
-                    range_key = 'bar'
+                    name = "table"
+                    hash_key = "foo"
+                    range_key = "bar"
                     read = 1
                     write = 1
 
                 class Index(idx):
-                    name = 'test-idx'
+                    name = "test-idx"
                     # missing hash_key
-                    range_key = 'bar'
+                    range_key = "bar"
                     projection = ProjectAll()
 
                 class Schema:
@@ -247,18 +263,19 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(MissingTableAttribute):
+
             class Model2(DynaModel):
                 class Table:
-                    name = 'table'
-                    hash_key = 'foo'
-                    range_key = 'bar'
+                    name = "table"
+                    hash_key = "foo"
+                    range_key = "bar"
                     read = 1
                     write = 1
 
                 class Index(idx):
-                    name = 'test-idx'
-                    hash_key = 'foo'
-                    range_key = 'bar'
+                    name = "test-idx"
+                    hash_key = "foo"
+                    range_key = "bar"
                     # no projection
 
                 class Schema:
@@ -266,19 +283,20 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(InvalidSchemaField):
+
             class Model3(DynaModel):
                 class Table:
-                    name = 'table'
-                    hash_key = 'foo'
-                    range_key = 'bar'
+                    name = "table"
+                    hash_key = "foo"
+                    range_key = "bar"
                     read = 1
                     write = 1
 
                 class Index(idx):
-                    name = 'test-idx'
-                    hash_key = 'foo'
+                    name = "test-idx"
+                    hash_key = "foo"
                     # no key named baz
-                    range_key = 'baz'
+                    range_key = "baz"
                     projection = ProjectAll()
 
                 class Schema:
@@ -286,19 +304,20 @@ def test_invalid_indexes():
                     bar = String(required=True)
 
         with pytest.raises(InvalidSchemaField):
+
             class Model4(DynaModel):
                 class Table:
-                    name = 'table'
-                    hash_key = 'foo'
-                    range_key = 'bar'
+                    name = "table"
+                    hash_key = "foo"
+                    range_key = "bar"
                     read = 1
                     write = 1
 
                 class Index(idx):
-                    name = 'test-idx'
+                    name = "test-idx"
                     # no key named baz
-                    hash_key = 'baz'
-                    range_key = 'bar'
+                    hash_key = "baz"
+                    range_key = "bar"
                     projection = ProjectAll()
 
                 class Schema:
@@ -309,12 +328,12 @@ def test_invalid_indexes():
 def test_update_table(dynamo_local):
     class TableV1(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
-            range_key = 'bar'
+            name = "table"
+            hash_key = "foo"
+            range_key = "bar"
             read = 5
             write = 5
-            stream = 'NEW_AND_OLD_IMAGES'
+            stream = "NEW_AND_OLD_IMAGES"
 
         class Schema:
             foo = String(required=True)
@@ -324,24 +343,24 @@ def test_update_table(dynamo_local):
 
     class TableV2(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
-            range_key = 'bar'
+            name = "table"
+            hash_key = "foo"
+            range_key = "bar"
             read = 10
             write = 10
 
         class Index1(GlobalIndex):
-            name = 'index1'
-            hash_key = 'baz'
-            range_key = 'bar'
+            name = "index1"
+            hash_key = "baz"
+            range_key = "bar"
             projection = ProjectAll()
             read = 5
             write = 5
 
         class Index2(GlobalIndex):
-            name = 'index2'
-            hash_key = 'bbq'
-            range_key = 'bar'
+            name = "index2"
+            hash_key = "bbq"
+            range_key = "bar"
             projection = ProjectAll()
             read = 5
             write = 5
@@ -354,17 +373,17 @@ def test_update_table(dynamo_local):
 
     class TableV3(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
-            range_key = 'bar'
+            name = "table"
+            hash_key = "foo"
+            range_key = "bar"
             read = 10
             write = 10
-            stream = 'NEW_IMAGE'
+            stream = "NEW_IMAGE"
 
         class Index2(GlobalIndex):
-            name = 'index2'
-            hash_key = 'bbq'
-            range_key = 'bar'
+            name = "index2"
+            hash_key = "bbq"
+            range_key = "bar"
             projection = ProjectAll()
             read = 5
             write = 5
@@ -387,7 +406,7 @@ def test_update_table(dynamo_local):
     # updating to v2 result in 1 change
     # * deleting index 1
     # * adding stream
-    assert TableV3.Table.update_table() == 2 
+    assert TableV3.Table.update_table() == 2
 
     # should now be a no-op
     assert TableV3.Table.update_table() == 0
@@ -396,17 +415,17 @@ def test_update_table(dynamo_local):
 def test_sparse_indexes(dynamo_local):
     class MyModel(DynaModel):
         class Table:
-            name = 'mymodel'
-            hash_key = 'foo'
+            name = "mymodel"
+            hash_key = "foo"
             read = 10
             write = 10
 
         class Index1(GlobalIndex):
-            name = 'index1'
-            hash_key = 'bar'
+            name = "index1"
+            hash_key = "bar"
             read = 10
             write = 10
-            projection = ProjectInclude('foo', 'bar')
+            projection = ProjectInclude("foo", "bar")
 
         class Schema:
             foo = String(required=True)
@@ -416,18 +435,18 @@ def test_sparse_indexes(dynamo_local):
 
     MyModel.Table.create_table()
     MyModel.put_batch(
-        {'foo': '1', 'bar': '1', 'baz': '1', 'bbq': '1'},
-        {'foo': '2', 'bar': '2', 'baz': '2', 'bbq': '2'},
+        {"foo": "1", "bar": "1", "baz": "1", "bbq": "1"},
+        {"foo": "2", "bar": "2", "baz": "2", "bbq": "2"},
     )
 
-    items = list(MyModel.Index1.query(bar='2'))
+    items = list(MyModel.Index1.query(bar="2"))
     assert len(items) == 1
-    assert items[0].foo == '2'
+    assert items[0].foo == "2"
 
 
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
-        first = TestModel.get(foo='first', bar='one')
+        first = TestModel.get(foo="first", bar="one")
         first.put = MagicMock()
         first.update_item = MagicMock()
         return first
@@ -442,8 +461,8 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     first = get_first()
     first.save(partial=True)
 
-    first.baz = 'changed'
-    first.update_item.return_value = {'Attributes': {'baz': 'changed'}}
+    first.baz = "changed"
+    first.update_item.return_value = {"Attributes": {"baz": "changed"}}
     first.save(partial=True)
     first.put.assert_not_called()
 
@@ -451,44 +470,44 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
         # no conditions should we set
         conditions=None,
         # our ReturnValues should be set to return updates values
-        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        update_item_kwargs={"ReturnValues": "UPDATED_NEW"},
         # the the we changed should be included
-        baz='changed',
+        baz="changed",
         # and so should the primary key
-        foo='first',
-        bar='one',
+        foo="first",
+        bar="one",
     )
     first.update_item.assert_has_calls([baz_update_call])
 
     # do it again, and just count should be sent
     first.count = 999
-    first.update_item.return_value = {'Attributes': {'count': 999}}
+    first.update_item.return_value = {"Attributes": {"count": 999}}
     first.save(partial=True)
     first.put.assert_not_called()
 
     count_update_call = call(
         conditions=None,
-        update_item_kwargs={'ReturnValues': 'UPDATED_NEW'},
+        update_item_kwargs={"ReturnValues": "UPDATED_NEW"},
         count=999,
-        foo='first',
-        bar='one',
+        foo="first",
+        bar="one",
     )
     first.update_item.assert_has_calls([baz_update_call, count_update_call])
 
 
 def test_partial_save_with_return_all(TestModel, TestModel_entries, dynamo_local):
-    model_to_patch = TestModel(foo='first', bar='one', partial=True)
+    model_to_patch = TestModel(foo="first", bar="one", partial=True)
     assert model_to_patch.baz is None
     model_to_patch.count = 12345
     model_to_patch.save(partial=True, return_all=True)
-    assert model_to_patch.baz == 'bbq'
+    assert model_to_patch.baz == "bbq"
 
 
 def test_unique_save(TestModel, TestModel_entries, dynamo_local):
-    first = TestModel(foo='first', bar='one', baz='uno')
+    first = TestModel(foo="first", bar="one", baz="uno")
     first.save()
 
-    second = TestModel(foo='first', bar='one', baz='uno')
+    second = TestModel(foo="first", bar="one", baz="uno")
     with pytest.raises(HashKeyExists):
         second.save(unique=True)
     second.save()
@@ -496,31 +515,35 @@ def test_unique_save(TestModel, TestModel_entries, dynamo_local):
 
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
+
     class SuperMixin(object):
         bbq = String()
 
     if is_marshmallow():
+
         class Mixin(SuperMixin):
             is_mixin = True
             bar = String()
 
-            @validates('bar')
+            @validates("bar")
             def validate_bar(self, value):
-                if value != 'bar':
-                    raise SchemaValidationError('bar must be bar')
+                if value != "bar":
+                    raise SchemaValidationError("bar must be bar")
+
     else:
+
         class Mixin(SuperMixin):
             is_mixin = True
             bar = String()
 
             def validate_bar(self, data, value):
-                if value != 'bar':
-                    raise SchemaValidationError('bar must be bar')
+                if value != "bar":
+                    raise SchemaValidationError("bar must be bar")
 
     class Model(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
+            name = "table"
+            hash_key = "foo"
             read = 1
             write = 1
 
@@ -529,14 +552,20 @@ def test_explicit_schema_parents():
             baz = String(required=True)
 
     assert Model.Schema.is_mixin is True
-    assert list(sorted(Model.Schema.dynamorm_fields().keys())) == ['bar', 'baz', 'bbq', 'foo']
+    assert list(sorted(Model.Schema.dynamorm_fields().keys())) == [
+        "bar",
+        "baz",
+        "bbq",
+        "foo",
+    ]
 
     with pytest.raises(ValidationError):
-        Model(foo='foo', baz='baz', bar='not bar')
+        Model(foo="foo", baz="baz", bar="not bar")
 
 
 def test_schema_parents_mro():
     """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
+
     class MixinTwo(object):
         bar = Number()
 
@@ -545,8 +574,8 @@ def test_schema_parents_mro():
 
     class Model(DynaModel):
         class Table:
-            name = 'table'
-            hash_key = 'foo'
+            name = "table"
+            hash_key = "foo"
             read = 1
             write = 1
 
@@ -554,29 +583,27 @@ def test_schema_parents_mro():
             foo = Number(required=True)
             baz = String(required=True)
 
-    assert 'bar' in Model.Schema.dynamorm_fields()
-    assert isinstance(Model.Schema.dynamorm_fields()['bar'], String)
+    assert "bar" in Model.Schema.dynamorm_fields()
+    assert isinstance(Model.Schema.dynamorm_fields()["bar"], String)
 
 
 def test_table_config(TestModel, dynamo_local):
     class MyModel(DynaModel):
         class Table:
-            name = 'mymodel'
-            hash_key = 'foo'
+            name = "mymodel"
+            hash_key = "foo"
             read = 10
             write = 10
 
-            resource_kwargs = {
-                'region_name': 'us-east-2'
-            }
+            resource_kwargs = {"region_name": "us-east-2"}
 
         class Schema:
             foo = String(required=True)
 
     class OtherModel(DynaModel):
         class Table:
-            name = 'othermodel'
-            hash_key = 'foo'
+            name = "othermodel"
+            hash_key = "foo"
             read = 10
             write = 10
 
@@ -585,11 +612,11 @@ def test_table_config(TestModel, dynamo_local):
 
     # dynamo_local sets up the default table config to point to us-west-2
     # So any models, like TestModel, that don't specify a config end up pointing there
-    assert TestModel.Table.resource.meta.client.meta.region_name == 'us-west-2'
+    assert TestModel.Table.resource.meta.client.meta.region_name == "us-west-2"
 
     # Our first model above has explicit resource kwargs, as such it should get a different resource with our explicitly
     # configured region name
-    assert MyModel.Table.resource.meta.client.meta.region_name == 'us-east-2'
+    assert MyModel.Table.resource.meta.client.meta.region_name == "us-east-2"
 
 
 def test_field_subclassing():
@@ -604,12 +631,12 @@ def test_field_subclassing():
 
     class MyModel(DynaModel):
         class Table:
-            name = 'mymodel'
-            hash_key = 'foo'
+            name = "mymodel"
+            hash_key = "foo"
             read = 10
             write = 10
 
         class Schema(Mixin):
             pass
 
-    assert isinstance(MyModel.Schema.dynamorm_fields()['foo'], String)
+    assert isinstance(MyModel.Schema.dynamorm_fields()["foo"], String)

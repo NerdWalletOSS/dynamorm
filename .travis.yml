@@ -6,7 +6,14 @@ branches:
     - master
 
 matrix:
+  fast_finish: true
   include:
+    - python: 3.7
+      env: TOXENV=black
+
+    - python: 3.7
+      env: TOXENV=docs
+
     - python: 2.7
       env: TOXENV=py27-schematics,codecov-py27
     - python: 2.7
@@ -37,16 +44,31 @@ matrix:
     - python: pypy3
       env: TOXENV=pypy3-marshmallow,codecov-pypy3
 
+
 install: pip install tox
 script: TOX_SKIP_MISSING_INTERPRETERS="False" tox
 
+env:
+  global:
+    # GITHUB_TOKEN
+    - secure: "lQxi+1FV7Lzs3y1/99EmJ4jQpdfc9dupQSFohobsvBCNngTlyE8QU0UK0UwOxeyvrTG9P31KO1jHJdhy7qaMuTUBDBNEaQoenThBAAltD4QOsQuR5ob0H9givBSHF1d0/3jFcnmKnOPTHJXmvewPtz67LDvQB7z0CcLbdiFgj1UB3h6Mk+/aykCHlsGrHyK8UKJQtf6dEzMMqQZPx3UOg81xh6/Kebdlnr5HUqAPtsnO/C7rneeJFcBq3kh0XGpEPxjlbmCGyEZzRPtvIjdCvucilv31nwJphoipnALujBw3RP+FLOIhATBHyUBHN5ELjZgNbhIBIjGhUb+jOJosNwVjdJVcjUPwfeJI/iyes5EA6CTbxmPqVzV5qHDl+BaWDNKPyP/wpY/rBOj5EFihIIxXqgyxQNRl4aJSfs+KC34txTb00NL/LNZRJFnbV0eaC+KHwBg5Qk2dyc4UPUdMlrsxhebRDYynQuF0/oX74T2kQoQiK+oS86P0q8skVLpEmK8HbLtLBXdYh0tFktLqsxBDuF8IxPULZWemNEiJ5Xk9kYYvsjc0aFtQZoDwulvX40RoCP06Zb+qVmzA21kRjxMC2xVIaHGkF2lea2ePh21hemWPs0PbHu4+VLQO1qvYGB/ytajmIN7tJJ7taG780daxl0c0O37kMhNx3taRi/g="
+
 deploy:
-  provider: pypi
-  user: __token__
-  password:
-    secure: "C0hRA/TnDOxMQyCUngaoUVp4PGVfPhIeh8Yr6sFa2XN+y0/afJVXBzbz2zrzXflg93zsZIppNTS+sUuYauae/v8ZRqvU1pjS5xVdlZytMBRt53omej2pe+m4DPe8RADIy5fkfuEyt9F1j7ZKXnxwXI+kz1x6cXShM09pCtCuvc26vTNQN3HycUeA11Fp3Bir4CGMx1qKE6hWwzM1+TP2Ci9Vp4mgAh6oqwpfKYIKtbJRd9Uy5r8RPmfc2suaau5S4kCKjqSGvrcbAOjpTTl6TZoTTpJstPnXb46kDwRaAWC34CRrgK3f0dgfyTm2OKgRMCrhR4JiZp016YvcADKySTtQOlyYn+x9jbV4j0USP8yebJLtPrWX124JAy1Y4tnCXsW7E3Uh7yK1pm3DO1WquHgT3qwUcsL6NCaoGCt9NwzunV0jTTRAVr43zpxkBaD73Vejv3gHaLpMrwccqywFZEjjUh0qJLk3qBIAWefV3aKhPoefRqFRN56BZFbcr0KZTCjZfFGUjno6ncblHqNbYd365SC95dt+FOh9GP7gkHX3l+R9F/eGxfyubPrZLrZSn01y0gSQFLEFHIyYzVofq8p0OZN6ZB/lebOE3r3SHrfiUJF5hoGCyCrqERCCiO2fjn8WmR+n1MLTmdafVlMCnm+FMq1d7pcodK8QDjYk6vo="
-  on:
-    branch: master
-    python: 3.7
-    condition: $TOXENV = py37-marshmallow,codecov-py37
-  distributions: "sdist bdist_wheel"
+  - provider: pypi
+    user: __token__
+    password:
+      secure: "C0hRA/TnDOxMQyCUngaoUVp4PGVfPhIeh8Yr6sFa2XN+y0/afJVXBzbz2zrzXflg93zsZIppNTS+sUuYauae/v8ZRqvU1pjS5xVdlZytMBRt53omej2pe+m4DPe8RADIy5fkfuEyt9F1j7ZKXnxwXI+kz1x6cXShM09pCtCuvc26vTNQN3HycUeA11Fp3Bir4CGMx1qKE6hWwzM1+TP2Ci9Vp4mgAh6oqwpfKYIKtbJRd9Uy5r8RPmfc2suaau5S4kCKjqSGvrcbAOjpTTl6TZoTTpJstPnXb46kDwRaAWC34CRrgK3f0dgfyTm2OKgRMCrhR4JiZp016YvcADKySTtQOlyYn+x9jbV4j0USP8yebJLtPrWX124JAy1Y4tnCXsW7E3Uh7yK1pm3DO1WquHgT3qwUcsL6NCaoGCt9NwzunV0jTTRAVr43zpxkBaD73Vejv3gHaLpMrwccqywFZEjjUh0qJLk3qBIAWefV3aKhPoefRqFRN56BZFbcr0KZTCjZfFGUjno6ncblHqNbYd365SC95dt+FOh9GP7gkHX3l+R9F/eGxfyubPrZLrZSn01y0gSQFLEFHIyYzVofq8p0OZN6ZB/lebOE3r3SHrfiUJF5hoGCyCrqERCCiO2fjn8WmR+n1MLTmdafVlMCnm+FMq1d7pcodK8QDjYk6vo="
+    on:
+      branch: master
+      python: 3.7
+      condition: $TOXENV = py37-marshmallow,codecov-py37
+    distributions: "sdist bdist_wheel"
+
+  - provider: pages
+    skip_cleanup: true
+    github_token: $GITHUB_TOKEN
+    keep_history: true
+    on:
+      branch: master
+      python: 3.7
+      condition: $TOXENV = docs

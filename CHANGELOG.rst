@@ -1,3 +1,9 @@
+0.9.7 - 2019.09.29
+##################
+
+* Use Black (https://github.com/psf/black) for formatting code
+* No functional library changes
+
 0.9.6 - 2019.09.26
 ##################
 

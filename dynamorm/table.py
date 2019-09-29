@@ -52,8 +52,11 @@ import six
 
 from boto3.dynamodb.conditions import Key, Attr
 from dynamorm.exceptions import (
-    MissingTableAttribute, TableNotActive,
-    InvalidSchemaField, HashKeyExists, ConditionFailed,
+    MissingTableAttribute,
+    TableNotActive,
+    InvalidSchemaField,
+    HashKeyExists,
+    ConditionFailed,
 )
 
 log = logging.getLogger(__name__)
@@ -61,7 +64,8 @@ log = logging.getLogger(__name__)
 
 class DynamoCommon3(object):
     """Common properties & functions of Boto3 DynamORM objects -- i.e. Tables & Indexes"""
-    REQUIRED_ATTRS = ('name', 'hash_key')
+
+    REQUIRED_ATTRS = ("name", "hash_key")
 
     name = None
     hash_key = None
@@ -72,38 +76,42 @@ class DynamoCommon3(object):
     def __init__(self):
         for attr in self.REQUIRED_ATTRS:
             if getattr(self, attr) is None:
-                raise MissingTableAttribute("Missing required Table attribute: {0}".format(attr))
+                raise MissingTableAttribute(
+                    "Missing required Table attribute: {0}".format(attr)
+                )
 
         if self.hash_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The hash key '{0}' does not exist in the schema".format(self.hash_key))
+            raise InvalidSchemaField(
+                "The hash key '{0}' does not exist in the schema".format(self.hash_key)
+            )
 
         if self.range_key and self.range_key not in self.schema.dynamorm_fields():
-            raise InvalidSchemaField("The range key '{0}' does not exist in the schema".format(self.range_key))
+            raise InvalidSchemaField(
+                "The range key '{0}' does not exist in the schema".format(
+                    self.range_key
+                )
+            )
 
     @property
     def key_schema(self):
         """Return an appropriate KeySchema, based on our key attributes and the schema object"""
+
         def as_schema(name, key_type):
-            return {
-                'AttributeName': name,
-                'KeyType': key_type
-            }
-        schema = [as_schema(self.hash_key, 'HASH')]
+            return {"AttributeName": name, "KeyType": key_type}
+
+        schema = [as_schema(self.hash_key, "HASH")]
         if self.range_key:
-            schema.append(as_schema(self.range_key, 'RANGE'))
+            schema.append(as_schema(self.range_key, "RANGE"))
         return schema
 
     @property
     def provisioned_throughput(self):
         """Return an appropriate ProvisionedThroughput, based on our attributes"""
-        return {
-            'ReadCapacityUnits': self.read,
-            'WriteCapacityUnits': self.write
-        }
+        return {"ReadCapacityUnits": self.read, "WriteCapacityUnits": self.write}
 
 
 class DynamoIndex3(DynamoCommon3):
-    REQUIRED_ATTRS = DynamoCommon3.REQUIRED_ATTRS + ('projection',)
+    REQUIRED_ATTRS = DynamoCommon3.REQUIRED_ATTRS + ("projection",)
     ARG_KEY = None
     INDEX_TYPE = None
 
@@ -128,42 +136,38 @@ class DynamoIndex3(DynamoCommon3):
 
     @property
     def index_args(self):
-        if self.projection.__class__.__name__ == 'ProjectAll':
+        if self.projection.__class__.__name__ == "ProjectAll":
+            projection = {"ProjectionType": "ALL"}
+        elif self.projection.__class__.__name__ == "ProjectKeys":
+            projection = {"ProjectionType": "KEYS_ONLY"}
+        elif self.projection.__class__.__name__ == "ProjectInclude":
             projection = {
-                'ProjectionType': 'ALL',
-            }
-        elif self.projection.__class__.__name__ == 'ProjectKeys':
-            projection = {
-                'ProjectionType': 'KEYS_ONLY',
-            }
-        elif self.projection.__class__.__name__ == 'ProjectInclude':
-            projection = {
-                'ProjectionType': 'INCLUDE',
-                'NonKeyAttributes': self.projection.include
+                "ProjectionType": "INCLUDE",
+                "NonKeyAttributes": self.projection.include,
             }
         else:
             raise RuntimeError("Unknown projection mode!")
 
         return {
-            'IndexName': self.name,
-            'KeySchema': self.key_schema,
-            'Projection': projection,
+            "IndexName": self.name,
+            "KeySchema": self.key_schema,
+            "Projection": projection,
         }
 
 
 class DynamoLocalIndex3(DynamoIndex3):
-    INDEX_TYPE = 'LocalIndex'
-    ARG_KEY = 'LocalSecondaryIndexes'
+    INDEX_TYPE = "LocalIndex"
+    ARG_KEY = "LocalSecondaryIndexes"
 
 
 class DynamoGlobalIndex3(DynamoIndex3):
-    INDEX_TYPE = 'GlobalIndex'
-    ARG_KEY = 'GlobalSecondaryIndexes'
+    INDEX_TYPE = "GlobalIndex"
+    ARG_KEY = "GlobalSecondaryIndexes"
 
     @property
     def index_args(self):
         args = super(DynamoGlobalIndex3, self).index_args
-        args['ProvisionedThroughput'] = self.provisioned_throughput
+        args["ProvisionedThroughput"] = self.provisioned_throughput
         return args
 
 
@@ -194,16 +198,25 @@ class DynamoTable3(DynamoCommon3):
 
                 # Now that we know which of our classes we want to use, we create a new class on the fly that uses our
                 # class with the attributes of the original class
-                new_class = type(name, (index_class,), dict(
-                    (k, v)
-                    for k, v in six.iteritems(klass.__dict__)
-                    if k[0] != '_'
-                ))
+                new_class = type(
+                    name,
+                    (index_class,),
+                    dict(
+                        (k, v) for k, v in six.iteritems(klass.__dict__) if k[0] != "_"
+                    ),
+                )
 
                 self.indexes[klass.name] = new_class(self, schema)
 
-        if self.stream and self.stream not in ['NEW_IMAGE', 'OLD_IMAGE', 'NEW_AND_OLD_IMAGES', 'KEYS_ONLY']:
-            raise ConditionFailed("Stream parameter '{0}' is invalid".format(self.stream))
+        if self.stream and self.stream not in [
+            "NEW_IMAGE",
+            "OLD_IMAGE",
+            "NEW_AND_OLD_IMAGES",
+            "KEYS_ONLY",
+        ]:
+            raise ConditionFailed(
+                "Stream parameter '{0}' is invalid".format(self.stream)
+            )
 
     @property
     def resource(self):
@@ -231,15 +244,15 @@ class DynamoTable3(DynamoCommon3):
         # allow for dict based resource config that we convert into a botocore Config object
         # https://botocore.readthedocs.io/en/stable/reference/config.html
         try:
-            resource_config = kwargs['config']
+            resource_config = kwargs["config"]
         except KeyError:
             # no 'config' provided in the kwargs
             pass
         else:
             if isinstance(resource_config, dict):
-                kwargs['config'] = botocore.config.Config(**resource_config)
+                kwargs["config"] = botocore.config.Config(**resource_config)
 
-        return boto3_session.resource('dynamodb', **kwargs)
+        return boto3_session.resource("dynamodb", **kwargs)
 
     @classmethod
     def get_table(cls, name):
@@ -263,10 +276,7 @@ class DynamoTable3(DynamoCommon3):
     @property
     def exists(self):
         """Return True or False based on the existance of this tables name in our resource"""
-        return any(
-            table.name == self.name
-            for table in self.resource.tables.all()
-        )
+        return any(table.name == self.name for table in self.resource.tables.all())
 
     @property
     def table_attribute_fields(self):
@@ -305,10 +315,7 @@ class DynamoTable3(DynamoCommon3):
             dynamorm_field = self.schema.dynamorm_fields()[name]
             field_type = self.schema.field_to_dynamo_type(dynamorm_field)
 
-            defs.append({
-                'AttributeName': name,
-                'AttributeType': field_type,
-            })
+            defs.append({"AttributeName": name, "AttributeType": field_type})
 
         return defs
 
@@ -318,21 +325,18 @@ class DynamoTable3(DynamoCommon3):
         spec = {}
 
         if self.stream:
-            spec = {
-                'StreamEnabled': True,
-                'StreamViewType': self.stream,
-            }
+            spec = {"StreamEnabled": True, "StreamViewType": self.stream}
         else:
-            spec = {
-                'StreamEnabled': False,
-            }
+            spec = {"StreamEnabled": False}
 
         return spec
 
     def create(self, wait=True):
         """DEPRECATED -- shim"""
-        warnings.warn("DynamoTable3.create has been deprecated, please use DynamoTable3.create_table",
-                      DeprecationWarning)
+        warnings.warn(
+            "DynamoTable3.create has been deprecated, please use DynamoTable3.create_table",
+            DeprecationWarning,
+        )
         return self.create_table(wait=wait)
 
     def create_table(self, wait=True):
@@ -341,7 +345,9 @@ class DynamoTable3(DynamoCommon3):
         :param bool wait: If set to True, the default, this call will block until the table is created
         """
         if not self.read or not self.write:
-            raise MissingTableAttribute("The read/write attributes are required to create a table")
+            raise MissingTableAttribute(
+                "The read/write attributes are required to create a table"
+            )
 
         index_args = collections.defaultdict(list)
         for index in six.itervalues(self.indexes):
@@ -358,7 +364,7 @@ class DynamoTable3(DynamoCommon3):
         )
         if wait:
             log.info("Waiting for table creation...")
-            table.meta.client.get_waiter('table_exists').wait(TableName=self.name)
+            table.meta.client.get_waiter("table_exists").wait(TableName=self.name)
         return table
 
     _update_table_ops = None
@@ -390,18 +396,22 @@ class DynamoTable3(DynamoCommon3):
         def wait_for_active():
             def _wait(thing_type, thing_name, thing_status_callback):
                 wait_duration = 0.5
-                if thing_status_callback(table) != 'ACTIVE':
-                    log.info("Waiting for %s %s to become active before performing update...", thing_type, thing_name)
+                if thing_status_callback(table) != "ACTIVE":
+                    log.info(
+                        "Waiting for %s %s to become active before performing update...",
+                        thing_type,
+                        thing_name,
+                    )
 
-                    while thing_status_callback(table) != 'ACTIVE':
-                        if thing_type == 'index':
+                    while thing_status_callback(table) != "ACTIVE":
+                        if thing_type == "index":
                             if thing_status_callback(table) is None:
                                 # once the index status is None then the index is gone
                                 break
 
-                            ok_statuses = ('CREATING', 'UPDATING', 'DELETING')
+                            ok_statuses = ("CREATING", "UPDATING", "DELETING")
                         else:
-                            ok_statuses = ('CREATING', 'UPDATING')
+                            ok_statuses = ("CREATING", "UPDATING")
 
                         thing_status = thing_status_callback(table)
                         if thing_status in ok_statuses:
@@ -411,92 +421,121 @@ class DynamoTable3(DynamoCommon3):
                             table.load()
                             continue
 
-                        raise TableNotActive("{0} {1} is {2}".format(thing_type, thing_name, thing_status))
+                        raise TableNotActive(
+                            "{0} {1} is {2}".format(
+                                thing_type, thing_name, thing_status
+                            )
+                        )
 
             def _index_status(table, index_name):
-                for index in (table.global_secondary_indexes or []):
-                    if index['IndexName'] == index_name:
-                        return index['IndexStatus']
+                for index in table.global_secondary_indexes or []:
+                    if index["IndexName"] == index_name:
+                        return index["IndexStatus"]
 
-            _wait('table', table.table_name, lambda table: table.table_status)
-            for index in (table.global_secondary_indexes or []):
-                _wait('index', index['IndexName'], lambda table: _index_status(table, index['IndexName']))
+            _wait("table", table.table_name, lambda table: table.table_status)
+            for index in table.global_secondary_indexes or []:
+                _wait(
+                    "index",
+                    index["IndexName"],
+                    lambda table: _index_status(table, index["IndexName"]),
+                )
 
         def do_update(**kwargs):
-            kwargs.update(dict(
-                AttributeDefinitions=self.attribute_definitions,
-            ))
+            kwargs.update(dict(AttributeDefinitions=self.attribute_definitions))
             return table.update(**kwargs)
 
         wait_for_active()
 
         # check if we're going to change our capacity
-        if (self.read and self.write) and \
-                (self.read != table.provisioned_throughput['ReadCapacityUnits'] or
-                 self.write != table.provisioned_throughput['WriteCapacityUnits']):
+        if (self.read and self.write) and (
+            self.read != table.provisioned_throughput["ReadCapacityUnits"]
+            or self.write != table.provisioned_throughput["WriteCapacityUnits"]
+        ):
 
-            log.info("Updating capacity on table %s (%s -> %s)",
-                     self.name,
-                     dict(
-                         (k, v)
-                         for k, v in six.iteritems(table.provisioned_throughput)
-                         if k.endswith('Units')
-                     ),
-                     self.provisioned_throughput)
+            log.info(
+                "Updating capacity on table %s (%s -> %s)",
+                self.name,
+                dict(
+                    (k, v)
+                    for k, v in six.iteritems(table.provisioned_throughput)
+                    if k.endswith("Units")
+                ),
+                self.provisioned_throughput,
+            )
             do_update(ProvisionedThroughput=self.provisioned_throughput)
             return self.update_table()
 
         # check if we're going to modify the stream
-        if self.stream_specification != (table.stream_specification or {'StreamEnabled': False}):
-            log.info("Updating stream on table %s (%s -> %s)",
-                     self.name,
-                     table.stream_specification['StreamViewType']
-                         if table.stream_specification and 'StreamEnabled' in table.stream_specification
-                         else 'NONE',
-                     self.stream)
+        if self.stream_specification != (
+            table.stream_specification or {"StreamEnabled": False}
+        ):
+            log.info(
+                "Updating stream on table %s (%s -> %s)",
+                self.name,
+                table.stream_specification["StreamViewType"]
+                if table.stream_specification
+                and "StreamEnabled" in table.stream_specification
+                else "NONE",
+                self.stream,
+            )
             do_update(StreamSpecification=self.stream_specification)
             return self.update_table()
 
         # Now for the global indexes, turn the data strucutre into a real dictionary so we can look things up by name
         # Along the way we'll delete any indexes that are no longer defined
         existing_indexes = {}
-        for index in (table.global_secondary_indexes or []):
-            if index['IndexName'] not in self.indexes:
-                log.info("Deleting global secondary index %s on table %s", index['IndexName'], self.name)
-                do_update(GlobalSecondaryIndexUpdates=[{
-                    'Delete': {
-                        'IndexName': index['IndexName']
-                    }
-                }])
+        for index in table.global_secondary_indexes or []:
+            if index["IndexName"] not in self.indexes:
+                log.info(
+                    "Deleting global secondary index %s on table %s",
+                    index["IndexName"],
+                    self.name,
+                )
+                do_update(
+                    GlobalSecondaryIndexUpdates=[
+                        {"Delete": {"IndexName": index["IndexName"]}}
+                    ]
+                )
                 return self.update_table()
 
-            existing_indexes[index['IndexName']] = index
+            existing_indexes[index["IndexName"]] = index
 
         for index in six.itervalues(self.indexes):
             if index.name in existing_indexes:
-                current_capacity = existing_indexes[index.name]['ProvisionedThroughput']
-                if (index.read and index.write) and \
-                        (index.read != current_capacity['ReadCapacityUnits'] or
-                         index.write != current_capacity['WriteCapacityUnits']):
+                current_capacity = existing_indexes[index.name]["ProvisionedThroughput"]
+                if (index.read and index.write) and (
+                    index.read != current_capacity["ReadCapacityUnits"]
+                    or index.write != current_capacity["WriteCapacityUnits"]
+                ):
 
-                    log.info("Updating capacity on global secondary index %s on table %s (%s)", index.name, self.name,
-                             index.provisioned_throughput)
+                    log.info(
+                        "Updating capacity on global secondary index %s on table %s (%s)",
+                        index.name,
+                        self.name,
+                        index.provisioned_throughput,
+                    )
 
-                    do_update(GlobalSecondaryIndexUpdates=[{
-                        'Update': {
-                            'IndexName': index['IndexName'],
-                            'ProvisionedThroughput': index.provisioned_throughput
-                        }
-                    }])
+                    do_update(
+                        GlobalSecondaryIndexUpdates=[
+                            {
+                                "Update": {
+                                    "IndexName": index["IndexName"],
+                                    "ProvisionedThroughput": index.provisioned_throughput,
+                                }
+                            }
+                        ]
+                    )
                     return self.update_table()
             else:
                 # create the index
-                log.info("Creating global secondary index %s on table %s", index.name, self.name)
+                log.info(
+                    "Creating global secondary index %s on table %s",
+                    index.name,
+                    self.name,
+                )
                 do_update(
                     AttributeDefinitions=self.attribute_definitions,
-                    GlobalSecondaryIndexUpdates=[{
-                        'Create': index.index_args
-                    }]
+                    GlobalSecondaryIndexUpdates=[{"Create": index.index_args}],
                 )
                 return self.update_table()
 
@@ -511,7 +550,9 @@ class DynamoTable3(DynamoCommon3):
         """
         self.table.delete()
         if wait:
-            self.table.meta.client.get_waiter('table_not_exists').wait(TableName=self.name)
+            self.table.meta.client.get_waiter("table_not_exists").wait(
+                TableName=self.name
+            )
         return True
 
     def put(self, item, **kwargs):
@@ -526,10 +567,12 @@ class DynamoTable3(DynamoCommon3):
 
     def put_unique(self, item, **kwargs):
         try:
-            kwargs['ConditionExpression'] = 'attribute_not_exists({0})'.format(self.hash_key)
+            kwargs["ConditionExpression"] = "attribute_not_exists({0})".format(
+                self.hash_key
+            )
             return self.put(item, **kwargs)
         except botocore.exceptions.ClientError as exc:
-            if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 raise HashKeyExists
             raise
 
@@ -547,34 +590,38 @@ class DynamoTable3(DynamoCommon3):
         expr_vals = {}
 
         UPDATE_FUNCTION_TEMPLATES = {
-            'append': '#uk_{0} = list_append(#uk_{0}, :uv_{0})',
-            'plus': '#uk_{0} = #uk_{0} + :uv_{0}',
-            'minus': '#uk_{0} = #uk_{0} - :uv_{0}',
-            'if_not_exists': '#uk_{0} = if_not_exists(#uk_{0}, :uv_{0})',
-            None: '#uk_{0} = :uv_{0}'
+            "append": "#uk_{0} = list_append(#uk_{0}, :uv_{0})",
+            "plus": "#uk_{0} = #uk_{0} + :uv_{0}",
+            "minus": "#uk_{0} = #uk_{0} - :uv_{0}",
+            "if_not_exists": "#uk_{0} = if_not_exists(#uk_{0}, :uv_{0})",
+            None: "#uk_{0} = :uv_{0}",
         }
 
         for key, value in six.iteritems(kwargs):
             try:
-                key, function = key.split('__', 1)
+                key, function = key.split("__", 1)
             except ValueError:
                 function = None
 
             # make sure the field (key) exists
             if key not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(key))
+                raise InvalidSchemaField(
+                    "{0} does not exist in the schema fields".format(key)
+                )
 
             if key in (self.hash_key, self.range_key):
                 update_key[key] = value
             else:
                 update_fields.append(UPDATE_FUNCTION_TEMPLATES[function].format(key))
-                expr_names['#uk_{0}'.format(key)] = key
-                expr_vals[':uv_{0}'.format(key)] = value
+                expr_names["#uk_{0}".format(key)] = key
+                expr_vals[":uv_{0}".format(key)] = value
 
-        update_item_kwargs['Key'] = update_key
-        update_item_kwargs['UpdateExpression'] = 'SET {0}'.format(', '.join(update_fields))
-        update_item_kwargs['ExpressionAttributeNames'] = expr_names
-        update_item_kwargs['ExpressionAttributeValues'] = expr_vals
+        update_item_kwargs["Key"] = update_key
+        update_item_kwargs["UpdateExpression"] = "SET {0}".format(
+            ", ".join(update_fields)
+        )
+        update_item_kwargs["ExpressionAttributeNames"] = expr_names
+        update_item_kwargs["ExpressionAttributeValues"] = expr_vals
 
         if isinstance(conditions, collections.Mapping):
             condition_expression = Q(**conditions)
@@ -589,42 +636,44 @@ class DynamoTable3(DynamoCommon3):
             condition_expression = conditions
 
         if condition_expression:
-            update_item_kwargs['ConditionExpression'] = condition_expression
+            update_item_kwargs["ConditionExpression"] = condition_expression
 
         try:
             return self.table.update_item(**update_item_kwargs)
         except botocore.exceptions.ClientError as exc:
-            if exc.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 raise ConditionFailed(exc)
             raise
 
     def get_batch(self, keys, consistent=False, attrs=None, batch_get_kwargs=None):
         batch_get_kwargs = batch_get_kwargs or {}
 
-        batch_get_kwargs['Keys'] = []
+        batch_get_kwargs["Keys"] = []
         for kwargs in keys:
             for k, v in six.iteritems(kwargs):
                 if k not in self.schema.dynamorm_fields():
-                    raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+                    raise InvalidSchemaField(
+                        "{0} does not exist in the schema fields".format(k)
+                    )
 
-            batch_get_kwargs['Keys'].append(kwargs)
+            batch_get_kwargs["Keys"].append(kwargs)
 
         if consistent:
-            batch_get_kwargs['ConsistentRead'] = True
+            batch_get_kwargs["ConsistentRead"] = True
 
         if attrs:
-            batch_get_kwargs['ProjectionExpression'] = attrs
+            batch_get_kwargs["ProjectionExpression"] = attrs
 
         while True:
-            response = self.resource.batch_get_item(RequestItems={
-                self.name: batch_get_kwargs
-            })
+            response = self.resource.batch_get_item(
+                RequestItems={self.name: batch_get_kwargs}
+            )
 
-            for item in response['Responses'][self.name]:
+            for item in response["Responses"][self.name]:
                 yield item
 
             try:
-                batch_get_kwargs = response['UnprocessedKeys'][self.name]
+                batch_get_kwargs = response["UnprocessedKeys"][self.name]
             except KeyError:
                 # once our table is no longer listed in UnprocessedKeys we're done our while True loop
                 break
@@ -634,23 +683,27 @@ class DynamoTable3(DynamoCommon3):
 
         for k, v in six.iteritems(kwargs):
             if k not in self.schema.dynamorm_fields():
-                raise InvalidSchemaField("{0} does not exist in the schema fields".format(k))
+                raise InvalidSchemaField(
+                    "{0} does not exist in the schema fields".format(k)
+                )
 
-        get_item_kwargs['Key'] = kwargs
+        get_item_kwargs["Key"] = kwargs
         if consistent:
-            get_item_kwargs['ConsistentRead'] = True
+            get_item_kwargs["ConsistentRead"] = True
 
         response = self.table.get_item(**get_item_kwargs)
 
-        if 'Item' in response:
-            return response['Item']
+        if "Item" in response:
+            return response["Item"]
 
     def query(self, *args, **kwargs):
-        query_kwargs = kwargs.pop('query_kwargs', {})
+        query_kwargs = kwargs.pop("query_kwargs", {})
         filter_kwargs = {}
 
-        if 'IndexName' in query_kwargs:
-            attr_fields = self.index_attribute_fields(index_name=query_kwargs['IndexName'])
+        if "IndexName" in query_kwargs:
+            attr_fields = self.index_attribute_fields(
+                index_name=query_kwargs["IndexName"]
+            )
         else:
             attr_fields = self.table_attribute_fields
 
@@ -658,10 +711,10 @@ class DynamoTable3(DynamoCommon3):
             full_key, value = kwargs.popitem()
 
             try:
-                key, op = full_key.split('__')
+                key, op = full_key.split("__")
             except ValueError:
                 key = full_key
-                op = 'eq'
+                op = "eq"
 
             if key not in attr_fields:
                 filter_kwargs[full_key] = value
@@ -671,11 +724,13 @@ class DynamoTable3(DynamoCommon3):
             key_expression = get_expression(key, op, value)
 
             try:
-                query_kwargs['KeyConditionExpression'] = query_kwargs['KeyConditionExpression'] & key_expression
+                query_kwargs["KeyConditionExpression"] = (
+                    query_kwargs["KeyConditionExpression"] & key_expression
+                )
             except (KeyError, TypeError):
-                query_kwargs['KeyConditionExpression'] = key_expression
+                query_kwargs["KeyConditionExpression"] = key_expression
 
-        if 'KeyConditionExpression' not in query_kwargs:
+        if "KeyConditionExpression" not in query_kwargs:
             raise InvalidSchemaField("Primary key must be specified for queries")
 
         filter_expression = Q(**filter_kwargs)
@@ -686,13 +741,13 @@ class DynamoTable3(DynamoCommon3):
                 filter_expression = arg
 
         if filter_expression:
-            query_kwargs['FilterExpression'] = filter_expression
+            query_kwargs["FilterExpression"] = filter_expression
 
         log.debug("Query: %s", query_kwargs)
         return self.table.query(**query_kwargs)
 
     def scan(self, *args, **kwargs):
-        scan_kwargs = kwargs.pop('scan_kwargs', None) or {}
+        scan_kwargs = kwargs.pop("scan_kwargs", None) or {}
 
         filter_expression = Q(**kwargs)
         for arg in args:
@@ -702,7 +757,7 @@ class DynamoTable3(DynamoCommon3):
                 filter_expression = arg
 
         if filter_expression:
-            scan_kwargs['FilterExpression'] = filter_expression
+            scan_kwargs["FilterExpression"] = filter_expression
 
         return self.table.scan(**scan_kwargs)
 
@@ -752,14 +807,14 @@ def Q(**mapping):
     while len(mapping):
         attr, value = mapping.popitem()
 
-        parts = attr.split('__')
+        parts = attr.split("__")
         attr = Attr(parts.pop(0))
-        op = 'eq'
+        op = "eq"
 
         while len(parts):
             if not hasattr(attr, parts[0]):
                 # this is a nested field, extend the attr
-                attr = Attr('.'.join([attr.name, parts.pop(0)]))
+                attr = Attr(".".join([attr.name, parts.pop(0)]))
             else:
                 op = parts.pop(0)
                 break
@@ -799,10 +854,13 @@ class ReadIterator(six.Iterator):
     :param \*args: Q objects, passed through to scan or query
     :param \*\*kwargs: filters, passed through to scan or query
     """
+
     METHOD_NAME = None
 
     def __init__(self, model, *args, **kwargs):
-        assert self.METHOD_NAME, "Improper use of ReadIterator, please use a subclass with a method name set"
+        assert (
+            self.METHOD_NAME
+        ), "Improper use of ReadIterator, please use a subclass with a method name set"
 
         self.model = model
         self.args = args
@@ -814,7 +872,7 @@ class ReadIterator(six.Iterator):
         self.resp = None
         self.index = -1
 
-        self.dynamo_kwargs_key = '_'.join([self.METHOD_NAME, 'kwargs'])
+        self.dynamo_kwargs_key = "_".join([self.METHOD_NAME, "kwargs"])
         if self.dynamo_kwargs_key not in self.kwargs:
             self.kwargs[self.dynamo_kwargs_key] = {}
         self.dynamo_kwargs = self.kwargs[self.dynamo_kwargs_key]
@@ -835,21 +893,21 @@ class ReadIterator(six.Iterator):
             self.resp = self._get_resp()
 
             # Store the last key from query
-            self.last = self.resp.get('LastEvaluatedKey', None)
+            self.last = self.resp.get("LastEvaluatedKey", None)
 
         # If a Limit is specified we must not operate in recursive mode
-        if 'Limit' in self.dynamo_kwargs:
+        if "Limit" in self.dynamo_kwargs:
             log.warning(
                 "%s was invoked with both a limit and the recursive flag set. "
                 "The recursive flag will be ignored",
-                self.__class__.__name__
+                self.__class__.__name__,
             )
             self._recursive = False
 
         # Increment which record we're going to pull from the items
         self.index += 1
 
-        if self.index == self.resp['Count']:
+        if self.index == self.resp["Count"]:
             # If we have no more items them we're done as long as we're not in recursive mode
             # And if we are in recursive mode we're done if the resp didn't contain a last key
             if not self._recursive or self.last is None:
@@ -861,22 +919,22 @@ class ReadIterator(six.Iterator):
             return self.__next__()
 
         # Grab the raw item from the response and return it as a new instance of our model
-        raw = self.resp['Items'][self.index]
+        raw = self.resp["Items"][self.index]
         return self.model.new_from_raw(raw, partial=self._partial)
 
     def limit(self, limit):
         """Set the limit value"""
-        self.dynamo_kwargs['Limit'] = limit
+        self.dynamo_kwargs["Limit"] = limit
         return self
 
     def start(self, last):
         """Set the last value"""
-        self.dynamo_kwargs['ExclusiveStartKey'] = last
+        self.dynamo_kwargs["ExclusiveStartKey"] = last
         return self
 
     def consistent(self):
         """Make this read a consistent one"""
-        self.dynamo_kwargs['ConsistentRead'] = True
+        self.dynamo_kwargs["ConsistentRead"] = True
         return self
 
     def specific_attributes(self, attrs):
@@ -885,8 +943,8 @@ class ReadIterator(six.Iterator):
         This is a list of attribute names. See the documentation for more info:
         https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html
         """
-        if 'ExpressionAttributeNames' not in self.dynamo_kwargs:
-            self.dynamo_kwargs['ExpressionAttributeNames'] = {}
+        if "ExpressionAttributeNames" not in self.dynamo_kwargs:
+            self.dynamo_kwargs["ExpressionAttributeNames"] = {}
 
         pe = []
         for attri, attr in enumerate(attrs):
@@ -894,12 +952,12 @@ class ReadIterator(six.Iterator):
             for parti, part in enumerate(attr.split(".")):
                 # replace the attrs with expression attributes so we can use reserved names (like count)
                 # convert names like child.sub -> to #pe1_1.#pe1_2
-                pename = '#pe{}'.format('_'.join([str(attri), str(parti)]))
-                self.dynamo_kwargs['ExpressionAttributeNames'][pename] = part
+                pename = "#pe{}".format("_".join([str(attri), str(parti)]))
+                self.dynamo_kwargs["ExpressionAttributeNames"][pename] = part
                 name_parts.append(pename)
-            pe.append('.'.join(name_parts))
+            pe.append(".".join(name_parts))
 
-        self.dynamo_kwargs['ProjectionExpression'] = ', '.join(pe)
+        self.dynamo_kwargs["ProjectionExpression"] = ", ".join(pe)
         self._partial = True
         return self
 
@@ -920,9 +978,9 @@ class ReadIterator(six.Iterator):
 
         This triggers a new request to the table when it is invoked.
         """
-        self.dynamo_kwargs['Select'] = 'COUNT'
+        self.dynamo_kwargs["Select"] = "COUNT"
         resp = self._get_resp()
-        return resp['Count']
+        return resp["Count"]
 
     def again(self):
         """Call this to reset the iterator so that you can iterate over it again.
@@ -938,13 +996,13 @@ class ReadIterator(six.Iterator):
 
 
 class ScanIterator(ReadIterator):
-    METHOD_NAME = 'scan'
+    METHOD_NAME = "scan"
 
 
 class QueryIterator(ReadIterator):
-    METHOD_NAME = 'query'
+    METHOD_NAME = "query"
 
     def reverse(self):
         """Return results from the query in reverse"""
-        self.dynamo_kwargs['ScanIndexForward'] = False
+        self.dynamo_kwargs["ScanIndexForward"] = False
         return self

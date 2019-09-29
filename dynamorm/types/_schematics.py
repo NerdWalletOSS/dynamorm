@@ -1,5 +1,8 @@
 from schematics.models import Model as SchematicsModel
-from schematics.exceptions import ValidationError as SchematicsValidationError, ModelConversionError
+from schematics.exceptions import (
+    ValidationError as SchematicsValidationError,
+    ModelConversionError,
+)
 from schematics import types
 
 from .base import DynamORMSchema
@@ -14,8 +17,8 @@ class Schema(SchematicsModel, DynamORMSchema):
         """Given a schematics field object return the appropriate Dynamo type character"""
         # XXX: Schematics does not currently have a "raw" type that would map to Dynamo's 'B' (binary) type.
         if isinstance(field, types.NumberType):
-            return 'N'
-        return 'S'
+            return "N"
+        return "S"
 
     @classmethod
     def dynamorm_fields(cls):
