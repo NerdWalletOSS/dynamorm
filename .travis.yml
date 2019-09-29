@@ -5,30 +5,40 @@ branches:
   only:
     - master
 
-python:
-  - 2.7
-  - 3.5
-  - 3.6
-  - 3.7
-  - pypy
-
-env:
-  - SERIALIZATION_PKG="marshmallow==2.15.1"
-  - SERIALIZATION_PKG="marshmallow==3.2.0"
-  - SERIALIZATION_PKG="schematics==2.1.0"
-
 matrix:
-  exclude:
-    # Python 2.7 (and pypy) are not supported in Marshmallow 3+
+  include:
     - python: 2.7
-      env: SERIALIZATION_PKG="marshmallow==3.2.0"
-    - python: pypy
-      env: SERIALIZATION_PKG="marshmallow==3.2.0"
+      env: TOXENV=py27-schematics,codecov-py27
+    - python: 2.7
+      env: TOXENV=py27-marshmallow,codecov-py27
 
-install: false
-script: ./build.sh
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+    - python: 3.5
+      env: TOXENV=py35-schematics,codecov-py35
+    - python: 3.5
+      env: TOXENV=py35-marshmallow,codecov-py35
+
+    - python: 3.6
+      env: TOXENV=py36-schematics,codecov-py36
+    - python: 3.6
+      env: TOXENV=py36-marshmallow,codecov-py36
+
+    - python: 3.7
+      env: TOXENV=py37-schematics,codecov-py37
+    - python: 3.7
+      env: TOXENV=py37-marshmallow,codecov-py37
+
+    - python: pypy
+      env: TOXENV=pypy2-schematics,codecov-pypy2
+    - python: pypy
+      env: TOXENV=pypy2-marshmallow,codecov-pypy2
+
+    - python: pypy3
+      env: TOXENV=pypy3-schematics,codecov-pypy3
+    - python: pypy3
+      env: TOXENV=pypy3-marshmallow,codecov-pypy3
+
+install: pip install tox
+script: TOX_SKIP_MISSING_INTERPRETERS="False" tox
 
 deploy:
   provider: pypi
@@ -38,5 +48,5 @@ deploy:
   on:
     branch: master
     python: 3.7
-    condition: $SERIALIZATION_PKG = schematics==2.1.0
+    condition: $TOXENV = py37-marshmallow,codecov-py37
   distributions: "sdist bdist_wheel"

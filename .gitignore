@@ -11,5 +11,6 @@ dist/
 *.dist-info/
 
 .coverage
-.pytest_cache
-.idea
+.pytest_cache/
+.idea/
+.tox/

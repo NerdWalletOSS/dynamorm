@@ -1,7 +1,8 @@
 0.9.6 - 2019.09.26
 ##################
 
-* Documentation & CI improvements
+* Switch to ``tox`` for running tests
+* Documentation improvements
 * No functional library changes
 
 0.9.5 - 2019.09.26
