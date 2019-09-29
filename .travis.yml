@@ -26,7 +26,7 @@ matrix:
       env: SERIALIZATION_PKG="marshmallow==3.2.0"
 
 install: false
-script: ./test.sh
+script: ./build.sh
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
