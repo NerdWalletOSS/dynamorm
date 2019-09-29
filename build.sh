@@ -6,7 +6,7 @@ if [ "$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then
     if [ -z "$(git diff origin/master setup.py | grep '\+.*version=')" ]; then
         printf "\n\n\n\nBump the version in setup.py!\n\n\n\n"
         exit 1
-    elif [ -z "$(git diff origin/master CHANGELOG.md)" ]; then
+    elif [ -z "$(git diff origin/master CHANGELOG.rst)" ]; then
         printf "\n\n\n\nAdd an entry to CHANGELOG.rst!\n\n\n\n"
         exit 1
     fi
