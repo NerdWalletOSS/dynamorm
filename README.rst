@@ -21,16 +21,9 @@ DynamORM (pronounced *Dynamo-R-M*) is a Python object & relation mapping library
 
 The project has two goals:
 
-1. **Abstract away the interaction with the underlying DynamoDB libraries**.  Python access to the DynamoDB service has
-   evolved quickly, from `Dynamo v1 in boto to Dynamo v2 in boto`_ and then the `new resource model in boto3`_.  By
-   providing a consistent interface that will feel familiar to users of other Python ORMs (SQLAlchemy, Django, Peewee,
-   etc) means that we can always provide best-practices for queries and take advantages of new features without needing
-   to refactor any application logic.
+1. **Abstract away the interaction with the underlying DynamoDB libraries**.  Python access to the DynamoDB service has evolved quickly, from `Dynamo v1 in boto to Dynamo v2 in boto`_ and then the `new resource model in boto3`_.  By providing a consistent interface that will feel familiar to users of other Python ORMs (SQLAlchemy, Django, Peewee, etc) means that we can always provide best-practices for queries and take advantages of new features without needing to refactor any application logic.
 
-2. **Delegate schema validation and serialization to more focused libraries**.  Building "ORM" semantics is "easy",
-   doing data validation and serialization is not.  We support both `Marshmallow`_ and `Schematics`_ for building your
-   object schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in
-   your code.
+2. **Delegate schema validation and serialization to more focused libraries**.  Building "ORM" semantics is "easy", doing data validation and serialization is not.  We support both `Marshmallow`_ and `Schematics`_ for building your object schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in your code.
 
 .. _DynamoDB: http://aws.amazon.com/dynamodb/
 .. _Dynamo v1 in boto to Dynamo v2 in boto: http://boto.cloudhackers.com/en/latest/migrations/dynamodb_v1_to_v2.html
@@ -138,5 +131,4 @@ Full documentation is built from the sources each build and can be found online 
 https://nerdwalletoss.github.io/dynamorm/
 
 
-The ``tests/`` also contain the most complete documentation on how to actually use the library, so you are encouraged to
-read through them to really familiarize yourself with some of the more advanced concepts and use cases.
+The ``tests/`` also contain the most complete documentation on how to actually use the library, so you are encouraged to read through them to really familiarize yourself with some of the more advanced concepts and use cases.

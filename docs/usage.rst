@@ -1,14 +1,11 @@
 Usage
 =====
 
-Using DynamORM is straight forward.  Simply define your models with some specific meta data to represent the DynamoDB
-Table structure as well as the document schema.  You can then use class level methods to query for and get items,
-represented as instances of the class, as well as class level methods to interact with specific documents in the table.
+Using DynamORM is straight forward.  Simply define your models with some specific meta data to represent the DynamoDB Table structure as well as the document schema.  You can then use class level methods to query for and get items, represented as instances of the class, as well as class level methods to interact with specific documents in the table.
 
 .. note::
 
-    Not all functionality is covered in this documentation yet.  See `the tests`_ for all "supported" functionality
-    (like: batch puts, unique puts, etc).
+    Not all functionality is covered in this documentation yet.  See `the tests`_ for all "supported" functionality (like: batch puts, unique puts, etc).
 
 .. _the tests: https://github.com/NerdWalletOSS/DynamORM/tree/master/tests
 
@@ -30,9 +27,7 @@ Make sure you have `configured boto3`_ and can access DynamoDB from the Python c
 Configuring the Boto3 resource
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and
-region selection.  You can provide explicit configuration for `boto3 sessions`_ and `boto3 resources`_ as part of your
-``Table`` definition.
+The above example is relying on the files ``~/.aws/credentials`` & ``~/.aws/config`` to provide access information and region selection.  You can provide explicit configuration for `boto3 sessions`_ and `boto3 resources`_ as part of your ``Table`` definition.
 
 For example, if you develop against a local dynamo service your models may look something like:
 
@@ -49,8 +44,7 @@ For example, if you develop against a local dynamo service your models may look 
             }
 
 
-You would obviously want the session and resource configuration to come from some sort of configuration provider that
-could provide the correct options depending on where your application is being run.
+You would obviously want the session and resource configuration to come from some sort of configuration provider that could provide the correct options depending on where your application is being run.
 
 .. _boto3 sessions: http://boto3.readthedocs.io/en/latest/reference/core/session.html
 .. _boto3 resources: http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#service-resource
@@ -133,9 +127,7 @@ In all cases, the attributes go through validation against the Schema.
 
 .. note::
 
-    Remember, if you have a ``String`` field it will use ``unicode`` (py2) or ``str`` (py3) on any value assigned to it,
-    which means that if you assign a ``list``, ``dict``, ``int``, etc then the validation will succeed and what will be
-    stored is the representative string value.
+    Remember, if you have a ``String`` field it will use ``unicode`` (py2) or ``str`` (py3) on any value assigned to it, which means that if you assign a ``list``, ``dict``, ``int``, etc then the validation will succeed and what will be stored is the representative string value.
 
 
 Fetching existing documents
@@ -172,9 +164,7 @@ Querying
 .. _Table query docs: https://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.query
 
 
-Like a ``get`` operation this takes arguments that map to the key names, but you can also specify a comparison operator
-for that key using the "double-under" syntax (``<field>__<operator>``).  For example to query a ``Book`` model for all
-entries with the ``isbn`` field that start with a specific value you would use the ``begins_with`` comparison operator:
+Like a ``get`` operation this takes arguments that map to the key names, but you can also specify a comparison operator for that key using the "double-under" syntax (``<field>__<operator>``).  For example to query a ``Book`` model for all entries with the ``isbn`` field that start with a specific value you would use the ``begins_with`` comparison operator:
 
 .. code-block:: python
 
@@ -189,8 +179,7 @@ Scanning
 
 .. epigraph::
 
-    The Scan operation returns one or more items and item attributes **by accessing every item** in a table or a
-    secondary index.
+    The Scan operation returns one or more items and item attributes **by accessing every item** in a table or a secondary index.
 
     -- `Table scan docs`_
 
@@ -210,12 +199,9 @@ Scanning works exactly the same as querying.
 Read Iterator object
 ~~~~~~~~~~~~~~~~~~~~
 
-Calling ``.query`` or ``.scan`` will return a ``ReadIterator`` object that will not actually send the API call to
-DynamoDB until you try to access an item in the object by iterating (``for book in books:``, ``list(books)``, etc...).
+Calling ``.query`` or ``.scan`` will return a ``ReadIterator`` object that will not actually send the API call to DynamoDB until you try to access an item in the object by iterating (``for book in books:``, ``list(books)``, etc...).
 
-The iterator objects have a number of methods on them that can be used to influence their behavior.  All of the methods
-described here (except ``.count()``) are "chained methods", meaning that they return the iterator object such that you
-can chain them together.
+The iterator objects have a number of methods on them that can be used to influence their behavior.  All of the methods described here (except ``.count()``) are "chained methods", meaning that they return the iterator object such that you can chain them together.
 
 .. code-block:: python
 
@@ -225,8 +211,7 @@ can chain them together.
 Returning the Count (``.count()``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Unlike the rest of the methods in this section, ``.count()`` is the only one that does not return the iterator object.
-Instead it changes the SELECT_ parameter to ``COUNT`` and immediately sends the request, returning the count.
+Unlike the rest of the methods in this section, ``.count()`` is the only one that does not return the iterator object. Instead it changes the SELECT_ parameter to ``COUNT`` and immediately sends the request, returning the count.
 
 .. code-block:: python
 
@@ -239,8 +224,7 @@ Instead it changes the SELECT_ parameter to ``COUNT`` and immediately sends the 
 Requesting consistent results (``.consistent()``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Queries & scans return eventually consistent results by default.  You can use ``.consistent()`` to return results that
-ensure all in-flight writes finished and no new writes were launched.
+Queries & scans return eventually consistent results by default.  You can use ``.consistent()`` to return results that ensure all in-flight writes finished and no new writes were launched.
 
 .. code-block:: python
 
@@ -250,9 +234,7 @@ ensure all in-flight writes finished and no new writes were launched.
 Changing the returned attributes (``.specific_attributes()``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default, query & scan operations will return ALL attributes from the table or index.  If you'd like to change the
-attributes to only return subset of the attributes you can pass a list to ``.specific_attributes([...])``.  Each
-attribute passed in should match the syntax from `Specifying Item Attributes`_ in the docs.
+By default, query & scan operations will return ALL attributes from the table or index.  If you'd like to change the attributes to only return subset of the attributes you can pass a list to ``.specific_attributes([...])``.  Each attribute passed in should match the syntax from `Specifying Item Attributes`_ in the docs.
 
 .. code-block:: python
 
@@ -266,14 +248,11 @@ Paging (``.last``, ``.start()`` & ``.again()``)
 
 .. epigraph::
 
-    A single Query operation will read up to the maximum number of items set (if using the Limit parameter) or a maximum
-    of 1 MB of data and then apply any filtering to the results
+    A single Query operation will read up to the maximum number of items set (if using the Limit parameter) or a maximum of 1 MB of data and then apply any filtering to the results
 
     -- `Table query docs`_
 
-When you query a table with many items, or with a limit, the iterator object will set its ``.last`` attribute to the key
-of the last item it received.  You can pass that item into a subsequent query via the ``start()`` method, or if you have
-the existing iterator object simply call ``.again()``.
+When you query a table with many items, or with a limit, the iterator object will set its ``.last`` attribute to the key of the last item it received.  You can pass that item into a subsequent query via the ``start()`` method, or if you have the existing iterator object simply call ``.again()``.
 
 .. code-block:: python
 
@@ -296,9 +275,7 @@ Limiting (``.limit()``)
 
 .. epigraph::
 
-    The maximum number of items to evaluate (not necessarily the number of matching items). If DynamoDB processes the
-    number of items up to the limit while processing the results, it stops the operation and returns the matching values
-    up to that point.
+    The maximum number of items to evaluate (not necessarily the number of matching items). If DynamoDB processes the number of items up to the limit while processing the results, it stops the operation and returns the matching values up to that point.
 
     -- `Table query docs`_
 
@@ -327,8 +304,7 @@ To have the indexed scanned in reverse for your query, use ``.reverse()``
 Recursion (``.recursive()``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you wish to get ALL items from a query or scan without having to deal with paging your self, then you can use the
-``recursive()`` method to have the iterator handle the paging for you.
+If you wish to get ALL items from a query or scan without having to deal with paging your self, then you can use the ``recursive()`` method to have the iterator handle the paging for you.
 
 .. code-block:: python
 
@@ -349,9 +325,7 @@ See the :py:func:`dynamorm.model.DynaModel.scan` docs for more examples.
 Indexes
 ~~~~~~~
 
-By default the hash & range keys of your table make up the "Primary Index".  `Secondary Indexes`_ provide different ways
-to query & scan your data.  They are defined on your Model alongside the main Table definition as inner classes
-inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
+By default the hash & range keys of your table make up the "Primary Index".  `Secondary Indexes`_ provide different ways to query & scan your data.  They are defined on your Model alongside the main Table definition as inner classes inheriting from either the ``GlobalIndex`` or ``LocalIndex`` classes.
 
 .. _Secondary Indexes: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SecondaryIndexes.html
 
@@ -374,32 +348,24 @@ Here's an excerpt from the model used in the readme:
             write = 5
             projection = ProjectAll()
 
-With the index defined we can now call ``Book.ByAuthor.query`` or ``Book.ByAuthor.scan`` to query or scan the index.
-The query & scan semantics on the Index are the same as on the main table.
+With the index defined we can now call ``Book.ByAuthor.query`` or ``Book.ByAuthor.scan`` to query or scan the index. The query & scan semantics on the Index are the same as on the main table.
 
 .. code-block:: python
 
     Book.ByAuthor.query(author='Some Author')
     Book.ByAuthor.query(author__ne='Some Author')
 
-Indexes uses "projection" to determine which attributes of your documents are available in the index.  The
-``ProjectAll`` projection puts ALL attributes from your Table into the Index.  The ``ProjectKeys`` projection puts just
-the keys from the table (and also the keys from the index themselves) into the index.  The ``ProjectInclude('attr1',
-'attr2')`` projection allows you to specify which attributes you wish to project.
+Indexes uses "projection" to determine which attributes of your documents are available in the index.  The ``ProjectAll`` projection puts ALL attributes from your Table into the Index.  The ``ProjectKeys`` projection puts just the keys from the table (and also the keys from the index themselves) into the index.  The ``ProjectInclude('attr1', 'attr2')`` projection allows you to specify which attributes you wish to project.
 
-Using the ``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't
-have all of the require attributes.
+Using the ``ProjectKeys`` or ``ProjectInclude`` projection will result in partially validated documents, since we won't have all of the require attributes.
 
-A common pattern is to define a "sparse index" with just the keys (``ProjectKeys``), load the keys of the documents you
-want from the index and then do a batch get to fetch them all from the main table.
+A common pattern is to define a "sparse index" with just the keys (``ProjectKeys``), load the keys of the documents you want from the index and then do a batch get to fetch them all from the main table.
 
 
 Updating documents
 ------------------
 
-There are a number of ways to send updates back to the Table from your Model classes and indexes.  The
-:ref:`creating-new-documents` section already showed you the :py:func:`dynamorm.model.DynaModel.save` methods for
-creating new documents.  ``save`` can also be used to update existing documents:
+There are a number of ways to send updates back to the Table from your Model classes and indexes.  The :ref:`creating-new-documents` section already showed you the :py:func:`dynamorm.model.DynaModel.save` methods for creating new documents.  ``save`` can also be used to update existing documents:
 
 .. code-block:: python
 
@@ -408,13 +374,9 @@ creating new documents.  ``save`` can also be used to update existing documents:
     book.in_print = False
     book.save()
 
-When you call ``.save()`` on an instance the WHOLE document is put back into the table as save simply invokes the
-:py:func:`dynamorm.model.DynaModel.put` function.  This means that if you have large models it may cost you more in
-Write Capacity Units to put the whole document back.
+When you call ``.save()`` on an instance the WHOLE document is put back into the table as save simply invokes the :py:func:`dynamorm.model.DynaModel.put` function.  This means that if you have large models it may cost you more in Write Capacity Units to put the whole document back.
 
-You can also do a "partial save" by passing ``partial=True`` when calling save, in which case the
-:py:func:`dynamorm.model.DynaModel.update` function will be used to only send the attributes that have been modified
-since the document was loaded.  The following two code blocks will result in the same operations:
+You can also do a "partial save" by passing ``partial=True`` when calling save, in which case the :py:func:`dynamorm.model.DynaModel.update` function will be used to only send the attributes that have been modified since the document was loaded.  The following two code blocks will result in the same operations:
 
 .. code-block:: python
 
@@ -429,10 +391,7 @@ since the document was loaded.  The following two code blocks will result in the
     book = Book.get(isbn='1234567890')
     book.update(in_print=False)
 
-Doing partial saves (``.save(partial=True)``) is a very convenient way to work with existing instances, but using the
-:py:func:`dynamorm.model.DynaModel.update` directly allows for you to also send `Update Expressions`_ and `Condition
-Expressions`_ with the update.  Combined with consistent reads, this allows you to do things like acquire locks that
-ensure race conditions cannot happen:
+Doing partial saves (``.save(partial=True)``) is a very convenient way to work with existing instances, but using the :py:func:`dynamorm.model.DynaModel.update` directly allows for you to also send `Update Expressions`_ and `Condition Expressions`_ with the update.  Combined with consistent reads, this allows you to do things like acquire locks that ensure race conditions cannot happen:
 
 .. code-block:: python
 
