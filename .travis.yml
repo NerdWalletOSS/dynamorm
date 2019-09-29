@@ -65,9 +65,9 @@ deploy:
     distributions: "sdist bdist_wheel"
 
   - provider: pages
+    local_dir: docs/_build/html/
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
-    keep_history: true
     on:
       branch: master
       python: 3.7
