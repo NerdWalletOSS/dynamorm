@@ -465,9 +465,9 @@ class DynaModel(object):
             pre_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             as_dict = self.to_dict()
             if unique:
-                resp = self.put_unique(as_dict, **kwargs)
+                resp = self.Table.put_unique(as_dict, **kwargs)
             else:
-                resp = self.put(as_dict, **kwargs)
+                resp = self.Table.put(as_dict, **kwargs)
             self._validated_data = as_dict
             post_save.send(self.__class__, instance=self, put_kwargs=kwargs)
             return resp
