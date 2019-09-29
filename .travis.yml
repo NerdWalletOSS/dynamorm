@@ -45,10 +45,6 @@ matrix:
       env: TOXENV=pypy3-marshmallow,codecov-pypy3
 
 
-before_install:
-  - [ -z "$(git diff origin/master setup.py | grep '\+.*version=')" ] && echo "Please bump the version in setup.py!" && exit 1
-  - [ -z "$(git diff origin/master CHANGELOG.rst)" ] && echo "Please add an entry to CHANGELOG.rst!" && exit 1
-
 install: pip install tox
 script: TOX_SKIP_MISSING_INTERPRETERS="False" tox
 

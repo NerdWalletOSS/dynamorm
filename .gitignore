@@ -3,6 +3,7 @@
 
 /build/
 /configs/
+/docs/_build/
 dist/
 .cache/
 .eggs/
