@@ -20,6 +20,7 @@ class DynamoLocal(object):
     Spins up a local dynamo instance. This should ONLY be used for testing!! This instance
     will register the cleanup method ``shutdown`` with the ``atexit`` module.
     """
+
     def __init__(self, dynamo_dir, port=None):
         self.port = port or get_random_port()
         if not os.path.isdir(dynamo_dir):
@@ -27,38 +28,41 @@ class DynamoLocal(object):
             assert not os.path.exists(dynamo_dir)
             os.makedirs(dynamo_dir, 0o755)
 
-        if not os.path.exists(os.path.join(dynamo_dir, 'DynamoDBLocal.jar')):
+        if not os.path.exists(os.path.join(dynamo_dir, "DynamoDBLocal.jar")):
             temp_fd, temp_file = tempfile.mkstemp()
             os.close(temp_fd)
             log.info("Downloading dynamo local to: {0}".format(temp_file))
             urlretrieve(
-                'https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz',
-                temp_file
+                "https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz",
+                temp_file,
             )
 
             log.info("Extracting dynamo local...")
-            archive = tarfile.open(temp_file, 'r:gz')
+            archive = tarfile.open(temp_file, "r:gz")
             archive.extractall(dynamo_dir)
             archive.close()
 
             os.unlink(temp_file)
 
-        log.info("Running dynamo from {dir} on port {port}".format(
-            dir=dynamo_dir,
-            port=self.port
-        ))
+        log.info(
+            "Running dynamo from {dir} on port {port}".format(
+                dir=dynamo_dir, port=self.port
+            )
+        )
         self.dynamo_proc = subprocess.Popen(
             (
-                'java',
-                '-Djava.library.path=./DynamoDBLocal_lib',
-                '-jar', 'DynamoDBLocal.jar',
-                '-sharedDb',
-                '-inMemory',
-                '-port', str(self.port)
+                "java",
+                "-Djava.library.path=./DynamoDBLocal_lib",
+                "-jar",
+                "DynamoDBLocal.jar",
+                "-sharedDb",
+                "-inMemory",
+                "-port",
+                str(self.port),
             ),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=dynamo_dir
+            cwd=dynamo_dir,
         )
         atexit.register(self.shutdown)
 
@@ -74,7 +78,7 @@ def get_random_port():
     random_port = random.randint(25000, 55000)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        result = sock.connect_ex(('127.0.0.1', random_port))
+        result = sock.connect_ex(("127.0.0.1", random_port))
     finally:
         sock.close()
     if result == 0:

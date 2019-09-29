@@ -18,6 +18,7 @@ class DynaModelException(DynamoException):
 @six.python_2_unicode_compatible
 class ValidationError(DynaModelException):
     """Schema validation failed"""
+
     def __init__(self, raw, schema_name, errors, *args, **kwargs):
         super(ValidationError, self).__init__(*args, **kwargs)
         self.errors = errors
@@ -25,13 +26,14 @@ class ValidationError(DynaModelException):
         self.schema_name = schema_name
 
     def __str__(self):
-        log.debug('Validation failure for data: {0}'.format(self.raw))
-        return 'Validation failed for schema {0}. Errors: {1}'.format(
+        log.debug("Validation failure for data: {0}".format(self.raw))
+        return "Validation failed for schema {0}. Errors: {1}".format(
             self.schema_name, self.errors
         )
 
 
 # --- Table exceptions ---
+
 
 class DynamoTableException(DynamoException):
     """Base exception class for all DynamoTable errors"""

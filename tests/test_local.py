@@ -9,7 +9,7 @@ DYNAMO_CONN_SLEEP = 1
 
 
 def test_shutdown_local_dynamo():
-    dynamo_local_dir = os.environ.get('DYNAMO_LOCAL', 'build/dynamo-local')
+    dynamo_local_dir = os.environ.get("DYNAMO_LOCAL", "build/dynamo-local")
     dynamo_local = DynamoLocal(dynamo_local_dir)
     connected = -1
     for _ in range(DYNAMO_CONN_RETRIES):
@@ -26,7 +26,7 @@ def test_shutdown_local_dynamo():
 def _connect_to_port(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        result = sock.connect_ex(('127.0.0.1', port))
+        result = sock.connect_ex(("127.0.0.1", port))
     finally:
         sock.close()
     return result

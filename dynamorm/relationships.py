@@ -127,21 +127,32 @@ class DefaultBackReference(object):
 
     For example, if there's a relationship defined on a model named ``OrderItem`` this would render ``order_item``.
     """
+
     def __init__(self, relationship):
         self.relationship = relationship
 
     def __str__(self):
-        return ''.join([
-            x if x.islower() else '_{0}'.format(x.lower())
-            for x in self.relationship.this.__name__
-        ]).strip('_')
+        return "".join(
+            [
+                x if x.islower() else "_{0}".format(x.lower())
+                for x in self.relationship.this.__name__
+            ]
+        ).strip("_")
 
 
 class Relationship(object):
     BackReferenceClass = None
     BackReferenceTemplate = None
 
-    def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference):
+    def __init__(
+        self,
+        other,
+        query,
+        index=None,
+        back_query=None,
+        back_index=None,
+        back_reference=DefaultBackReference,
+    ):
         self.this = None
         self.other = other
         self.query = query
@@ -154,7 +165,7 @@ class Relationship(object):
         self.accessor = self.other if index is None else getattr(self.other, index)
 
     def __repr__(self):
-        return '{0}({1}, {2})'.format(self.__class__.__name__, self.this, self.other)
+        return "{0}({1}, {2})".format(self.__class__.__name__, self.this, self.other)
 
     def set_this_model(self, model):
         """Called from the metaclass once the model the relationship is being placed on has been initialized"""
@@ -169,9 +180,11 @@ class Relationship(object):
 
     def set_back_reference(self):
         """Sets up a back reference to this model on the other model"""
-        assert self.this is not None, "This model must be set prior to setting up a back reference!"
+        assert (
+            self.this is not None
+        ), "This model must be set prior to setting up a back reference!"
 
-        if self.BackReferenceClass == 'self':
+        if self.BackReferenceClass == "self":
             back_ref_cls = self.__class__
         else:
             back_ref_cls = self.BackReferenceClass
@@ -181,7 +194,7 @@ class Relationship(object):
             query=self.back_query,
             index=self.back_index,
             back_query=self.query,
-            back_reference=None
+            back_reference=None,
         )
         self.back_reference_relationship.set_this_model(self.other)
 
@@ -203,13 +216,28 @@ class OneToOne(Relationship):
     throughput.  By splitting the data into two tables you can have lower throughput on the "secondary" table as the
     items will be lazily fetched only as they are accessed.
     """
-    BackReferenceClass = 'self'
-    BackReferenceTemplate = '{back_reference}'
 
-    def __init__(self, other, query, index=None, back_query=None, back_index=None, back_reference=DefaultBackReference,
-                 auto_create=True):
-        super(OneToOne, self).__init__(other=other, query=query, index=index, back_query=back_query,
-                                       back_index=back_index, back_reference=back_reference)
+    BackReferenceClass = "self"
+    BackReferenceTemplate = "{back_reference}"
+
+    def __init__(
+        self,
+        other,
+        query,
+        index=None,
+        back_query=None,
+        back_index=None,
+        back_reference=DefaultBackReference,
+        auto_create=True,
+    ):
+        super(OneToOne, self).__init__(
+            other=other,
+            query=query,
+            index=index,
+            back_query=back_query,
+            back_index=back_index,
+            back_reference=back_reference,
+        )
         self.other_inst = None
         self.auto_create = auto_create
 
@@ -255,7 +283,7 @@ class OneToOne(Relationship):
             self.other_inst = next(results)
         except StopIteration:
             if create_missing:
-                query['partial'] = True
+                query["partial"] = True
                 self.other_inst = self.other(**query)
 
     def assign(self, value):
@@ -282,20 +310,25 @@ class OneToMany(Relationship):
     """A One to Many relationship is defined on the "parent" model, where each instance has many related "child"
     instances of another model.
     """
+
     BackReferenceClass = OneToOne
-    BackReferenceTemplate = '{back_reference}'
+    BackReferenceTemplate = "{back_reference}"
 
     def __get__(self, obj, owner):
-        return QuerySet(self.other, self.query(obj), self.accessor if self.index else None)
+        return QuerySet(
+            self.other, self.query(obj), self.accessor if self.index else None
+        )
 
 
 class ManyToOne(OneToOne):
     """A Many To One relationship is defined on the "child" model, where many child models have one parent model."""
+
     BackReferenceClass = OneToMany
-    BackReferenceTemplate = '{back_reference}s'
+    BackReferenceTemplate = "{back_reference}s"
 
 
 # XXX TODO: ManyToMany
+
 
 class QuerySet(object):
     # XXX TODO: QuerySet should be moved to it's own namespace and should also be leveraged by the model classes so that
@@ -316,11 +349,11 @@ class QuerySet(object):
 
     def count(self):
         query = self.query.copy()
-        query['query_kwargs'] = dict(Select='COUNT')
+        query["query_kwargs"] = dict(Select="COUNT")
         if self.index:
-            query['query_kwargs']['IndexName'] = self.index.name
+            query["query_kwargs"]["IndexName"] = self.index.name
         resp = self.model.Table.query(**query)
-        return resp['Count']
+        return resp["Count"]
 
     def filter(self, **kwargs):
         new_query = self.query.copy()
