@@ -649,7 +649,7 @@ def test_field_subclassing():
 def test_delete_normalized_keys(dynamo_local, request):
     class Model(DynaModel):
         class Table:
-            name = "mymodel"
+            name = "delete_normalized"
             hash_key = "uuid"
             read = 10
             write = 10
