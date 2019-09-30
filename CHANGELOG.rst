@@ -1,3 +1,8 @@
+0.9.10 - 2019.09.30
+###################
+
+* Bug fix: Ensure keys are normalized when calling ``.delete()`` on a model.
+
 0.9.9 - 2019.09.30
 ##################
 
