@@ -17,10 +17,10 @@ def is_marshmallow():
 
 
 if is_marshmallow():
-    from marshmallow.fields import String, Integer as Number
+    from marshmallow.fields import String, Integer as Number, UUID
     from marshmallow import validates, ValidationError as SchemaValidationError
 else:
-    from schematics.types import StringType as String, IntType as Number
+    from schematics.types import StringType as String, IntType as Number, UUIDType as UUID
     from schematics.exceptions import ValidationError as SchemaValidationError
 
 try:
@@ -640,3 +640,25 @@ def test_field_subclassing():
             pass
 
     assert isinstance(MyModel.Schema.dynamorm_fields()["foo"], String)
+
+
+def test_delete_normalized_keys(dynamo_local, request):
+    class Model(DynaModel):
+        class Table:
+            name = "mymodel"
+            hash_key = "uuid"
+            read = 10
+            write = 10
+
+        class Schema:
+            uuid = UUID(required=True)
+            foo = String()
+
+    Model.Table.create_table()
+    request.addfinalizer(Model.Table.delete)
+
+    Model(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022").save()
+
+    Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022").delete()
+
+    assert Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022") is None
