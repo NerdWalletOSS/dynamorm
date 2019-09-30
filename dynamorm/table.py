@@ -582,7 +582,10 @@ class DynamoTable3(DynamoCommon3):
                 writer.put_item(Item=remove_nones(item))
 
     def update(self, update_item_kwargs=None, conditions=None, **kwargs):
-        update_item_kwargs = update_item_kwargs or {}
+        # copy update_item_kwargs, so that we don't mutate the original later on
+        update_item_kwargs = dict(
+            (k, v) for k, v in six.iteritems(update_item_kwargs or {})
+        )
         conditions = conditions or {}
         update_key = {}
         update_fields = []
@@ -646,7 +649,10 @@ class DynamoTable3(DynamoCommon3):
             raise
 
     def get_batch(self, keys, consistent=False, attrs=None, batch_get_kwargs=None):
-        batch_get_kwargs = batch_get_kwargs or {}
+        # copy batch_get_kwargs, so that we don't mutate the original later on
+        batch_get_kwargs = dict(
+            (k, v) for k, v in six.iteritems(batch_get_kwargs or {})
+        )
 
         batch_get_kwargs["Keys"] = []
         for kwargs in keys:
@@ -679,7 +685,8 @@ class DynamoTable3(DynamoCommon3):
                 break
 
     def get(self, consistent=False, get_item_kwargs=None, **kwargs):
-        get_item_kwargs = get_item_kwargs or {}
+        # copy get_item_kwargs, so that we don't mutate the original later on
+        get_item_kwargs = dict((k, v) for k, v in six.iteritems(get_item_kwargs or {}))
 
         for k, v in six.iteritems(kwargs):
             if k not in self.schema.dynamorm_fields():
@@ -697,7 +704,10 @@ class DynamoTable3(DynamoCommon3):
             return response["Item"]
 
     def query(self, *args, **kwargs):
-        query_kwargs = kwargs.pop("query_kwargs", {})
+        # copy query_kwargs, so that we don't mutate the original later on
+        query_kwargs = dict(
+            (k, v) for k, v in six.iteritems(kwargs.pop("query_kwargs", {}))
+        )
         filter_kwargs = {}
 
         if "IndexName" in query_kwargs:
@@ -747,7 +757,10 @@ class DynamoTable3(DynamoCommon3):
         return self.table.query(**query_kwargs)
 
     def scan(self, *args, **kwargs):
-        scan_kwargs = kwargs.pop("scan_kwargs", None) or {}
+        # copy scan_kwargs, so that we don't mutate the original later on
+        scan_kwargs = dict(
+            (k, v) for k, v in six.iteritems(kwargs.pop("scan_kwargs", {}))
+        )
 
         filter_expression = Q(**kwargs)
         for arg in args:
