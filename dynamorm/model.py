@@ -587,6 +587,7 @@ class DynaModel(object):
         """Delete this record in the table."""
         delete_item_kwargs = {}
         self._add_hash_key_values(delete_item_kwargs)
+        self._normalize_keys_in_kwargs(delete_item_kwargs)
 
         pre_delete.send(self.__class__, instance=self)
         resp = self.Table.delete_item(**delete_item_kwargs)
