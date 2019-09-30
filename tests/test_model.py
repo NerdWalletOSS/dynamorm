@@ -20,7 +20,11 @@ if is_marshmallow():
     from marshmallow.fields import String, Integer as Number, UUID
     from marshmallow import validates, ValidationError as SchemaValidationError
 else:
-    from schematics.types import StringType as String, IntType as Number, UUIDType as UUID
+    from schematics.types import (
+        StringType as String,
+        IntType as Number,
+        UUIDType as UUID,
+    )
     from schematics.exceptions import ValidationError as SchemaValidationError
 
 try:
