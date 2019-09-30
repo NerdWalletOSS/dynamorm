@@ -487,7 +487,7 @@ class DynaModel(object):
         return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
     def _add_hash_key_values(self, hash_dict):
-        """Mutate a dicitonary to add key: value pair for a hash and (if specified) sort key.
+        """Mutate a dictionary to add key: value pair for a hash and (if specified) sort key.
         """
         hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
         try:
@@ -587,6 +587,7 @@ class DynaModel(object):
         """Delete this record in the table."""
         delete_item_kwargs = {}
         self._add_hash_key_values(delete_item_kwargs)
+        self._normalize_keys_in_kwargs(delete_item_kwargs)
 
         pre_delete.send(self.__class__, instance=self)
         resp = self.Table.delete_item(**delete_item_kwargs)
