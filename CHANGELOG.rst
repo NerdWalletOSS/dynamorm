@@ -1,3 +1,10 @@
+0.9.11 - 2019.09.30
+###################
+
+* Bug fix: Don't mutate dictionaries passed to table methods.
+
+  This caused problems with ``ReadIterator`` objects that called ``.again()`` because the underlying Table object would end up mutating state on the iterator object.
+
 0.9.10 - 2019.09.30
 ###################
 
