@@ -668,3 +668,11 @@ def test_delete_normalized_keys(dynamo_local, request):
     Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022").delete()
 
     assert Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022") is None
+
+
+def test_query_with_id_and_recursive(TestModel, TestModel_entries_xlarge, dynamo_local):
+    """Ensure that we don't raise a KeyCondition error when our query + recursive returns more than a page
+
+    https://github.com/NerdWalletOSS/dynamorm/pull/63/
+    """
+    assert len(list(TestModel.query(foo="first").recursive())) == 4000

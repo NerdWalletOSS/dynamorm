@@ -388,12 +388,12 @@ def test_scan_iterator(TestModel, TestModel_entries_xlarge, dynamo_local, mocker
     results = ScanIterator(TestModel)
 
     assert TestModel.Table.scan.call_count == 0
-    assert len(list(results)) == 3322
+    assert len(list(results)) == 3299
     assert TestModel.Table.scan.call_count == 1
 
     results = ScanIterator(TestModel).start(results.last)
 
-    assert len(list(results)) == 678
+    assert len(list(results)) == 701
     assert TestModel.Table.scan.call_count == 2
 
 
