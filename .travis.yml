@@ -15,34 +15,34 @@ matrix:
       env: TOXENV=docs
 
     - python: 2.7
-      env: TOXENV=py27-schematics,codecov-py27
+      env: TOXENV=py27-schematics-codecov
     - python: 2.7
-      env: TOXENV=py27-marshmallow,codecov-py27
+      env: TOXENV=py27-marshmallow-codecov
 
     - python: 3.5
-      env: TOXENV=py35-schematics,codecov-py35
+      env: TOXENV=py35-schematics-codecov
     - python: 3.5
-      env: TOXENV=py35-marshmallow,codecov-py35
+      env: TOXENV=py35-marshmallow-codecov
 
     - python: 3.6
-      env: TOXENV=py36-schematics,codecov-py36
+      env: TOXENV=py36-schematics-codecov
     - python: 3.6
-      env: TOXENV=py36-marshmallow,codecov-py36
+      env: TOXENV=py36-marshmallow-codecov
 
     - python: 3.7
-      env: TOXENV=py37-schematics,codecov-py37
+      env: TOXENV=py37-schematics-codecov
     - python: 3.7
-      env: TOXENV=py37-marshmallow,codecov-py37
+      env: TOXENV=py37-marshmallow-codecov
 
     - python: pypy
-      env: TOXENV=pypy2-schematics,codecov-pypy2
+      env: TOXENV=pypy2-schematics-codecov
     - python: pypy
-      env: TOXENV=pypy2-marshmallow,codecov-pypy2
+      env: TOXENV=pypy2-marshmallow-codecov
 
     - python: pypy3
-      env: TOXENV=pypy3-schematics,codecov-pypy3
+      env: TOXENV=pypy3-schematics-codecov
     - python: pypy3
-      env: TOXENV=pypy3-marshmallow,codecov-pypy3
+      env: TOXENV=pypy3-marshmallow-codecov
 
 
 install: pip install tox
@@ -61,7 +61,7 @@ deploy:
     on:
       branch: master
       python: 3.7
-      condition: $TOXENV = py37-marshmallow,codecov-py37
+      condition: $TOXENV = py37-marshmallow-codecov
     distributions: "sdist bdist_wheel"
 
   - provider: pages

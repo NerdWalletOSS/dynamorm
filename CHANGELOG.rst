@@ -1,3 +1,8 @@
+0.9.9 - 2019.09.30
+##################
+
+* Performance: Avoid validating twice when calling ``.save()`` on a model.
+
 0.9.8 - 2019.09.29
 ##################
 
