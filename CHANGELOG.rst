@@ -1,3 +1,9 @@
+0.9.12 - 2019.09.30
+###################
+
+* Ensure GitHub pages serves our static documentation content
+* No functional library changes
+
 0.9.11 - 2019.09.30
 ###################
 
