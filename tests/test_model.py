@@ -659,6 +659,8 @@ def test_delete_normalized_keys(dynamo_local, request):
 
     Model(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022").save()
 
+    # We originally did not normalize keys when calling delete, which would cause this
+    # to fail with: TypeError: Unsupported type "<class 'uuid.UUID'>"
     Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022").delete()
 
     assert Model.get(uuid="cc1dea15-c359-455a-a53e-c0a7a31ee022") is None
