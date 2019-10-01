@@ -54,6 +54,7 @@ import six
 
 from boto3.dynamodb.conditions import Key, Attr
 from dynamorm.exceptions import (
+    InvalidTableAttribute,
     MissingTableAttribute,
     TableNotActive,
     InvalidSchemaField,

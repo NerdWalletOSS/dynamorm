@@ -1,3 +1,9 @@
+0.9.13 - 2019.10.01
+###################
+
+* Add support for PAY_PER_REQUEST billing mode
+* Bump minimum version of boto3 to 1.9.54
+
 0.9.12 - 2019.09.30
 ###################
 
