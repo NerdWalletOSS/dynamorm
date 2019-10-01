@@ -7,6 +7,7 @@ from dynamorm.exceptions import (
     DynaModelException,
     HashKeyExists,
     InvalidSchemaField,
+    InvalidTableAttribute,
     MissingTableAttribute,
     ValidationError,
 )
@@ -79,10 +80,31 @@ def test_parent_inner_classes():
 def test_table_validation():
     """Defining a model with missing table attributes should raise exceptions"""
     with pytest.raises(MissingTableAttribute):
-
+        # Missing hash_key
         class Model(DynaModel):
             class Table:
                 name = "table"
+
+            class Schema:
+                foo = String(required=True)
+
+    with pytest.raises(MissingTableAttribute):
+        # Missing read/write
+        class Model(DynaModel):
+            class Table:
+                name = "table"
+                hash_key = "foo"
+
+            class Schema:
+                foo = String(required=True)
+
+    with pytest.raises(InvalidTableAttribute):
+        # Invalid billing mode
+        class Model(DynaModel):
+            class Table:
+                name = "table"
+                hash_key = "foo"
+                billing_mode = "FOO"
 
             class Schema:
                 foo = String(required=True)

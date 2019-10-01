@@ -111,9 +111,6 @@ class DynamoCommon3(object):
     @property
     def provisioned_throughput(self):
         """Return an appropriate ProvisionedThroughput, based on our attributes"""
-        if self.billing_mode != "PROVISIONED":
-            return None
-
         return {"ReadCapacityUnits": self.read, "WriteCapacityUnits": self.write}
 
 
@@ -134,7 +131,6 @@ class DynamoIndex3(DynamoCommon3):
     def __init__(self, table, schema):
         self.table = table
         self.schema = schema
-        self.billing_mode = table.billing_mode
 
         super(DynamoIndex3, self).__init__()
 
@@ -175,7 +171,7 @@ class DynamoGlobalIndex3(DynamoIndex3):
     @property
     def index_args(self):
         args = super(DynamoGlobalIndex3, self).index_args
-        if self.billing_mode == "PROVISIONED":
+        if self.table.billing_mode == "PROVISIONED":
             args["ProvisionedThroughput"] = self.provisioned_throughput
         return args
 
@@ -196,6 +192,17 @@ class DynamoTable3(DynamoCommon3):
         self.schema = schema
 
         super(DynamoTable3, self).__init__()
+
+        if self.billing_mode not in ("PROVISIONED", "PAY_PER_REQUEST"):
+            raise InvalidTableAttribute(
+                "valid values for billing_mode are: PROVISIONED|PAY_PER_REQUEST"
+            )
+
+        if self.billing_mode == "PROVISIONED" and (not self.read or not self.write):
+            raise MissingTableAttribute(
+                "The read/write attributes are required to create "
+                "a table when billing_mode is 'PROVISIONED'"
+            )
 
         self.indexes = {}
         if indexes:
@@ -353,17 +360,6 @@ class DynamoTable3(DynamoCommon3):
 
         :param bool wait: If set to True, the default, this call will block until the table is created
         """
-        if self.billing_mode not in ("PROVISIONED", "PAY_PER_REQUEST"):
-            raise InvalidTableAttribute(
-                "valid values for billing_mode are: PROVISIONED|PAY_PER_REQUEST"
-            )
-
-        if self.billing_mode == "PROVISIONED" and (not self.read or not self.write):
-            raise MissingTableAttribute(
-                "The read/write attributes are required to create "
-                "a table when billing_mode is 'PROVISIONED'"
-            )
-
         extra_args = collections.defaultdict(list)
         for index in six.itervalues(self.indexes):
             extra_args[index.ARG_KEY].append(index.index_args)
