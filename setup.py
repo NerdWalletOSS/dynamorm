@@ -5,7 +5,7 @@ with open("README.rst", "r") as readme_fd:
 
 setup(
     name="dynamorm",
-    version="0.9.12",
+    version="0.9.13",
     description="DynamORM is a Python object & relation mapping library for Amazon's DynamoDB service.",
     long_description=long_description,
     author="Evan Borgstrom",
@@ -13,7 +13,7 @@ setup(
     url="https://github.com/NerdWalletOSS/DynamORM",
     license="Apache License Version 2.0",
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
-    install_requires=["blinker>=1.4,<2.0", "boto3>=1.3,<2.0", "six"],
+    install_requires=["blinker>=1.4,<2.0", "boto3>=1.9.54,<2.0", "six"],
     extras_require={
         "marshmallow": ["marshmallow>=2.15.1,<4"],
         "schematics": ["schematics>=2.1.0,<3"],

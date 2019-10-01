@@ -43,6 +43,10 @@ class MissingTableAttribute(DynamoTableException):
     """A required attribute is missing"""
 
 
+class InvalidTableAttribute(DynamoTableException):
+    """An attribute has an invalid value"""
+
+
 class InvalidSchemaField(DynamoTableException):
     """A field provided does not exist in the schema"""
 
