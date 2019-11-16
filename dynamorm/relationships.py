@@ -238,10 +238,12 @@ class OneToOne(Relationship):
             back_index=back_index,
             back_reference=back_reference,
         )
+        self.cache = {}
         self.other_inst = None
         self.auto_create = auto_create
 
     def __get__(self, obj, owner):
+        self.other_inst = self.cache.get(str(obj.__dict__))
         if self.other_inst is None:
             self.get_other_inst(obj, create_missing=self.auto_create)
         return self.other_inst
@@ -285,6 +287,8 @@ class OneToOne(Relationship):
             if create_missing:
                 query["partial"] = True
                 self.other_inst = self.other(**query)
+        finally:
+            self.cache[str(obj.__dict__)] = self.other_inst
 
     def assign(self, value):
         return self.back_query(value)
