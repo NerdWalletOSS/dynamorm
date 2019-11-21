@@ -180,6 +180,7 @@ class DynamoTable3(DynamoCommon3):
 
     session_kwargs = None
     resource_kwargs = None
+    session = None
 
     stream = None
 
@@ -233,6 +234,8 @@ class DynamoTable3(DynamoCommon3):
         ``DynamoTable3.get_resource`` will end up replacing the resource_kwargs on all classes that do not define their
         own.
         """
+        if cls.session:
+            return cls.session
         if kwargs and not cls.resource_kwargs:
             cls.resource_kwargs = kwargs
 
