@@ -255,7 +255,8 @@ class DynamoTable3(DynamoCommon3):
             if isinstance(resource_config, dict):
                 kwargs["config"] = botocore.config.Config(**resource_config)
 
-        return boto3_session.resource("dynamodb", **kwargs)
+        cls.session = boto3_session.resource("dynamodb", **kwargs)
+        return cls.session
 
     @classmethod
     def get_table(cls, name):
