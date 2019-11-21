@@ -210,6 +210,49 @@ def test_missing_field_validation():
         )
 
 
+def test_validation():
+
+    class Book(DynaModel):
+        class Table:
+            name = "books"
+            hash_key = "id"
+            read = 1
+            write = 1
+    
+        class Schema:
+            id = String(required=True)
+            rank = Number(max_value=5)
+            name = String(required=True)
+
+    Book.Table.create_table()
+
+    # ok
+    b = Book(id="foo", rank=1, name="Foos Gold")
+    b.save()
+
+    # no hash key
+    with pytest.raises(ValidationError):
+        b = Book(rank=1, name="Foos Gold")
+        b.save()
+
+    # no required attribute
+    with pytest.raises(ValidationError):
+        b = Book(id="foo", rank=1)
+        b.save()
+
+    # bad type for attribute
+    with pytest.raises(ValidationError):
+        b = Book(id="foo2", rank="bar", name="Foos Gold")
+        b.save()
+
+    # bad semantics - fails custom validation for attribute
+    with pytest.raises(ValidationError):
+        b = Book(id="foo2", rank=10, name="Foos Gold")
+        b.save()
+
+    Book.Table.delete()
+
+
 def test_index_setup():
     """Ensure our index objects are setup & transformed correctly by our meta class"""
 
