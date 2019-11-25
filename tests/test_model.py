@@ -210,7 +210,13 @@ def test_missing_field_validation():
         )
 
 
-def test_validation():
+def test_validation(dynamo_local):
+
+    if is_marshmallow():
+        from marshmallow.validate import Range
+        number_field = Number(validate=[Range(max=5)])
+    else:
+        number_field = Number(max_value=5)
 
     class Book(DynaModel):
         class Table:
@@ -218,10 +224,10 @@ def test_validation():
             hash_key = "id"
             read = 1
             write = 1
-    
+
         class Schema:
             id = String(required=True)
-            rank = Number(max_value=5)
+            rank = number_field
             name = String(required=True)
 
     Book.Table.create_table()
