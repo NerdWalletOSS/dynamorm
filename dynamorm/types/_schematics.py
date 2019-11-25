@@ -27,7 +27,7 @@ class Schema(SchematicsModel, DynamORMSchema):
     @classmethod
     def dynamorm_validate(cls, obj, partial=False, native=False):
         try:
-            inst = cls(obj, strict=False, partial=partial)
+            inst = cls(obj, strict=False, partial=partial, validate=True)
         except (SchematicsValidationError, ModelConversionError) as e:
             raise ValidationError(obj, cls.__name__, e.messages)
 
