@@ -214,6 +214,7 @@ def test_validation(dynamo_local):
 
     if is_marshmallow():
         from marshmallow.validate import Range
+
         number_field = Number(validate=[Range(max=5)])
     else:
         number_field = Number(max_value=5)
