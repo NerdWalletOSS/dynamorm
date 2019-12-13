@@ -909,7 +909,7 @@ class ReadIterator(six.Iterator):
             self.last = self.resp.get("LastEvaluatedKey", None)
 
         # If a Limit is specified we must not operate in recursive mode
-        if "Limit" in self.dynamo_kwargs:
+        if "Limit" in self.dynamo_kwargs and self._recursive:
             log.warning(
                 "%s was invoked with both a limit and the recursive flag set. "
                 "The recursive flag will be ignored",

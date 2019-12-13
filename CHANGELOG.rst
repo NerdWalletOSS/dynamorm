@@ -1,3 +1,8 @@
+0.9.13 - 2019.12.12
+###################
+
+* Check that recursive mode is enabled before warning about trying to use both limit and recursive.
+
 0.9.12 - 2019.09.30
 ###################
 
