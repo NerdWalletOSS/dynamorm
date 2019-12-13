@@ -4,6 +4,7 @@ import os
 import time
 
 import pytest
+from dateutil import tz
 
 from dynamorm import (
     DynaModel,
@@ -43,7 +44,9 @@ def TestModel():
 
             def _deserialize(self, value, attr, data, **kwargs):
                 try:
-                    return datetime.datetime.fromtimestamp(float(value) / 1000000)
+                    return datetime.datetime.fromtimestamp(
+                        float(value) / 1000000, tz=tz.tzutc()
+                    )
                 except TypeError:
                     if isinstance(value, datetime.datetime):
                         return value
@@ -108,7 +111,9 @@ def TestModel():
 
             def to_native(self, value, context=None):
                 try:
-                    return datetime.datetime.fromtimestamp(float(value) / 1000000)
+                    return datetime.datetime.fromtimestamp(
+                        float(value) / 1000000, tz=tz.tzutc()
+                    )
                 except TypeError:
                     if isinstance(value, datetime.datetime):
                         return value

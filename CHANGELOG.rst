@@ -1,3 +1,8 @@
+0.9.14 - 2019.12.13
+###################
+
+* Ensure that ``dynamorm_validate`` actually calls ``schematics`` validation.
+
 0.9.13 - 2019.12.12
 ###################
 
