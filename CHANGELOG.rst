@@ -1,3 +1,33 @@
+0.10.0 - 2019.12.18
+###################
+
+* Enable support for updating nested paths in ``Table.update``.
+
+  DynamoDB allows updating of nested attributes, using something like JSON path. From the `DynamoDB Developer Guide`_::
+
+    aws dynamodb update-item \
+        --table-name ProductCatalog \
+        --key '{"Id":{"N":"789"}}' \
+        --update-expression "SET #pr.#5star[1] = :r5, #pr.#3star = :r3" \
+        --expression-attribute-names '{
+            "#pr": "ProductReviews",
+            "#5star": "FiveStar",
+            "#3star": "ThreeStar"
+        }' \
+        --expression-attribute-values '{
+            ":r5": { "S": "Very happy with my purchase" },
+            ":r3": {
+                "L": [
+                    { "S": "Just OK - not that great" }
+                ]
+            }
+        }' \
+        --return-values ALL_NEW
+
+  Note that the attribute names along the nested path are broken up - this helps distinguish a nested update from a flat key like ``my.flat.key`` that contains a period.
+
+.. _`DynamoDB Developer Guide`: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
+
 0.9.14 - 2019.12.13
 ###################
 
