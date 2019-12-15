@@ -153,8 +153,8 @@ def TestModel():
                 bar = types.StringType(required=True)
                 baz = types.StringType(required=True)
                 count = types.IntType()
-                child = compound.DictType(types.StringType)
-                things = compound.ListType(types.BaseType)
+                child = compound.DictType(types.BaseType)
+                things = compound.ListType(types.StringType)
                 when = types.DateTimeType()
                 created = DynamoTimestampType()
 

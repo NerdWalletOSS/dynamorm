@@ -385,14 +385,18 @@ def test_update_expressions_nested_paths(TestModel):
     assert two.child == {"sub": "two"}
 
     # Test nested path updates.
-    two.update(child__foo__bar="thing")
-    assert two.child == {"sub": "two", "foo": {"bar": "thing"}}
+    two.update(child__foo={"bar": "thing", "baz": "thing"})
+    assert two.child == {"sub": "two", "foo": {"bar": "thing", "baz": "thing"}}
+    two.update(child__foo__bar="nothing")
+    assert two.child == {"sub": "two", "foo": {"bar": "nothing", "baz": "thing"}}
+    two.update(child__foo={"bar": "nothing"})
+    assert two.child == {"sub": "two", "foo": {"bar": "nothing"}}
 
     # Test an operation (here, `if_not_exists`) on a nested path.
-    two.update(child__foo__bar__if_not_exists="nothing")
-    assert two.child["foo"]["bar"] == "thing"
-    two.update(child__foo__baz__if_not_exists="nothing")
-    assert two.child["foo"]["baz"] == "nothing"
+    two.update(child__foo__bar__if_not_exists="new-thing")
+    assert two.child["foo"]["bar"] == "nothing"
+    two.update(child__foo__baz__if_not_exists="new-thing")
+    assert two.child["foo"]["baz"] == "new-thing"
 
 
 def test_scan_iterator(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):
