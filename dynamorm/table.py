@@ -587,37 +587,50 @@ class DynamoTable3(DynamoCommon3):
             (k, v) for k, v in six.iteritems(update_item_kwargs or {})
         )
         conditions = conditions or {}
-        update_key = {}
         update_fields = []
         expr_names = {}
         expr_vals = {}
 
-        UPDATE_FUNCTION_TEMPLATES = {
-            "append": "#uk_{0} = list_append(#uk_{0}, :uv_{0})",
-            "plus": "#uk_{0} = #uk_{0} + :uv_{0}",
-            "minus": "#uk_{0} = #uk_{0} - :uv_{0}",
-            "if_not_exists": "#uk_{0} = if_not_exists(#uk_{0}, :uv_{0})",
-            None: "#uk_{0} = :uv_{0}",
+        def get_update_expr_for_key(id_, parts):
+            UPDATE_FUNCTION_TEMPLATES = {
+                "append": "#uk_{0} = list_append(#uk_{0}, :uv_{0})",
+                "plus": "#uk_{0} = #uk_{0} + :uv_{0}",
+                "minus": "#uk_{0} = #uk_{0} - :uv_{0}",
+                "if_not_exists": "#uk_{0} = if_not_exists(#uk_{0}, :uv_{0})",
+                None: "#uk_{0} = :uv_{0}",
+            }
+
+            if len(parts) == 1 or parts[-1] not in UPDATE_FUNCTION_TEMPLATES:
+                function = None
+            else:
+                parts, function = parts[:-1], parts[-1]
+
+            return UPDATE_FUNCTION_TEMPLATES[function].format(id_), {"#uk_{0}".format(id_): "__".join(parts)}
+
+        # First, pick out the keys for the update.
+        update_key = {
+            key: kwargs.pop(key)
+            for key in (self.hash_key, self.range_key)
+            if key in kwargs
         }
 
-        for key, value in six.iteritems(kwargs):
-            try:
-                key, function = key.split("__", 1)
-            except ValueError:
-                function = None
+        # Then, generate the keys and values for the update-expression.
+        for i, key in enumerate(kwargs):
+            key_parts = key.split("__")
+            top_level_key = key_parts[0]
 
-            # make sure the field (key) exists
-            if key not in self.schema.dynamorm_fields():
+            # Make sure the top-level field (key) exists
+            # XXX TODO: Should we validate nested keys as well?
+            if top_level_key not in self.schema.dynamorm_fields():
                 raise InvalidSchemaField(
                     "{0} does not exist in the schema fields".format(key)
                 )
 
-            if key in (self.hash_key, self.range_key):
-                update_key[key] = value
-            else:
-                update_fields.append(UPDATE_FUNCTION_TEMPLATES[function].format(key))
-                expr_names["#uk_{0}".format(key)] = key
-                expr_vals[":uv_{0}".format(key)] = value
+            # Add the actual field expression, keys, and value.
+            field_expr, field_expr_names = get_update_expr_for_key(i, key_parts)
+            update_fields.append(field_expr)
+            expr_names.update(field_expr_names)
+            expr_vals[":uv_{0}".format(i)] = kwargs[key]
 
         update_item_kwargs["Key"] = update_key
         update_item_kwargs["UpdateExpression"] = "SET {0}".format(
