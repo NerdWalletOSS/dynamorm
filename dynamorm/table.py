@@ -582,6 +582,67 @@ class DynamoTable3(DynamoCommon3):
             for item in items:
                 writer.put_item(Item=remove_nones(item))
 
+    def get_update_expr_for_key(self, id_, parts):
+        """Given a key and a unique id, return all the information required
+        for the update expression. This includes the actual field operations,
+        a dictionary of generated field names, and the generated field value.
+
+        To account for nested keys, the generated field expression placeholders
+        are of the form::
+
+            #uk_0_0 = :uv_0
+            #uk_0_0.#uk_0_1 = :uv_0
+            #uk_0_0.#uk_0_1.#uk_0_2 = :uv_0
+            ...
+
+        Note that if the value of a part - e.g #uk_0_1 - itself has a period ``.``,
+        that is interpreted literally and not as nest in the document path. That is::
+
+            #uk_0_0.#uk_0_1 = :uv_0
+            {
+                "#uk_0_0": "foo",
+                "#uk_0_1": "bar.baz"
+            }
+            {
+                ":uv_0": 42
+            }
+
+        ...will result in the value::
+
+            "foo": {
+                "bar.baz": 42
+            }
+
+        :param id_: Unique id for this key
+        :param parts: List of parts that make up this key
+        :rtype: tuple[str, dict, str]
+        """
+        UPDATE_FUNCTION_TEMPLATES = {
+            "append": "{key} = list_append({key}, {value})",
+            "plus": "{key} = {key} + {value}",
+            "minus": "{key} = {key} - {value}",
+            "if_not_exists": "{key} = if_not_exists({key}, {value})",
+            None: "{key} = {value}",
+        }
+
+        if len(parts) == 1 or parts[-1] not in UPDATE_FUNCTION_TEMPLATES:
+            function = None
+        else:
+            parts, function = parts[:-1], parts[-1]
+
+        field_value = ":uv_{0}".format(id_)
+        field_expr_names = OrderedDict([
+            ("#uk_{0}_{1}".format(id_, part_id), part_name)
+            for part_id, part_name in enumerate(parts)
+        ])
+        field_name = ".".join(six.iterkeys(field_expr_names))
+
+        return (
+            UPDATE_FUNCTION_TEMPLATES[function].format(key=field_name, value=field_value),
+            field_expr_names,
+            field_value,
+        )
+
     def update(self, update_item_kwargs=None, conditions=None, **kwargs):
         # copy update_item_kwargs, so that we don't mutate the original later on
         update_item_kwargs = dict(
@@ -591,67 +652,6 @@ class DynamoTable3(DynamoCommon3):
         update_fields = []
         expr_names = {}
         expr_vals = {}
-
-        def get_update_expr_for_key(id_, parts):
-            """Given a key and a unique id, return all the information required
-            for the update expression. This includes the actual field operations,
-            a dictionary of generated field names, and the generated field value.
-
-            To account for nested keys, the generated field expression placeholders
-            are of the form::
-
-                #uk_0_0 = :uv_0
-                #uk_0_0.#uk_0_1 = :uv_0
-                #uk_0_0.#uk_0_1.#uk_0_2 = :uv_0
-                ...
-
-            Note that if the value of a part - e.g #uk_0_1 - itself has a period ``.``,
-            that is interpreted literally and not as nest in the document path. That is::
-
-                #uk_0_0.#uk_0_1 = :uv_0
-                {
-                    "#uk_0_0": "foo",
-                    "#uk_0_1": "bar.baz"
-                }
-                {
-                    ":uv_0": 42
-                }
-
-            ...will result in the value::
-
-                "foo": {
-                    "bar.baz": 42
-                }
-
-            :param id_: Unique id for this key
-            :param parts: List of parts that make up this key
-            :rtype: tuple[str, dict, str]
-            """
-            UPDATE_FUNCTION_TEMPLATES = {
-                "append": "{key} = list_append({key}, {value})",
-                "plus": "{key} = {key} + {value}",
-                "minus": "{key} = {key} - {value}",
-                "if_not_exists": "{key} = if_not_exists({key}, {value})",
-                None: "{key} = {value}",
-            }
-
-            if len(parts) == 1 or parts[-1] not in UPDATE_FUNCTION_TEMPLATES:
-                function = None
-            else:
-                parts, function = parts[:-1], parts[-1]
-
-            field_value = ":uv_{0}".format(id_)
-            field_expr_names = OrderedDict([
-                ("#uk_{0}_{1}".format(id_, part_id), part_name)
-                for part_id, part_name in enumerate(parts)
-            ])
-            field_name = ".".join(six.iterkeys(field_expr_names))
-
-            return (
-                UPDATE_FUNCTION_TEMPLATES[function].format(key=field_name, value=field_value),
-                field_expr_names,
-                field_value,
-            )
 
         # First, pick out the keys for the update.
         update_key = {
@@ -673,7 +673,7 @@ class DynamoTable3(DynamoCommon3):
                 )
 
             # Add the actual field expression, keys, and value.
-            field_expr, field_expr_names, field_expr_value = get_update_expr_for_key(i, key_parts)
+            field_expr, field_expr_names, field_expr_value = self.get_update_expr_for_key(i, key_parts)
             update_fields.append(field_expr)
             expr_names.update(field_expr_names)
             expr_vals[field_expr_value] = kwargs[key]

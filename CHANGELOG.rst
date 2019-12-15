@@ -1,9 +1,32 @@
 0.10.0 - 2019.12.18
 ###################
 
-* Enable support for updating nested paths in ``Table.update``.
+* Enable support for updating nested paths in ``Table.update``. Like functions (like ``minus`` or ``if_not_exists``) nested paths are also separated using the double-underscore syntax. For example, given an attribute ``foo`` of an item ``i``:::
 
-  DynamoDB allows updating of nested attributes, using something like JSON path. From the `DynamoDB Developer Guide`_::
+    "foo": {
+        "bar": {
+            "a": 1
+        },
+        "baz": 10
+    }
+
+    i.update(foo__bar__a=42)
+    "foo": {
+        "bar": {
+            "a": 42
+        },
+        "baz": 10
+    }
+
+    i.update(foo__baz__plus=32)
+    "foo": {
+        "bar": {
+            "a": 42
+        },
+        "baz": 42
+    }
+
+  This works because DynamoDB allows updating of nested attributes, using something like JSON path. From the `DynamoDB Developer Guide`_::
 
     aws dynamodb update-item \
         --table-name ProductCatalog \
