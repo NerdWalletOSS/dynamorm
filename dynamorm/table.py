@@ -631,14 +631,18 @@ class DynamoTable3(DynamoCommon3):
             parts, function = parts[:-1], parts[-1]
 
         field_value = ":uv_{0}".format(id_)
-        field_expr_names = OrderedDict([
-            ("#uk_{0}_{1}".format(id_, part_id), part_name)
-            for part_id, part_name in enumerate(parts)
-        ])
+        field_expr_names = OrderedDict(
+            [
+                ("#uk_{0}_{1}".format(id_, part_id), part_name)
+                for part_id, part_name in enumerate(parts)
+            ]
+        )
         field_name = ".".join(six.iterkeys(field_expr_names))
 
         return (
-            UPDATE_FUNCTION_TEMPLATES[function].format(key=field_name, value=field_value),
+            UPDATE_FUNCTION_TEMPLATES[function].format(
+                key=field_name, value=field_value
+            ),
             field_expr_names,
             field_value,
         )
@@ -673,7 +677,11 @@ class DynamoTable3(DynamoCommon3):
                 )
 
             # Add the actual field expression, keys, and value.
-            field_expr, field_expr_names, field_expr_value = self.get_update_expr_for_key(i, key_parts)
+            (
+                field_expr,
+                field_expr_names,
+                field_expr_value,
+            ) = self.get_update_expr_for_key(i, key_parts)
             update_fields.append(field_expr)
             expr_names.update(field_expr_names)
             expr_vals[field_expr_value] = kwargs[key]
