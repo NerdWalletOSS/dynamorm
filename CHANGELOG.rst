@@ -1,4 +1,4 @@
-0.10.0 - 2019.12.18
+0.10.0 - 2020.02.05
 ###################
 
 * Enable support for updating nested paths in ``Table.update``. Like functions (like ``minus`` or ``if_not_exists``) nested paths are also separated using the double-underscore syntax. For example, given an attribute ``foo`` of an item ``i``:::
@@ -50,6 +50,11 @@
   Note that the attribute names along the nested path are broken up - this helps distinguish a nested update from a flat key like ``my.flat.key`` that contains a period.
 
 .. _`DynamoDB Developer Guide`: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
+
+0.9.15 - 2020.02.06
+###################
+
+* Address ``DeprecationWarning`` for ``collections.abc`` in Python 3.3+
 
 0.9.14 - 2019.12.13
 ###################
