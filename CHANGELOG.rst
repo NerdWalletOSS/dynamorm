@@ -1,3 +1,8 @@
+0.9.15 - 2020.02.06
+###################
+
+* Address ``DeprecationWarning`` for ``collections.abc`` in Python 3.3+
+
 0.9.14 - 2019.12.13
 ###################
 

@@ -11,6 +11,10 @@ DynamORM
            :target: https://pypi.python.org/pypi/dynamorm
            :alt: Latest PyPI version
 
+.. image:: https://img.shields.io/pypi/pyversions/dynamorm.svg
+           :target: https://pypi.python.org/pypi/dynamorm
+           :alt: Supported Python Versions
+
 ----
 
 *This package is a work in progress -- Feedback / Suggestions / Etc welcomed!*
