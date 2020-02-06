@@ -41,10 +41,15 @@ projection  True      object  An instance of of :class:`dynamorm.model.ProjectAl
 
 """
 
-import collections
 import logging
 import time
 import warnings
+from collections import defaultdict
+
+try:
+    from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
 
 import boto3
 import botocore
@@ -349,7 +354,7 @@ class DynamoTable3(DynamoCommon3):
                 "The read/write attributes are required to create a table"
             )
 
-        index_args = collections.defaultdict(list)
+        index_args = defaultdict(list)
         for index in six.itervalues(self.indexes):
             index_args[index.ARG_KEY].append(index.index_args)
 
@@ -626,9 +631,9 @@ class DynamoTable3(DynamoCommon3):
         update_item_kwargs["ExpressionAttributeNames"] = expr_names
         update_item_kwargs["ExpressionAttributeValues"] = expr_vals
 
-        if isinstance(conditions, collections.Mapping):
+        if isinstance(conditions, Mapping):
             condition_expression = Q(**conditions)
-        elif isinstance(conditions, collections.Iterable):
+        elif isinstance(conditions, Iterable):
             condition_expression = None
             for condition in conditions:
                 try:
@@ -803,7 +808,7 @@ def get_expression(attr, op, value):
         # otherwise we bubble it up.
         if value is True:
             return op()
-        elif isinstance(value, collections.Iterable):
+        elif isinstance(value, Iterable):
             return op(*value)
         else:
             raise
