@@ -344,21 +344,24 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     else:
         assert two.things is None
 
+    # Test the `append` operation.
     two.update(things=["foo"])
     assert two.things == ["foo"]
     two.update(things__append=["bar"])
     assert two.things == ["foo", "bar"]
 
-    DT = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
-    two.update(created=DT)
+    dt = datetime.datetime(2017, 7, 28, 16, 18, 15, 48, tzinfo=dateutil.tz.tzutc())
+    two.update(created=dt)
     assert isinstance(two.created, datetime.datetime)
 
+    # Test the `+` and `-` operators.
     assert two.count == 222
     two.update(count__plus=10)
     assert two.count == 232
     two.update(count__minus=2)
     assert two.count == 230
 
+    # Test the `if_not_exists` operators.
     two.update(count__if_not_exists=1)
     assert two.count == 230
 
@@ -373,10 +376,27 @@ def test_update_expressions(TestModel, TestModel_entries, dynamo_local):
     six.update(count__if_not_exists=6)
     assert six.count == 6
 
-    # XXX TODO
-    # XXX two.update(child__foo__bar='thing')
-    # http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
-    # XXX support REMOVE in a different function
+    # XXX TODO: support REMOVE in a different function
+
+
+@pytest.mark.usefixtures("TestModel_entries", "dynamo_local")
+def test_update_expressions_nested_paths(TestModel):
+    two = TestModel.get(foo="first", bar="two")
+    assert two.child == {"sub": "two"}
+
+    # Test nested path updates.
+    two.update(child__foo={"bar": "thing", "baz": "thing"})
+    assert two.child == {"sub": "two", "foo": {"bar": "thing", "baz": "thing"}}
+    two.update(child__foo__bar="nothing")
+    assert two.child == {"sub": "two", "foo": {"bar": "nothing", "baz": "thing"}}
+    two.update(child__foo={"bar": "nothing"})
+    assert two.child == {"sub": "two", "foo": {"bar": "nothing"}}
+
+    # Test an operation (here, `if_not_exists`) on a nested path.
+    two.update(child__foo__bar__if_not_exists="new-thing")
+    assert two.child["foo"]["bar"] == "nothing"
+    two.update(child__foo__baz__if_not_exists="new-thing")
+    assert two.child["foo"]["baz"] == "new-thing"
 
 
 def test_scan_iterator(TestModel, TestModel_entries_xlarge, dynamo_local, mocker):

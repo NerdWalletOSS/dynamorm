@@ -1,3 +1,56 @@
+0.10.0 - 2020.02.05
+###################
+
+* Enable support for updating nested paths in ``Table.update``. Like functions (like ``minus`` or ``if_not_exists``) nested paths are also separated using the double-underscore syntax. For example, given an attribute ``foo`` of an item ``i``:::
+
+    "foo": {
+        "bar": {
+            "a": 1
+        },
+        "baz": 10
+    }
+
+    i.update(foo__bar__a=42)
+    "foo": {
+        "bar": {
+            "a": 42
+        },
+        "baz": 10
+    }
+
+    i.update(foo__baz__plus=32)
+    "foo": {
+        "bar": {
+            "a": 42
+        },
+        "baz": 42
+    }
+
+  This works because DynamoDB allows updating of nested attributes, using something like JSON path. From the `DynamoDB Developer Guide`_::
+
+    aws dynamodb update-item \
+        --table-name ProductCatalog \
+        --key '{"Id":{"N":"789"}}' \
+        --update-expression "SET #pr.#5star[1] = :r5, #pr.#3star = :r3" \
+        --expression-attribute-names '{
+            "#pr": "ProductReviews",
+            "#5star": "FiveStar",
+            "#3star": "ThreeStar"
+        }' \
+        --expression-attribute-values '{
+            ":r5": { "S": "Very happy with my purchase" },
+            ":r3": {
+                "L": [
+                    { "S": "Just OK - not that great" }
+                ]
+            }
+        }' \
+        --return-values ALL_NEW
+
+  Note that the attribute names along the nested path are broken up - this helps distinguish a nested update from a flat key like ``my.flat.key`` that contains a period.
+
+.. _`DynamoDB Developer Guide`: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.SET.AddingNestedMapAttributes
+
 0.9.15 - 2020.02.06
 ###################
 
