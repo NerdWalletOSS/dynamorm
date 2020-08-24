@@ -73,4 +73,3 @@ class Schema(MarshmallowSchema, DynamORMSchema):
     @staticmethod
     def base_schema_type():
         return MarshmallowSchema
-

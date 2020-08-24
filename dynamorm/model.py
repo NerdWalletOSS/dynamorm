@@ -64,7 +64,9 @@ class DynaModelMeta(type):
                 except AttributeError:
                     continue
 
-                if inspect.isclass(parent_attr) and issubclass(parent_attr, inner_class):
+                if inspect.isclass(parent_attr) and issubclass(
+                    parent_attr, inner_class
+                ):
                     return False
                 elif isinstance(parent_attr, inner_class):
                     return False
@@ -101,9 +103,7 @@ class DynaModelMeta(type):
         if should_transform("Schema", Schema):
             if issubclass(attrs["Schema"], Schema.base_schema_type()):
                 SchemaClass = type(
-                    "{name}Schema".format(name=name),
-                    (Schema, attrs["Schema"]),
-                    {},
+                    "{name}Schema".format(name=name), (Schema, attrs["Schema"]), {},
                 )
             else:
                 SchemaClass = type(

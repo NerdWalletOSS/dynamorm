@@ -44,4 +44,3 @@ class DynamORMSchema(object):
     def base_schema_type():
         """Returns the base class used for schemas of this type"""
         raise NotImplementedError("Child class must implement schema_base_class")
-

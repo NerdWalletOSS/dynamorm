@@ -18,7 +18,11 @@ def is_marshmallow():
 
 if is_marshmallow():
     from marshmallow.fields import String, Integer as Number, UUID
-    from marshmallow import validates, ValidationError as SchemaValidationError, Schema as BaseModel
+    from marshmallow import (
+        validates,
+        ValidationError as SchemaValidationError,
+        Schema as BaseModel,
+    )
 else:
     from schematics.exceptions import ValidationError as SchemaValidationError
     from schematics.types import (
