@@ -42,6 +42,7 @@
         class Schema(Mixin):
             bar = String()
 
+ * The internal ``DynamORMSchema.base_field_type()`` function was unused and has been removed
 
 0.10.0 - 2020.02.05
 ###################

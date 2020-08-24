@@ -67,9 +67,5 @@ class Schema(MarshmallowSchema, DynamORMSchema):
         return data
 
     @staticmethod
-    def base_field_type():
-        return fields.Field
-
-    @staticmethod
     def base_schema_type():
         return MarshmallowSchema
