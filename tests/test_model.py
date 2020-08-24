@@ -18,14 +18,15 @@ def is_marshmallow():
 
 if is_marshmallow():
     from marshmallow.fields import String, Integer as Number, UUID
-    from marshmallow import validates, ValidationError as SchemaValidationError
+    from marshmallow import validates, ValidationError as SchemaValidationError, Schema as Model
 else:
+    from schematics.exceptions import ValidationError as SchemaValidationError
     from schematics.types import (
         StringType as String,
         IntType as Number,
         UUIDType as UUID,
     )
-    from schematics.exceptions import ValidationError as SchemaValidationError
+    from schematics.models import Model
 
 try:
     from unittest.mock import MagicMock, call
@@ -636,6 +637,24 @@ def test_schema_parents_mro():
         class Schema(MixinOne, MixinTwo):
             foo = Number(required=True)
             baz = String(required=True)
+
+    assert "bar" in Model.Schema.dynamorm_fields()
+    assert isinstance(Model.Schema.dynamorm_fields()["bar"], String)
+
+
+def test_model_mixin():
+    class Mixin(Model):
+        bar = Number()
+
+    class Model(DynaModel):
+        class Table:
+            name = "table"
+            hash_key = "foo"
+            read = 1
+            write = 1
+
+        class Schema(Mixin):
+            foo = Number(required=True)
 
     assert "bar" in Model.Schema.dynamorm_fields()
     assert isinstance(Model.Schema.dynamorm_fields()["bar"], String)
