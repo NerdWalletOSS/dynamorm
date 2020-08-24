@@ -39,3 +39,9 @@ class DynamORMSchema(object):
     def base_field_type():
         """Returns the class that all fields in the schema will inherit from"""
         raise NotImplementedError("Child class must implement base_field_type")
+
+    @staticmethod
+    def base_schema_type():
+        """Returns the base class used for schemas of this type"""
+        raise NotImplementedError("Child class must implement schema_base_class")
+

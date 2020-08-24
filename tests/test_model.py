@@ -18,7 +18,7 @@ def is_marshmallow():
 
 if is_marshmallow():
     from marshmallow.fields import String, Integer as Number, UUID
-    from marshmallow import validates, ValidationError as SchemaValidationError, Schema as Model
+    from marshmallow import validates, ValidationError as SchemaValidationError, Schema as BaseModel
 else:
     from schematics.exceptions import ValidationError as SchemaValidationError
     from schematics.types import (
@@ -26,7 +26,7 @@ else:
         IntType as Number,
         UUIDType as UUID,
     )
-    from schematics.models import Model
+    from schematics.models import Model as BaseModel
 
 try:
     from unittest.mock import MagicMock, call
@@ -571,7 +571,7 @@ def test_unique_save(TestModel, TestModel_entries, dynamo_local):
 def test_explicit_schema_parents():
     """Inner Schema classes should be able to have explicit parents"""
 
-    class SuperMixin(object):
+    class SuperMixin(BaseModel):
         bbq = String()
 
     if is_marshmallow():
@@ -621,10 +621,10 @@ def test_explicit_schema_parents():
 def test_schema_parents_mro():
     """Inner Schema classes should obey MRO (to test our schematics field pull up)"""
 
-    class MixinTwo(object):
+    class MixinTwo(BaseModel):
         bar = Number()
 
-    class MixinOne(object):
+    class MixinOne(BaseModel):
         bar = String()
 
     class Model(DynaModel):
@@ -643,10 +643,10 @@ def test_schema_parents_mro():
 
 
 def test_model_mixin():
-    class Mixin(Model):
-        bar = Number()
+    class Mixin(BaseModel):
+        bar = String()
 
-    class Model(DynaModel):
+    class MyModel(DynaModel):
         class Table:
             name = "table"
             hash_key = "foo"
@@ -654,10 +654,12 @@ def test_model_mixin():
             write = 1
 
         class Schema(Mixin):
-            foo = Number(required=True)
+            foo = String(required=True)
 
-    assert "bar" in Model.Schema.dynamorm_fields()
-    assert isinstance(Model.Schema.dynamorm_fields()["bar"], String)
+    assert "foo" in MyModel.Schema.dynamorm_fields()
+    assert "bar" in MyModel.Schema.dynamorm_fields()
+    assert isinstance(MyModel.Schema.dynamorm_fields()["foo"], String)
+    assert isinstance(MyModel.Schema.dynamorm_fields()["bar"], String)
 
 
 def test_table_config(TestModel, dynamo_local):
@@ -699,7 +701,7 @@ def test_field_subclassing():
     class SubSubclassedString(SubclassedString):
         pass
 
-    class Mixin(object):
+    class Mixin(BaseModel):
         foo = SubSubclassedString(required=True)
 
     class MyModel(DynaModel):
