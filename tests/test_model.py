@@ -666,20 +666,6 @@ def test_model_mixin():
     assert isinstance(MyModel.Schema.dynamorm_fields()["bar"], String)
 
 
-def test_explicit_subclass():
-    class MyModel(DynaModel):
-        class Table:
-            name = "table"
-            hash_key = "foo"
-            read = 1
-            write = 1
-
-        class Schema(BaseModel):
-            foo = String(required=True)
-
-    assert isinstance(MyModel.Schema.dynamorm_fields()["foo"], String)
-
-
 def test_table_config(TestModel, dynamo_local):
     class MyModel(DynaModel):
         class Table:

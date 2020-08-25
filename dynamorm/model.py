@@ -43,37 +43,23 @@ class DynaModelMeta(type):
         if name in ("DynaModel", "DynaModelMeta"):
             return super(DynaModelMeta, cls).__new__(cls, name, parents, attrs)
 
-        def should_transform(inner_name, inner_class):
+        def should_transform(inner_class):
             """Closure to determine if we should transfer an inner class (Schema or Table)"""
             # if the inner class exists in our own attributes we use that
-            try:
-                if issubclass(attrs[inner_name], inner_class):
-                    # the inner name is already a subclass of inner_class, so no need to transform
-                    return False
-
-                # the inner name should be transformed
+            if inner_class in attrs:
                 return True
-            except KeyError:
-                # inner_name is not defined in attrs
-                pass
 
             # if any of our parent classes have the class then we use that
             for parent in parents:
                 try:
-                    parent_attr = getattr(parent, inner_name)
+                    getattr(parent, inner_class)
+                    return False
                 except AttributeError:
-                    continue
-
-                if inspect.isclass(parent_attr) and issubclass(
-                    parent_attr, inner_class
-                ):
-                    return False
-                elif isinstance(parent_attr, inner_class):
-                    return False
+                    pass
 
             raise DynaModelException(
                 "You must define an inner '{inner}' class on your '{name}' class".format(
-                    inner=inner_name, name=name
+                    inner=inner_class, name=name
                 )
             )
 
@@ -91,16 +77,16 @@ class DynaModelMeta(type):
         )
 
         # Transform the Schema.
-        if "marshmallow" in sys.modules:
-            from .types._marshmallow import Schema
-        elif "schematics" in sys.modules:
-            from .types._schematics import Schema
-        else:
-            raise DynaModelException(
-                "Unknown Schema definitions, we couldn't find any supported fields/types"
-            )
+        if should_transform("Schema"):
+            if "marshmallow" in sys.modules:
+                from .types._marshmallow import Schema
+            elif "schematics" in sys.modules:
+                from .types._schematics import Schema
+            else:
+                raise DynaModelException(
+                    "Unknown Schema definitions, we couldn't find any supported fields/types"
+                )
 
-        if should_transform("Schema", Schema):
             if issubclass(attrs["Schema"], Schema.base_schema_type()):
                 SchemaClass = type(
                     "{name}Schema".format(name=name), (Schema, attrs["Schema"]), {},
@@ -111,11 +97,10 @@ class DynaModelMeta(type):
                     (Schema,) + attrs["Schema"].__bases__,
                     dict(attrs["Schema"].__dict__),
                 )
-
             attrs["Schema"] = SchemaClass
 
         # transform the Table
-        if should_transform("Table", DynamoTable3):
+        if should_transform("Table"):
             TableClass = type(
                 "{name}Table".format(name=name),
                 (DynamoTable3,) + attrs["Table"].__bases__,
