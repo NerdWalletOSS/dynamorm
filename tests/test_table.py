@@ -318,7 +318,7 @@ def test_schema_field_removed_update_return_all(
     TestModel, TestModel_table, dynamo_local
 ):
     """Simulate a schema change with field removed and make sure we can update the record
-       and return all columns with new schema
+    and return all columns with new schema
     """
     data = {"foo": "1", "bar": "2", "old_schema_key": 10, "baz": "baz"}
     TestModel.Table.put(data)

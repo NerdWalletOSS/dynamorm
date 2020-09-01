@@ -89,7 +89,9 @@ class DynaModelMeta(type):
 
             if issubclass(attrs["Schema"], Schema.base_schema_type()):
                 SchemaClass = type(
-                    "{name}Schema".format(name=name), (Schema, attrs["Schema"]), {},
+                    "{name}Schema".format(name=name),
+                    (Schema, attrs["Schema"]),
+                    {},
                 )
             else:
                 SchemaClass = type(
@@ -481,8 +483,7 @@ class DynaModel(object):
         return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
     def _add_hash_key_values(self, hash_dict):
-        """Mutate a dictionary to add key: value pair for a hash and (if specified) sort key.
-        """
+        """Mutate a dictionary to add key: value pair for a hash and (if specified) sort key."""
         hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
         try:
             hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
