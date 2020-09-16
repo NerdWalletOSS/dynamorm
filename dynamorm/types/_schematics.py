@@ -37,5 +37,5 @@ class Schema(SchematicsModel, DynamORMSchema):
             return inst.to_primitive()
 
     @staticmethod
-    def base_field_type():
-        return types.BaseType
+    def base_schema_type():
+        return SchematicsModel

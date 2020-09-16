@@ -1,3 +1,49 @@
+0.11.0 - 2020.08.24
+###################
+
+* **BREAKING** Inner ``Schema`` classes that use inheritance must use bases that explicitly extend from the base class of the serialization package.
+
+  Previously this was allowed::
+
+    from schematics.types import StringType
+
+
+    class Mixin:
+        foo = StringType(required=True)
+
+    class MyModel(DynaModel):
+        class Table:
+            name = "table"
+            hash_key = "foo"
+            read = 1
+            write = 1
+
+        class Schema(Mixin):
+            bar = StringType()
+
+  DynamORM would implicitly add the base Schematics model to the MRO of the Schema. However, this caused problems when you want to use an explicitly declared model as the base mixin since our serialization packages already apply metaclass logic to the fields.
+
+  Now, you must always explicitly inherit from the base class::
+
+    from schematics.models import Model
+    from schematics.types import StringType
+
+
+    class Mixin(Model):
+        foo = String(required=True)
+
+    class MyModel(DynaModel):
+        class Table:
+            name = "table"
+            hash_key = "foo"
+            read = 1
+            write = 1
+
+        class Schema(Mixin):
+            bar = String()
+
+ * The internal ``DynamORMSchema.base_field_type()`` function was unused and has been removed
+
 0.10.0 - 2020.02.05
 ###################
 

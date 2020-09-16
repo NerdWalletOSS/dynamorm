@@ -82,27 +82,23 @@ class DynaModelMeta(type):
                 from .types._marshmallow import Schema
             elif "schematics" in sys.modules:
                 from .types._schematics import Schema
-
-                # Pull all of our fields up onto the main schema, obeying MRO
-                # This is done to ensure that "mixin" class fields get properly declared for Schematics
-                def pull_up_fields(cls):
-                    for base in reversed(cls.__bases__):
-                        for k, v in six.iteritems(base.__dict__):
-                            if isinstance(v, Schema.base_field_type()):
-                                setattr(attrs["Schema"], k, v)
-                        pull_up_fields(base)
-
-                pull_up_fields(attrs["Schema"])
             else:
                 raise DynaModelException(
                     "Unknown Schema definitions, we couldn't find any supported fields/types"
                 )
 
-            SchemaClass = type(
-                "{name}Schema".format(name=name),
-                (Schema,) + attrs["Schema"].__bases__,
-                dict(attrs["Schema"].__dict__),
-            )
+            if issubclass(attrs["Schema"], Schema.base_schema_type()):
+                SchemaClass = type(
+                    "{name}Schema".format(name=name),
+                    (Schema, attrs["Schema"]),
+                    {},
+                )
+            else:
+                SchemaClass = type(
+                    "{name}Schema".format(name=name),
+                    (Schema,) + attrs["Schema"].__bases__,
+                    dict(attrs["Schema"].__dict__),
+                )
             attrs["Schema"] = SchemaClass
 
         # transform the Table
@@ -487,8 +483,7 @@ class DynaModel(object):
         return self.update(update_item_kwargs=kwargs, return_all=return_all, **updates)
 
     def _add_hash_key_values(self, hash_dict):
-        """Mutate a dictionary to add key: value pair for a hash and (if specified) sort key.
-        """
+        """Mutate a dictionary to add key: value pair for a hash and (if specified) sort key."""
         hash_dict[self.Table.hash_key] = getattr(self, self.Table.hash_key)
         try:
             hash_dict[self.Table.range_key] = getattr(self, self.Table.range_key)
