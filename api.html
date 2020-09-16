@@ -1,0 +1,1319 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DynamORM API &#8212; DynamORM 0.11.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Motivation for creating DynamORM" href="motivation.html" />
+    <link rel="prev" title="Developing" href="developing.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="dynamorm-api">
+<h1>DynamORM API<a class="headerlink" href="#dynamorm-api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-dynamorm">
+<span id="dynamorm"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm</span></code><a class="headerlink" href="#module-dynamorm" title="Permalink to this headline">¶</a></h2>
+<p>The base module namespace simply imports the most frequently used objects to simplify imports in clients:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dynamorm</span> <span class="kn">import</span> <span class="n">DynaModel</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="module-dynamorm.model">
+<span id="dynamorm-model"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.model</span></code><a class="headerlink" href="#module-dynamorm.model" title="Permalink to this headline">¶</a></h2>
+<p>Models represent tables in DynamoDB and define the characteristics of the Dynamo service as well as the Marshmallow
+or Schematics schema that is used for validating and marshalling your data.</p>
+<dl class="py class">
+<dt id="dynamorm.model.DynaModel">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.model.</code><code class="sig-name descname">DynaModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">partial</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">raw</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">DynaModel</span></code> is the base class all of your models will extend from.  This model definition encapsulates the
+parameters used to create and manage the table as well as the schema for validating and marshalling data into object
+attributes.  It will also hold any custom business logic you need for your objects.</p>
+<p>Your class must define two inner classes that specify the Dynamo Table options and the Schema, respectively.</p>
+<p>The Dynamo Table options are defined in a class named <code class="docutils literal notranslate"><span class="pre">Table</span></code>.  See the <a class="reference internal" href="#module-dynamorm.table" title="dynamorm.table"><code class="xref py py-mod docutils literal notranslate"><span class="pre">dynamorm.table</span></code></a> module for
+more information.</p>
+<p>Any Local or Global Secondary Indexes you wish to create are defined as inner tables that extend from either the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">LocalIndex</span></code> or <code class="xref py py-class docutils literal notranslate"><span class="pre">GlobalIndex</span></code> classes.  See the <a class="reference internal" href="#module-dynamorm.table" title="dynamorm.table"><code class="xref py py-mod docutils literal notranslate"><span class="pre">dynamorm.table</span></code></a> module for more information.</p>
+<p>The document schema is defined in a class named <code class="docutils literal notranslate"><span class="pre">Schema</span></code>, which should be filled out exactly as you would fill
+out any other Marshmallow <a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/api_reference.html#marshmallow.Schema" title="(in marshmallow v3.8.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Schema</span></code></a> or Schematics <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code>.</p>
+<p>For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Marshmallow example</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dynamorm</span> <span class="kn">import</span> <span class="n">DynaModel</span><span class="p">,</span> <span class="n">GlobalIndex</span><span class="p">,</span> <span class="n">ProjectAll</span>
+
+<span class="kn">from</span> <span class="nn">marshmallow</span> <span class="kn">import</span> <span class="n">fields</span><span class="p">,</span> <span class="n">validate</span><span class="p">,</span> <span class="n">validates</span><span class="p">,</span> <span class="n">ValidationError</span>
+
+<span class="k">class</span> <span class="nc">Thing</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;things&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;id&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">ByColor</span><span class="p">(</span><span class="n">GlobalIndex</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;by-color&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;color&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">projection</span> <span class="o">=</span> <span class="n">ProjectAll</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">((</span><span class="s1">&#39;purple&#39;</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;yellow&#39;</span><span class="p">)))</span>
+        <span class="n">compound</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Dict</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="nd">@validates</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">validate_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="c1"># this is a very silly example just to illustrate that you can fill out the</span>
+            <span class="c1"># inner Schema class just like any other Marshmallow class</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;evan&#39;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s2">&quot;No Evan&#39;s allowed&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">say_hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello.  </span><span class="si">{name}</span><span class="s2"> here.  My ID is </span><span class="si">{id}</span><span class="s2"> and I&#39;m colored </span><span class="si">{color}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">color</span>
+        <span class="p">))</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete this record in the table.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.get">
+<em class="property">classmethod </em><code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">consistent</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an item from the table</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hash_key</span><span class="o">=</span><span class="s2">&quot;three&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>consistent</strong> (<em>bool</em>) – If set to True the get will be a consistent read</p></li>
+<li><p><strong>**kwargs</strong> – You must supply your hash key, and range key if used</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.get_batch">
+<em class="property">classmethod </em><code class="sig-name descname">get_batch</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">keys</span></em>, <em class="sig-param"><span class="n">consistent</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">attrs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.get_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator to get more than one item from the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keys</strong> – One or more dicts containing the hash key, and range key if used</p></li>
+<li><p><strong>consistent</strong> (<em>bool</em>) – If set to True then get_batch will be a consistent read</p></li>
+<li><p><strong>attrs</strong> (<em>str</em>) – The projection expression of which attrs to fetch, if None all attrs will be fetched</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.new_from_raw">
+<em class="property">classmethod </em><code class="sig-name descname">new_from_raw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw</span></em>, <em class="sig-param"><span class="n">partial</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.new_from_raw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a new instance of this model from a raw (dict) of data that is loaded by our Schema</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>raw</strong> (<em>dict</em>) – The attributes to use when creating the instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.put">
+<em class="property">classmethod </em><code class="sig-name descname">put</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put a single item into the table for this model</p>
+<p>The attributes on the item go through validation, so this may raise <code class="xref py py-class docutils literal notranslate"><span class="pre">ValidationError</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> (<em>dict</em>) – The item to put into the table</p></li>
+<li><p><strong>**kwargs</strong> – All other kwargs are passed through to the put method on the table</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.put_batch">
+<em class="property">classmethod </em><code class="sig-name descname">put_batch</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">items</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">batch_kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.put_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put one or more items into the table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>*items</strong> – The items to put into the table</p></li>
+<li><p><strong>**kwargs</strong> – All other kwargs are passed through to the put_batch method on the table</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">put_batch</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">&quot;hash_key&quot;</span><span class="p">:</span> <span class="s2">&quot;one&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;hash_key&quot;</span><span class="p">:</span> <span class="s2">&quot;two&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;hash_key&quot;</span><span class="p">:</span> <span class="s2">&quot;three&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.put_unique">
+<em class="property">classmethod </em><code class="sig-name descname">put_unique</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.put_unique" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put a single item into the table for this model, with a unique attribute constraint on the hash key</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> (<em>dict</em>) – The item to put into the table</p></li>
+<li><p><strong>**kwargs</strong> – All other kwargs are passed through to the put_unique method on the table</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.query">
+<em class="property">classmethod </em><code class="sig-name descname">query</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a query on our table based on our keys</p>
+<p>You supply the key(s) to query based on as keyword arguments:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s2">&quot;Mr. Foo&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the <code class="docutils literal notranslate"><span class="pre">eq</span></code> condition is used.  If you wish to use any of the other <a class="reference external" href="http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Key">valid conditions for keys</a> use
+a double underscore syntax following the key name.  For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">foo__begins_with</span><span class="o">=</span><span class="s2">&quot;Mr.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_kwargs</strong> (<em>dict</em>) – Extra parameters that should be passed through to the Table query function</p></li>
+<li><p><strong>**kwargs</strong> – The key(s) and value(s) to query based on</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">partial</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">unique</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">return_all</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save this instance to the table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partial</strong> (<em>bool</em>) – When False the whole document will be <code class="docutils literal notranslate"><span class="pre">.put</span></code> or <code class="docutils literal notranslate"><span class="pre">.put_unique</span></code> to the table.
+When True only values that have changed since the document was loaded will sent
+to the table via an <code class="docutils literal notranslate"><span class="pre">.update</span></code>.</p></li>
+<li><p><strong>unique</strong> (<em>bool</em>) – Only relevant if partial=False, ignored otherwise. When False, the document will
+be <code class="docutils literal notranslate"><span class="pre">.put</span></code> to the table.  When True, the document will be <code class="docutils literal notranslate"><span class="pre">.put_unique</span></code>.</p></li>
+<li><p><strong>return_all</strong> (<em>bool</em>) – Only used for partial saves.  Passed through to <code class="docutils literal notranslate"><span class="pre">.update</span></code>.</p></li>
+<li><p><strong>**kwargs</strong> – When partial is False these are passed through to the put method on the table.  When partial
+is True these become the kwargs for update_item.  See <code class="docutils literal notranslate"><span class="pre">.put</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">.update</span></code> for more
+details.</p></li>
+</ul>
+</dd>
+</dl>
+<p>The attributes on the item go through validation, so this may raise <code class="xref py py-class docutils literal notranslate"><span class="pre">ValidationError</span></code>.</p>
+<p>TODO - Support unique, partial saves.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.scan">
+<em class="property">classmethod </em><code class="sig-name descname">scan</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.scan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a scan on our table</p>
+<p>You supply the attr(s) to query based on as keyword arguments:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">age</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the <code class="docutils literal notranslate"><span class="pre">eq</span></code> condition is used.  If you wish to use any of the other <a class="reference external" href="http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Attr">valid conditions for attrs</a> use
+a double underscore syntax following the key name.  For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;&gt;</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__ne='bar')</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__lt=10)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;=</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__lte=10)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&gt;</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__gt=10)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&gt;=</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__gte=10)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BETWEEN</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__between=[10,</span> <span class="pre">20])</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">IN</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(count__in=[11,</span> <span class="pre">12,</span> <span class="pre">13])</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute_exists</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__exists=True)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute_not_exists</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__not_exists=True)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attribute_type</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__type='S')</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">begins_with</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__begins_with='f')</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contains</span></code>: <code class="docutils literal notranslate"><span class="pre">Thing.scan(foo__contains='oo')</span></code></p></li>
+</ul>
+<p>Accessing nested attributes also uses the double underscore syntax:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">address__state</span><span class="o">=</span><span class="s2">&quot;CA&quot;</span><span class="p">)</span>
+<span class="n">Thing</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">address__state__begins_with</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Multiple attrs are combined with the AND (&amp;) operator:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Thing</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">address__state</span><span class="o">=</span><span class="s2">&quot;CA&quot;</span><span class="p">,</span> <span class="n">address__zip__begins_with</span><span class="o">=</span><span class="s2">&quot;9&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you want to combine them with the OR (|) operator, or negate them (~), then you can use the Q function and
+pass them as arguments into scan where each argument is combined with AND:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dynamorm</span> <span class="kn">import</span> <span class="n">Q</span>
+
+<span class="n">Thing</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">Q</span><span class="p">(</span><span class="n">address__state</span><span class="o">=</span><span class="s2">&quot;CA&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="n">Q</span><span class="p">(</span><span class="n">address__state</span><span class="o">=</span><span class="s2">&quot;NY&quot;</span><span class="p">),</span> <span class="o">~</span><span class="n">Q</span><span class="p">(</span><span class="n">address__zip__contains</span><span class="o">=</span><span class="s2">&quot;5&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The above would scan for all things with an address.state of (CA OR NY) AND address.zip does not contain 5.</p>
+<p>This returns a generator, which will continue to yield items until all matching the scan are produced,
+abstracting away pagination. More information on scan pagination: <a class="reference external" href="http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination">http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.Pagination</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scan_kwargs</strong> (<em>dict</em>) – Extra parameters that should be passed through to the Table scan function</p></li>
+<li><p><strong>*args</strong> – An optional list of Q objects that can be combined with or superseded the **kwargs values</p></li>
+<li><p><strong>**kwargs</strong> – The key(s) and value(s) to filter based on</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">conditions</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">update_item_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">return_all</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update this instance in the table</p>
+<p>New values are set via kwargs to this function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This would set the <code class="docutils literal notranslate"><span class="pre">foo</span></code> attribute of the thing object to <code class="docutils literal notranslate"><span class="pre">'bar'</span></code>.  You cannot change the Hash or Range key
+via an update operation – this is a property of DynamoDB.</p>
+<p>You can supply a dictionary of conditions that influence the update.  In their simpliest form Conditions are
+supplied as a direct match (eq):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This update would only succeed if foo was set to ‘foo’ at the time of the update.  If you wish to use any of the
+other <a class="reference external" href="http://boto3.readthedocs.io/en/latest/reference/customizations/dynamodb.html#boto3.dynamodb.conditions.Attr">valid conditions for attrs</a> use a double underscore syntax following the key name.  You can also access
+nested attributes using the double underscore syntac.  See the scan method for examples of both.</p>
+<p>You can also pass Q objects to conditions as either a complete expression, or a list of expressions that will be
+AND’d together:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="n">Q</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">))</span>
+
+<span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="n">Q</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span> <span class="o">|</span> <span class="n">Q</span><span class="p">(</span><span class="n">bar</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">))</span>
+
+<span class="c1"># the following two statements are equivalent</span>
+<span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="n">Q</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">Q</span><span class="p">(</span><span class="n">bar</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">))</span>
+<span class="n">thing</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="p">[</span><span class="n">Q</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;foo&#39;</span><span class="p">),</span> <span class="o">~</span><span class="n">Q</span><span class="p">(</span><span class="n">bar</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>If your update conditions do not match then a dynamorm.exceptions.ConditionFailed exception will be raised.</p>
+<p>As long as the update succeeds the attrs on this instance will be updated to match their new values.  If you set
+<code class="docutils literal notranslate"><span class="pre">return_all</span></code> to true then we will update all of the attributes on the object with the current values in
+Dyanmo, rather than just those you updated.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.update_item">
+<em class="property">classmethod </em><code class="sig-name descname">update_item</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">conditions</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">update_item_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.update_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a item in the table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Params conditions</dt>
+<dd class="field-odd"><p>A dict of key/val pairs that should be applied as a condition to the update</p>
+</dd>
+<dt class="field-even">Params update_item_kwargs</dt>
+<dd class="field-even"><p>A dict of other kwargs that are passed through to update_item</p>
+</dd>
+<dt class="field-odd">Params **kwargs</dt>
+<dd class="field-odd"><p>Includes your hash/range key/val to match on as well as any keys to update</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.model.DynaModel.validate">
+<code class="sig-name descname">validate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModel.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate this instance</p>
+<p>We do this as a “native”/load/deserialization since Marshmallow ONLY raises validation errors for
+required/allow_none/validate(s) during deserialization.  See the note at:
+<a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/quickstart.html#validation">https://marshmallow.readthedocs.io/en/latest/quickstart.html#validation</a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.model.DynaModelMeta">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.model.</code><code class="sig-name descname">DynaModelMeta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">parents</span></em>, <em class="sig-param"><span class="n">attrs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.model.DynaModelMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>DynaModelMeta is a metaclass for the DynaModel class that transforms our Table and Schema classes</p>
+<p>Since we can inspect the data we need to build the full data structures needed for working with tables and indexes
+users can define for more concise and readable table definitions that we transform into the final. To allow for a
+more concise definition of DynaModels we do not require that users define their inner Schema class as extending
+from the <a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/api_reference.html#marshmallow.Schema" title="(in marshmallow v3.8.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Schema</span></code></a>.  Instead, when the class is being defined we take the inner Schema and
+transform it into a new class named &lt;Name&gt;Schema, extending from <a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/api_reference.html#marshmallow.Schema" title="(in marshmallow v3.8.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Schema</span></code></a>.  For example, on a
+model named <code class="docutils literal notranslate"><span class="pre">Foo</span></code> the resulting <code class="docutils literal notranslate"><span class="pre">Foo.Schema</span></code> object would be an instance of a class named <code class="docutils literal notranslate"><span class="pre">FooSchema</span></code>, rather
+than a class named <code class="docutils literal notranslate"><span class="pre">Schema</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-dynamorm.table">
+<span id="dynamorm-table"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.table</span></code><a class="headerlink" href="#module-dynamorm.table" title="Permalink to this headline">¶</a></h2>
+<p>The inner <code class="docutils literal notranslate"><span class="pre">Table</span></code> class on <code class="docutils literal notranslate"><span class="pre">DynaModel</span></code> definitions becomes an instance of our
+<a class="reference internal" href="#dynamorm.table.DynamoTable3" title="dynamorm.table.DynamoTable3"><code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.table.DynamoTable3</span></code></a> class.</p>
+<p>The attributes you define on your inner <code class="docutils literal notranslate"><span class="pre">Table</span></code> class map to underlying boto data structures.  This mapping is
+expressed through the following data model:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 10%" />
+<col style="width: 5%" />
+<col style="width: 75%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>name</p></td>
+<td><p>True</p></td>
+<td><p>str</p></td>
+<td><p>The name of the table, as stored in Dynamo.</p></td>
+</tr>
+<tr class="row-odd"><td><p>hash_key</p></td>
+<td><p>True</p></td>
+<td><p>str</p></td>
+<td><p>The name of the field to use as the hash key.
+It must exist in the schema.</p></td>
+</tr>
+<tr class="row-even"><td><p>range_key</p></td>
+<td><p>False</p></td>
+<td><p>str</p></td>
+<td><p>The name of the field to use as the range_key, if one is used.
+It must exist in the schema.</p></td>
+</tr>
+<tr class="row-odd"><td><p>read</p></td>
+<td><p>True</p></td>
+<td><p>int</p></td>
+<td><p>The provisioned read throughput.</p></td>
+</tr>
+<tr class="row-even"><td><p>write</p></td>
+<td><p>True</p></td>
+<td><p>int</p></td>
+<td><p>The provisioned write throughput.</p></td>
+</tr>
+<tr class="row-odd"><td><p>stream</p></td>
+<td><p>False</p></td>
+<td><p>str</p></td>
+<td><p>The stream view type, either None or one of:
+‘NEW_IMAGE’|’OLD_IMAGE’|’NEW_AND_OLD_IMAGES’|’KEYS_ONLY’</p></td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="indexes">
+<h3>Indexes<a class="headerlink" href="#indexes" title="Permalink to this headline">¶</a></h3>
+<p>Like the <code class="docutils literal notranslate"><span class="pre">Table</span></code> definition, Indexes are also inner classes on <code class="docutils literal notranslate"><span class="pre">DynaModel</span></code> definitions, and they require the same
+data model with one extra field.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 8%" />
+<col style="width: 6%" />
+<col style="width: 76%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>projection</p></td>
+<td><p>True</p></td>
+<td><p>object</p></td>
+<td><p>An instance of of <code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.model.ProjectAll</span></code>,
+<code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.model.ProjectKeys</span></code>, or <code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.model.ProjectInclude</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt id="dynamorm.table.DynamoCommon3">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">DynamoCommon3</code><a class="headerlink" href="#dynamorm.table.DynamoCommon3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Common properties &amp; functions of Boto3 DynamORM objects – i.e. Tables &amp; Indexes</p>
+<dl class="py method">
+<dt id="dynamorm.table.DynamoCommon3.key_schema">
+<em class="property">property </em><code class="sig-name descname">key_schema</code><a class="headerlink" href="#dynamorm.table.DynamoCommon3.key_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an appropriate KeySchema, based on our key attributes and the schema object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoCommon3.provisioned_throughput">
+<em class="property">property </em><code class="sig-name descname">provisioned_throughput</code><a class="headerlink" href="#dynamorm.table.DynamoCommon3.provisioned_throughput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an appropriate ProvisionedThroughput, based on our attributes</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.DynamoGlobalIndex3">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">DynamoGlobalIndex3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table</span></em>, <em class="sig-param"><span class="n">schema</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoGlobalIndex3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.DynamoIndex3">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">DynamoIndex3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table</span></em>, <em class="sig-param"><span class="n">schema</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoIndex3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.DynamoLocalIndex3">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">DynamoLocalIndex3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">table</span></em>, <em class="sig-param"><span class="n">schema</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoLocalIndex3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.DynamoTable3">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">DynamoTable3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">schema</span></em>, <em class="sig-param"><span class="n">indexes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a Table object in the Boto3 DynamoDB API</p>
+<p>This is built in such a way that in the future, when Amazon releases future boto versions, a new DynamoTable class
+can be authored that implements the same methods but maps through to the new semantics.</p>
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.all_attribute_fields">
+<em class="property">property </em><code class="sig-name descname">all_attribute_fields</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.all_attribute_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list with the names of all the attribute fields (hash or range key on the table or indexes)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.attribute_definitions">
+<em class="property">property </em><code class="sig-name descname">attribute_definitions</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.attribute_definitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an appropriate AttributeDefinitions, based on our key attributes and the schema object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.create">
+<code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">wait</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>DEPRECATED – shim</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.create_table">
+<code class="sig-name descname">create_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">wait</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.create_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new table based on our attributes</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>wait</strong> (<em>bool</em>) – If set to True, the default, this call will block until the table is created</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.delete">
+<code class="sig-name descname">delete</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">wait</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete this existing table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>wait</strong> (<em>bool</em>) – If set to True, the default, this call will block until the table is deleted</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.exists">
+<em class="property">property </em><code class="sig-name descname">exists</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True or False based on the existance of this tables name in our resource</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.get_resource">
+<em class="property">classmethod </em><code class="sig-name descname">get_resource</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.get_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the boto3 resource</p>
+<p>If you provide kwargs here and the class doesn’t have any resource_kwargs defined then the ones passed will
+permanently override the resource_kwargs on the class.</p>
+<p>This is useful for bootstrapping test resources against a Dynamo local instance as a call to
+<code class="docutils literal notranslate"><span class="pre">DynamoTable3.get_resource</span></code> will end up replacing the resource_kwargs on all classes that do not define their
+own.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.get_table">
+<em class="property">classmethod </em><code class="sig-name descname">get_table</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.get_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the boto3 Table object for this model, create it if it doesn’t exist</p>
+<p>The Table is stored on the class for each model, so it is shared between all instances of a given model.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.get_update_expr_for_key">
+<code class="sig-name descname">get_update_expr_for_key</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id_</span></em>, <em class="sig-param"><span class="n">parts</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.get_update_expr_for_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a key and a unique id, return all the information required
+for the update expression. This includes the actual field operations,
+a dictionary of generated field names, and the generated field value.</p>
+<p>To account for nested keys, the generated field expression placeholders
+are of the form:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#uk_0_0 = :uv_0</span>
+<span class="c1">#uk_0_0.#uk_0_1 = :uv_0</span>
+<span class="c1">#uk_0_0.#uk_0_1.#uk_0_2 = :uv_0</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>Note that if the value of a part - e.g #uk_0_1 - itself has a period <code class="docutils literal notranslate"><span class="pre">.</span></code>,
+that is interpreted literally and not as nest in the document path. That is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#uk_0_0.#uk_0_1 = :uv_0</span>
+<span class="p">{</span>
+    <span class="s2">&quot;#uk_0_0&quot;</span><span class="p">:</span> <span class="s2">&quot;foo&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;#uk_0_1&quot;</span><span class="p">:</span> <span class="s2">&quot;bar.baz&quot;</span>
+<span class="p">}</span>
+<span class="p">{</span>
+    <span class="s2">&quot;:uv_0&quot;</span><span class="p">:</span> <span class="mi">42</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>…will result in the value:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;foo&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;bar.baz&quot;</span><span class="p">:</span> <span class="mi">42</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> – Unique id for this key</p></li>
+<li><p><strong>parts</strong> – List of parts that make up this key</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple[str, dict, str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.index_attribute_fields">
+<code class="sig-name descname">index_attribute_fields</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">index_name</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.index_attribute_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the attribute fields for a given index, or all indexes if omitted</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.put">
+<code class="sig-name descname">put</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put a singular item into the table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> (<em>dict</em>) – The data to put into the table</p></li>
+<li><p><strong>**kwargs</strong> – All other keyword arguments are passed through to the <a class="reference external" href="http://boto3.readthedocs.io/en/latest/reference/services/dynamodb.html#DynamoDB.Table.put_item">DynamoDB Table put_item</a> function.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.stream_specification">
+<em class="property">property </em><code class="sig-name descname">stream_specification</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.stream_specification" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an appropriate StreamSpecification, based on the stream attribute</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.table">
+<em class="property">property </em><code class="sig-name descname">table</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the boto3 table</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.table_attribute_fields">
+<em class="property">property </em><code class="sig-name descname">table_attribute_fields</code><a class="headerlink" href="#dynamorm.table.DynamoTable3.table_attribute_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list with the names of the table attribute fields (hash or range key)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.DynamoTable3.update_table">
+<code class="sig-name descname">update_table</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.DynamoTable3.update_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates an existing table</p>
+<p>Per the AWS documentation:</p>
+<p>You can only perform one of the following operations at once:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Modify the provisioned throughput settings of the table.</p></li>
+<li><p>Enable or disable Streams on the table.</p></li>
+<li><p>Remove a global secondary index from the table.</p></li>
+<li><p>Create a new global secondary index on the table.</p></li>
+</ul>
+</div></blockquote>
+<p>Thus, this will recursively call itself to perform each of these operations in turn, waiting for the table to
+return to ‘ACTIVE’ status before performing the next.</p>
+<p>This returns the number of update operations performed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="dynamorm.table.Q">
+<code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">Q</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">mapping</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.Q" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Q object represents an AND’d together query using boto3’s Attr object, based on a set of keyword arguments that
+support the full access to the operations (eq, ne, between, etc) as well as nested attributes.</p>
+<p>It can be used input to both scan operations as well as update conditions.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.QueryIterator">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">QueryIterator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.QueryIterator" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="dynamorm.table.QueryIterator.reverse">
+<code class="sig-name descname">reverse</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.QueryIterator.reverse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return results from the query in reverse</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.ReadIterator">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">ReadIterator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>ReadIterator provides an iterator object that wraps a model and a method (either scan or query).</p>
+<p>Since it is an object we can attach attributes and functions to it that are useful to the caller.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Scan through a model, one at a time.  Don&#39;t do this!</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">MyModel</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="n">model</span><span class="o">.</span><span class="n">id</span>
+
+<span class="c1"># The next time you call scan (or query) pass the .last attribute of your previous results</span>
+<span class="c1"># in as the last argument</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">MyModel</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">last</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="n">model</span><span class="o">.</span><span class="n">id</span>
+
+<span class="c1"># ...</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – The Model class to wrap</p></li>
+<li><p><strong>*args</strong> – Q objects, passed through to scan or query</p></li>
+<li><p><strong>**kwargs</strong> – filters, passed through to scan or query</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.again">
+<code class="sig-name descname">again</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.again" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call this to reset the iterator so that you can iterate over it again.</p>
+<p>If the previous invocation has a LastEvaluatedKey then this will resume from the next item.  Otherwise it will
+re-do the previous invocation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.consistent">
+<code class="sig-name descname">consistent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.consistent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make this read a consistent one</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.count">
+<code class="sig-name descname">count</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the count matching the current read</p>
+<p>This triggers a new request to the table when it is invoked.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.limit">
+<code class="sig-name descname">limit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">limit</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.limit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the limit value</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.partial">
+<code class="sig-name descname">partial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">partial</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.partial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the partial value for this iterator, which is used when creating new items from the response.</p>
+<p>This is used by indexes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.recursive">
+<code class="sig-name descname">recursive</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.recursive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the recursive value to True for this iterator</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.specific_attributes">
+<code class="sig-name descname">specific_attributes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">attrs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.specific_attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return only specific attributes in the documents through a ProjectionExpression</p>
+<p>This is a list of attribute names. See the documentation for more info:
+<a class="reference external" href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html">https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dynamorm.table.ReadIterator.start">
+<code class="sig-name descname">start</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">last</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ReadIterator.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the last value</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.table.ScanIterator">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">ScanIterator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.ScanIterator" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="dynamorm.table.remove_nones">
+<code class="sig-prename descclassname">dynamorm.table.</code><code class="sig-name descname">remove_nones</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">in_dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.table.remove_nones" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively remove keys with a value of <code class="docutils literal notranslate"><span class="pre">None</span></code> from the <code class="docutils literal notranslate"><span class="pre">in_dict</span></code> collection</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-dynamorm.relationships">
+<span id="dynamorm-relationships"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.relationships</span></code><a class="headerlink" href="#module-dynamorm.relationships" title="Permalink to this headline">¶</a></h2>
+<p>Relationships leverage the native tables &amp; indexes in DynamoDB to allow more concise definition and access of related
+objects in your Python code.</p>
+<p>You define relationships along side your Schema and Indexes on your model, and must provide the query used to map the
+related models together.  You can also supply a “back reference” query to have the other side of the relationship also
+have a relationship back to the defining model.</p>
+<p>DynamORM provides the following relationship types:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#dynamorm.relationships.OneToOne" title="dynamorm.relationships.OneToOne"><code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.relationships.OneToOne</span></code></a> - Useful when you have a large number of attributes to store and you want
+to break them up over multiple tables for performance in querying.</p></li>
+<li><p><a class="reference internal" href="#dynamorm.relationships.OneToMany" title="dynamorm.relationships.OneToMany"><code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.relationships.OneToMany</span></code></a> / <a class="reference internal" href="#dynamorm.relationships.ManyToOne" title="dynamorm.relationships.ManyToOne"><code class="xref py py-class docutils literal notranslate"><span class="pre">dynamorm.relationships.ManyToOne</span></code></a> - Useful when you have an
+instance of one model that has a collection of related instances of another model.  You use <code class="docutils literal notranslate"><span class="pre">OneToMany</span></code> or
+<code class="docutils literal notranslate"><span class="pre">ManyToOne</span></code> depending on which side of the relationship you are defining the attribute on.  You’ll to use both
+interchangeably based on how your models are laid out since you need to pass a reference to the other model into the
+relationship.</p></li>
+</ul>
+<p>Here’s an example of how you could model the <a class="reference external" href="http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SampleData.CreateTables.html#SampleData.CreateTables2">Forum Application</a> from the DynamoDB Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Reply</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;replies&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;forum_thread&#39;</span>
+        <span class="n">range_key</span> <span class="o">=</span> <span class="s1">&#39;created&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">ByUser</span><span class="p">(</span><span class="n">GlobalIndex</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;replies-by-user&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;user_name&#39;</span>
+        <span class="n">range_key</span> <span class="o">=</span> <span class="s1">&#39;message&#39;</span>
+        <span class="n">projection</span> <span class="o">=</span> <span class="n">ProjectKeys</span><span class="p">()</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="n">forum_thread</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">created</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">user_name</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">String</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;users&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;name&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">replies</span> <span class="o">=</span> <span class="n">OneToMany</span><span class="p">(</span>
+        <span class="n">Reply</span><span class="p">,</span>
+        <span class="n">index</span><span class="o">=</span><span class="s1">&#39;ByUser&#39;</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">user</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">user_name</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="n">back_query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">reply</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">user_name</span><span class="p">)</span>
+    <span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Thread</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;threads&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;forum_name&#39;</span>
+        <span class="n">range_key</span> <span class="o">=</span> <span class="s1">&#39;subject&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">ByUser</span><span class="p">(</span><span class="n">GlobalIndex</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;threads-by-user&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;user_name&#39;</span>
+        <span class="n">range_key</span> <span class="o">=</span> <span class="s1">&#39;subject&#39;</span>
+        <span class="n">projection</span> <span class="o">=</span> <span class="n">ProjectKeys</span><span class="p">()</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="n">forum_name</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">user_name</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">subject</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">user</span> <span class="o">=</span> <span class="n">ManyToOne</span><span class="p">(</span>
+        <span class="n">User</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">thread</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">thread</span><span class="o">.</span><span class="n">user_name</span><span class="p">),</span>
+        <span class="n">back_index</span><span class="o">=</span><span class="s1">&#39;ByUser&#39;</span><span class="p">,</span>
+        <span class="n">back_query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">user</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">user_name</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">replies</span> <span class="o">=</span> <span class="n">OneToMany</span><span class="p">(</span>
+        <span class="n">Reply</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">thread</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">forum_thread</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="se">\n</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">thread</span><span class="o">.</span><span class="n">forum_name</span><span class="p">,</span> <span class="n">thread</span><span class="o">.</span><span class="n">subject</span><span class="p">)),</span>
+        <span class="n">back_query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">reply</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">forum_name</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">forum_thread</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">subject</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">forum_thread</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Forum</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;forums&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;name&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">String</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">threads</span> <span class="o">=</span> <span class="n">OneToMany</span><span class="p">(</span>
+        <span class="n">Thread</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">forum</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">forum_name</span><span class="o">=</span><span class="n">forum</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="n">back_query</span><span class="o">=</span><span class="k">lambda</span> <span class="n">thread</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">thread</span><span class="o">.</span><span class="n">forum_name</span><span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py class">
+<dt id="dynamorm.relationships.DefaultBackReference">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.relationships.</code><code class="sig-name descname">DefaultBackReference</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">relationship</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.relationships.DefaultBackReference" title="Permalink to this definition">¶</a></dt>
+<dd><p>When given a relationship the string representation of this will be a “python” string name of the model the
+relationship exists on.</p>
+<p>For example, if there’s a relationship defined on a model named <code class="docutils literal notranslate"><span class="pre">OrderItem</span></code> this would render <code class="docutils literal notranslate"><span class="pre">order_item</span></code>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.relationships.ManyToOne">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.relationships.</code><code class="sig-name descname">ManyToOne</code><span class="sig-paren">(</span><em class="sig-param">other</em>, <em class="sig-param">query</em>, <em class="sig-param">index=None</em>, <em class="sig-param">back_query=None</em>, <em class="sig-param">back_index=None</em>, <em class="sig-param">back_reference=&lt;class 'dynamorm.relationships.DefaultBackReference'&gt;</em>, <em class="sig-param">auto_create=True</em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.relationships.ManyToOne" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Many To One relationship is defined on the “child” model, where many child models have one parent model.</p>
+<dl class="py attribute">
+<dt id="dynamorm.relationships.ManyToOne.BackReferenceClass">
+<code class="sig-name descname">BackReferenceClass</code><a class="headerlink" href="#dynamorm.relationships.ManyToOne.BackReferenceClass" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#dynamorm.relationships.OneToMany" title="dynamorm.relationships.OneToMany"><code class="xref py py-class docutils literal notranslate"><span class="pre">OneToMany</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.relationships.OneToMany">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.relationships.</code><code class="sig-name descname">OneToMany</code><span class="sig-paren">(</span><em class="sig-param">other</em>, <em class="sig-param">query</em>, <em class="sig-param">index=None</em>, <em class="sig-param">back_query=None</em>, <em class="sig-param">back_index=None</em>, <em class="sig-param">back_reference=&lt;class 'dynamorm.relationships.DefaultBackReference'&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.relationships.OneToMany" title="Permalink to this definition">¶</a></dt>
+<dd><p>A One to Many relationship is defined on the “parent” model, where each instance has many related “child”
+instances of another model.</p>
+<dl class="py attribute">
+<dt id="dynamorm.relationships.OneToMany.BackReferenceClass">
+<code class="sig-name descname">BackReferenceClass</code><a class="headerlink" href="#dynamorm.relationships.OneToMany.BackReferenceClass" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#dynamorm.relationships.OneToOne" title="dynamorm.relationships.OneToOne"><code class="xref py py-class docutils literal notranslate"><span class="pre">OneToOne</span></code></a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dynamorm.relationships.OneToOne">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.relationships.</code><code class="sig-name descname">OneToOne</code><span class="sig-paren">(</span><em class="sig-param">other</em>, <em class="sig-param">query</em>, <em class="sig-param">index=None</em>, <em class="sig-param">back_query=None</em>, <em class="sig-param">back_index=None</em>, <em class="sig-param">back_reference=&lt;class 'dynamorm.relationships.DefaultBackReference'&gt;</em>, <em class="sig-param">auto_create=True</em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.relationships.OneToOne" title="Permalink to this definition">¶</a></dt>
+<dd><p>A One-to-One relationship is where two models (tables) have items that have a relation to exactly one instance in
+the other model.</p>
+<p>It is a useful pattern when you wish to split up large tables with many attributes where your “main” table is
+queried frequently and having all of the attributes included in the query results would increase your required
+throughput.  By splitting the data into two tables you can have lower throughput on the “secondary” table as the
+items will be lazily fetched only as they are accessed.</p>
+<dl class="py method">
+<dt id="dynamorm.relationships.OneToOne.set_this_model">
+<code class="sig-name descname">set_this_model</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.relationships.OneToOne.set_this_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called from the metaclass once the model the relationship is being placed on has been initialized</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-dynamorm.signals">
+<span id="dynamorm-signals"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.signals</span></code><a class="headerlink" href="#module-dynamorm.signals" title="Permalink to this headline">¶</a></h2>
+<p>Signals provide a way for applications to loosely couple themselves and respond to different life cycle events.</p>
+<p>The <a class="reference external" href="https://pythonhosted.org/blinker/">blinker</a> library provides the low-level signal implementation.</p>
+<p>To use the signals you <code class="docutils literal notranslate"><span class="pre">connect</span></code> a receiver function to the signals you’re interested in:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dynamorm.signals</span> <span class="kn">import</span> <span class="n">post_save</span>
+
+<span class="k">def</span> <span class="nf">post_save_receiver</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">partial</span><span class="p">,</span> <span class="n">put_kwargs</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Received post_save signal from model </span><span class="si">%s</span><span class="s2"> for instance </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+
+<span class="n">post_save</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">post_save_receiver</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>See the <a class="reference external" href="https://pythonhosted.org/blinker/">blinker</a> documentation for more details.</p>
+<dl class="py data">
+<dt id="dynamorm.signals.model_prepared">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">model_prepared</code><a class="headerlink" href="#dynamorm.signals.model_prepared" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent whenever a model class has been prepared by the metaclass.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class that is now prepared for use.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.pre_init">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">pre_init</code><a class="headerlink" href="#dynamorm.signals.pre_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent during model instantiation, before processing the raw data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>bool partial: True if this is a partial instantiation, not all data may be present.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>dict raw: The raw data to be processed by the model schema.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.post_init">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">post_init</code><a class="headerlink" href="#dynamorm.signals.post_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent once model instantiation is complete and all raw data has been processed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>bool partial: True if this is a partial instantiation, not all data may be present.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>dict raw: The raw data to be processed by the model schema.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.pre_save">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">pre_save</code><a class="headerlink" href="#dynamorm.signals.pre_save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent before saving (via put) model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict put_kwargs: A dict of the kwargs being sent to the table put method.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.post_save">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">post_save</code><a class="headerlink" href="#dynamorm.signals.post_save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent after saving (via put) model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict put_kwargs: A dict of the kwargs being sent to the table put method.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.pre_update">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">pre_update</code><a class="headerlink" href="#dynamorm.signals.pre_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent before saving (via update) model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict conditions: The conditions for the update to succeed.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>dict update_item_kwargs: A dict of the kwargs being sent to the table put method.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict updates: The fields to update.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.post_update">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">post_update</code><a class="headerlink" href="#dynamorm.signals.post_update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent after saving (via update) model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict conditions: The conditions for the update to succeed.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>dict update_item_kwargs: A dict of the kwargs being sent to the table put method.</p>
+</dd>
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>dict updates: The fields to update.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.pre_delete">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">pre_delete</code><a class="headerlink" href="#dynamorm.signals.pre_delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent before deleting model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The model instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt id="dynamorm.signals.post_delete">
+<code class="sig-prename descclassname">dynamorm.signals.</code><code class="sig-name descname">post_delete</code><a class="headerlink" href="#dynamorm.signals.post_delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sent after deleting model instances.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param</dt>
+<dd class="field-odd"><p>sender: The model class.</p>
+</dd>
+<dt class="field-even">Param</dt>
+<dd class="field-even"><p>instance: The deleted model instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-dynamorm.exceptions">
+<span id="dynamorm-exceptions"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.exceptions</span></code><a class="headerlink" href="#module-dynamorm.exceptions" title="Permalink to this headline">¶</a></h2>
+<dl class="py exception">
+<dt id="dynamorm.exceptions.ConditionFailed">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">ConditionFailed</code><a class="headerlink" href="#dynamorm.exceptions.ConditionFailed" title="Permalink to this definition">¶</a></dt>
+<dd><p>A condition check failed</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.DynaModelException">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">DynaModelException</code><a class="headerlink" href="#dynamorm.exceptions.DynaModelException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base exception for DynaModel problems</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.DynamoException">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">DynamoException</code><a class="headerlink" href="#dynamorm.exceptions.DynamoException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base exception for all DynamORM raised exceptions</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.DynamoTableException">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">DynamoTableException</code><a class="headerlink" href="#dynamorm.exceptions.DynamoTableException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base exception class for all DynamoTable errors</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.HashKeyExists">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">HashKeyExists</code><a class="headerlink" href="#dynamorm.exceptions.HashKeyExists" title="Permalink to this definition">¶</a></dt>
+<dd><p>A operating requesting a unique hash key failed</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.InvalidKey">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">InvalidKey</code><a class="headerlink" href="#dynamorm.exceptions.InvalidKey" title="Permalink to this definition">¶</a></dt>
+<dd><p>A parameter is not a valid key</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.InvalidSchemaField">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">InvalidSchemaField</code><a class="headerlink" href="#dynamorm.exceptions.InvalidSchemaField" title="Permalink to this definition">¶</a></dt>
+<dd><p>A field provided does not exist in the schema</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.MissingTableAttribute">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">MissingTableAttribute</code><a class="headerlink" href="#dynamorm.exceptions.MissingTableAttribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>A required attribute is missing</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.TableNotActive">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">TableNotActive</code><a class="headerlink" href="#dynamorm.exceptions.TableNotActive" title="Permalink to this definition">¶</a></dt>
+<dd><p>The table is not ACTIVE, and you do not want to wait</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt id="dynamorm.exceptions.ValidationError">
+<em class="property">exception </em><code class="sig-prename descclassname">dynamorm.exceptions.</code><code class="sig-name descname">ValidationError</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw</span></em>, <em class="sig-param"><span class="n">schema_name</span></em>, <em class="sig-param"><span class="n">errors</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.exceptions.ValidationError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schema validation failed</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-dynamorm.local">
+<span id="dynamorm-local"></span><h2><code class="docutils literal notranslate"><span class="pre">dynamorm.local</span></code><a class="headerlink" href="#module-dynamorm.local" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="dynamorm.local.DynamoLocal">
+<em class="property">class </em><code class="sig-prename descclassname">dynamorm.local.</code><code class="sig-name descname">DynamoLocal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dynamo_dir</span></em>, <em class="sig-param"><span class="n">port</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.local.DynamoLocal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spins up a local dynamo instance. This should ONLY be used for testing!! This instance
+will register the cleanup method <code class="docutils literal notranslate"><span class="pre">shutdown</span></code> with the <code class="docutils literal notranslate"><span class="pre">atexit</span></code> module.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dynamorm.local.get_random_port">
+<code class="sig-prename descclassname">dynamorm.local.</code><code class="sig-name descname">get_random_port</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dynamorm.local.get_random_port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a random port that appears to be available</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">DynamORM</a></h1>
+
+
+
+<p class="blurb">Python object & relation mapping library for Amazon's DynamoDB service.<br /></p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=NerdWalletOSS&repo=dynamorm&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/NerdWalletOSS/dynamorm">
+    <img
+        alt="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+        src="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+    />
+</a>
+</p>
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://codecov.io/github/NerdWalletOSS/dynamorm">
+    <img
+    alt="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    src="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    />
+</a>
+</p>
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developing.html">Developing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DynamORM API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm"><code class="docutils literal notranslate"><span class="pre">dynamorm</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.model"><code class="docutils literal notranslate"><span class="pre">dynamorm.model</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.table"><code class="docutils literal notranslate"><span class="pre">dynamorm.table</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.relationships"><code class="docutils literal notranslate"><span class="pre">dynamorm.relationships</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.signals"><code class="docutils literal notranslate"><span class="pre">dynamorm.signals</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.exceptions"><code class="docutils literal notranslate"><span class="pre">dynamorm.exceptions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-dynamorm.local"><code class="docutils literal notranslate"><span class="pre">dynamorm.local</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="motivation.html">Motivation for creating DynamORM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="developing.html" title="previous chapter">Developing</a></li>
+      <li>Next: <a href="motivation.html" title="next chapter">Motivation for creating DynamORM</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; 2020 <a href="http://nerdwallet.com">NerdWallet</a>.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/NerdWalletOSS/dynamorm" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

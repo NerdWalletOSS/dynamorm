@@ -1,0 +1,292 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DynamORM &#8212; DynamORM 0.11.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="dynamorm">
+<h1>DynamORM<a class="headerlink" href="#dynamorm" title="Permalink to this headline">¶</a></h1>
+<a class="reference external image-reference" href="https://travis-ci.org/NerdWalletOSS/dynamorm"><img alt="https://img.shields.io/travis/NerdWalletOSS/dynamorm.svg" src="https://img.shields.io/travis/NerdWalletOSS/dynamorm.svg" /></a>
+<a class="reference external image-reference" href="https://codecov.io/github/NerdWalletOSS/dynamorm"><img alt="https://img.shields.io/codecov/c/github/NerdWalletOSS/dynamorm.svg" src="https://img.shields.io/codecov/c/github/NerdWalletOSS/dynamorm.svg" /></a>
+<a class="reference external image-reference" href="https://pypi.python.org/pypi/dynamorm"><img alt="Latest PyPI version" src="https://img.shields.io/pypi/v/dynamorm.svg" /></a>
+<a class="reference external image-reference" href="https://pypi.python.org/pypi/dynamorm"><img alt="Supported Python Versions" src="https://img.shields.io/pypi/pyversions/dynamorm.svg" /></a>
+<hr class="docutils" />
+<p><em>This package is a work in progress – Feedback / Suggestions / Etc welcomed!</em></p>
+<p>Python + DynamoDB ♡</p>
+<p>DynamORM (pronounced <em>Dynamo-R-M</em>) is a Python object &amp; relation mapping library for Amazon’s <a class="reference external" href="http://aws.amazon.com/dynamodb/">DynamoDB</a> service.</p>
+<p>The project has two goals:</p>
+<ol class="arabic simple">
+<li><p><strong>Abstract away the interaction with the underlying DynamoDB libraries</strong>.  Python access to the DynamoDB service has evolved quickly, from <a class="reference external" href="http://boto.cloudhackers.com/en/latest/migrations/dynamodb_v1_to_v2.html">Dynamo v1 in boto to Dynamo v2 in boto</a> and then the <a class="reference external" href="http://boto3.readthedocs.io/en/latest/guide/dynamodb.html">new resource model in boto3</a>.  By providing a consistent interface that will feel familiar to users of other Python ORMs (SQLAlchemy, Django, Peewee, etc) means that we can always provide best-practices for queries and take advantages of new features without needing to refactor any application logic.</p></li>
+<li><p><strong>Delegate schema validation and serialization to more focused libraries</strong>.  Building “ORM” semantics is “easy”, doing data validation and serialization is not.  We support both <a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/">Marshmallow</a> and <a class="reference external" href="https://schematics.readthedocs.io/en/latest/">Schematics</a> for building your object schemas.  You can take advantage of the full power of these libraries as they are transparently exposed in your code.</p></li>
+</ol>
+<div class="section" id="supported-schema-validation-libraries">
+<h2>Supported Schema Validation Libraries<a class="headerlink" href="#supported-schema-validation-libraries" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://schematics.readthedocs.io/en/latest/">Schematics</a> &gt;= 2.1.0</p></li>
+<li><p><a class="reference external" href="https://marshmallow.readthedocs.io/en/latest/">Marshmallow</a> &gt;= 2.15.1</p></li>
+</ul>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">from</span> <span class="nn">dynamorm</span> <span class="kn">import</span> <span class="n">DynaModel</span><span class="p">,</span> <span class="n">GlobalIndex</span><span class="p">,</span> <span class="n">ProjectAll</span>
+
+<span class="c1"># In this example we&#39;ll use Marshmallow, but you can also use Schematics too!</span>
+<span class="c1"># You can see that you have to import the schema library yourself, it is not abstracted at all</span>
+<span class="kn">from</span> <span class="nn">marshmallow</span> <span class="kn">import</span> <span class="n">fields</span>
+
+<span class="c1"># Our objects are defined as DynaModel classes</span>
+<span class="k">class</span> <span class="nc">Book</span><span class="p">(</span><span class="n">DynaModel</span><span class="p">):</span>
+    <span class="c1"># Define our DynamoDB properties</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;prod-books&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;isbn&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">class</span> <span class="nc">ByAuthor</span><span class="p">(</span><span class="n">GlobalIndex</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;by-author&#39;</span>
+        <span class="n">hash_key</span> <span class="o">=</span> <span class="s1">&#39;author&#39;</span>
+        <span class="n">read</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="n">projection</span> <span class="o">=</span> <span class="n">ProjectAll</span><span class="p">()</span>
+
+    <span class="c1"># Define our data schema, each property here will become a property on instances of the Book class</span>
+    <span class="k">class</span> <span class="nc">Schema</span><span class="p">:</span>
+        <span class="n">isbn</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">validate_isbn</span><span class="p">)</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+        <span class="n">publisher</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">String</span><span class="p">()</span>
+
+        <span class="c1"># NOTE: Marshmallow uses the `missing` keyword during deserialization, which occurs when we save</span>
+        <span class="c1"># an object to Dynamo and the attr has no value, versus the `default` keyword, which is used when</span>
+        <span class="c1"># we load a document from Dynamo and the value doesn&#39;t exist or is null.</span>
+        <span class="n">year</span> <span class="o">=</span> <span class="n">fields</span><span class="o">.</span><span class="n">Number</span><span class="p">(</span><span class="n">missing</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+
+<span class="c1"># Store new documents directly from dictionaries</span>
+<span class="n">Book</span><span class="o">.</span><span class="n">put</span><span class="p">({</span>
+    <span class="s2">&quot;isbn&quot;</span><span class="p">:</span> <span class="s2">&quot;12345678910&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Foo&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="s2">&quot;Mr. Bar&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;publisher&quot;</span><span class="p">:</span> <span class="s2">&quot;Publishorama&quot;</span>
+<span class="p">})</span>
+
+<span class="c1"># Work with the classes as objects.  You can pass attributes from the schema to the constructor</span>
+<span class="n">foo</span> <span class="o">=</span> <span class="n">Book</span><span class="p">(</span><span class="n">isbn</span><span class="o">=</span><span class="s2">&quot;12345678910&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Foo&quot;</span><span class="p">,</span> <span class="n">author</span><span class="o">=</span><span class="s2">&quot;Mr. Bar&quot;</span><span class="p">,</span>
+           <span class="n">publisher</span><span class="o">=</span><span class="s2">&quot;Publishorama&quot;</span><span class="p">)</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+<span class="c1"># Or assign attributes</span>
+<span class="n">foo</span> <span class="o">=</span> <span class="n">Book</span><span class="p">()</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">isbn</span> <span class="o">=</span> <span class="s2">&quot;12345678910&quot;</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Foo&quot;</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">author</span> <span class="o">=</span> <span class="s2">&quot;Mr. Bar&quot;</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">publisher</span> <span class="o">=</span> <span class="s2">&quot;Publishorama&quot;</span>
+
+<span class="c1"># In all cases they go through Schema validation, calls to .put or .save can result in ValidationError</span>
+<span class="n">foo</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+<span class="c1"># You can then fetch, query and scan your tables.</span>
+<span class="c1"># Get on the hash key, and/or range key</span>
+<span class="n">book</span> <span class="o">=</span> <span class="n">Book</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">isbn</span><span class="o">=</span><span class="s2">&quot;12345678910&quot;</span><span class="p">)</span>
+
+<span class="c1"># Update items, with conditions</span>
+<span class="c1"># Here our condition ensures we don&#39;t have a race condition where someone else updates the title first</span>
+<span class="n">book</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;Corrected Foo&#39;</span><span class="p">,</span> <span class="n">conditions</span><span class="o">=</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">book</span><span class="o">.</span><span class="n">title</span><span class="p">,))</span>
+
+<span class="c1"># Query based on the keys</span>
+<span class="n">Book</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">isbn__begins_with</span><span class="o">=</span><span class="s2">&quot;12345&quot;</span><span class="p">)</span>
+
+<span class="c1"># Scan based on attributes</span>
+<span class="n">Book</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="s2">&quot;Mr. Bar&quot;</span><span class="p">)</span>
+<span class="n">Book</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">author__ne</span><span class="o">=</span><span class="s2">&quot;Mr. Bar&quot;</span><span class="p">)</span>
+
+<span class="c1"># Query based on indexes</span>
+<span class="n">Book</span><span class="o">.</span><span class="n">ByAuthor</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="s2">&quot;Mr. Bar&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h1>
+<p>Full documentation is built from the sources each build and can be found online at:</p>
+<p><a class="reference external" href="https://nerdwalletoss.github.io/dynamorm/">https://nerdwalletoss.github.io/dynamorm/</a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">tests/</span></code> also contain the most complete documentation on how to actually use the library, so you are encouraged to read through them to really familiarize yourself with some of the more advanced concepts and use cases.</p>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#setting-up-boto3">Setting up Boto3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#defining-your-models-tables-schemas">Defining your Models – Tables &amp; Schemas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#table-data-model">Table Data Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#creating-new-documents">Creating new documents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#fetching-existing-documents">Fetching existing documents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#updating-documents">Updating documents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#relationships">Relationships</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developing.html">Developing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="developing.html#testing-with-tox">Testing with tox</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developing.html#formatting-with-black">Formatting with black</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">DynamORM API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm"><code class="docutils literal notranslate"><span class="pre">dynamorm</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.model"><code class="docutils literal notranslate"><span class="pre">dynamorm.model</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.table"><code class="docutils literal notranslate"><span class="pre">dynamorm.table</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.relationships"><code class="docutils literal notranslate"><span class="pre">dynamorm.relationships</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.signals"><code class="docutils literal notranslate"><span class="pre">dynamorm.signals</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.exceptions"><code class="docutils literal notranslate"><span class="pre">dynamorm.exceptions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-dynamorm.local"><code class="docutils literal notranslate"><span class="pre">dynamorm.local</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="motivation.html">Motivation for creating DynamORM</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">DynamORM</a></h1>
+
+
+
+<p class="blurb">Python object & relation mapping library for Amazon's DynamoDB service.<br /></p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=NerdWalletOSS&repo=dynamorm&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/NerdWalletOSS/dynamorm">
+    <img
+        alt="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+        src="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+    />
+</a>
+</p>
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://codecov.io/github/NerdWalletOSS/dynamorm">
+    <img
+    alt="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    src="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    />
+</a>
+</p>
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developing.html">Developing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">DynamORM API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="motivation.html">Motivation for creating DynamORM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="usage.html" title="next chapter">Usage</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; 2020 <a href="http://nerdwallet.com">NerdWallet</a>.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/NerdWalletOSS/dynamorm" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

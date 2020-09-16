@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Developing &#8212; DynamORM 0.11.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DynamORM API" href="api.html" />
+    <link rel="prev" title="Usage" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="developing">
+<h1>Developing<a class="headerlink" href="#developing" title="Permalink to this headline">¶</a></h1>
+<p>DynamORM is designed to work with Python2.7, Python3.5, Python3.6, and Python3.7 as well as with both Marshmallow and Schematics for serialization.  When you open a Pull Request on GitHub tests will be against a full matrix of these options to guarantee compatibility.</p>
+<p>Locally we use <a class="reference external" href="https://tox.readthedocs.io/en/latest/">tox</a> to provide a similar test matrix.  By default when you run <code class="docutils literal notranslate"><span class="pre">tox</span></code> the tests will run against <code class="docutils literal notranslate"><span class="pre">python2</span></code> and <code class="docutils literal notranslate"><span class="pre">python3</span></code> for both Marshmallow and Schematics.</p>
+<p>The tests will pull down the latest copy of DynamoDB Local from S3 and place it in <code class="docutils literal notranslate"><span class="pre">build/dynamo-local</span></code>.  A copy will be started on a random high port, running with <code class="docutils literal notranslate"><span class="pre">-inMemory</span></code>, at the start of the test run and shutdown after the run.</p>
+<div class="section" id="testing-with-tox">
+<h2>Testing with <a class="reference external" href="https://tox.readthedocs.io/en/latest/">tox</a><a class="headerlink" href="#testing-with-tox" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://tox.readthedocs.io/en/latest/">tox</a> can be installed with <code class="docutils literal notranslate"><span class="pre">pip</span></code>, or with your local package manager (i.e. on OSX <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">tox</span></code>).</p>
+<p>Once installed simply run <code class="docutils literal notranslate"><span class="pre">tox</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">tox</span>
+</pre></div>
+</div>
+<p>This will create virtualenvs for the full matrix of <code class="docutils literal notranslate"><span class="pre">python2</span></code> and <code class="docutils literal notranslate"><span class="pre">python3</span></code> with both schematics and marshmallow.</p>
+</div>
+<div class="section" id="formatting-with-black">
+<h2>Formatting with <a class="reference external" href="https://github.com/psf/black">black</a><a class="headerlink" href="#formatting-with-black" title="Permalink to this headline">¶</a></h2>
+<p>DynamORM uses <a class="reference external" href="https://github.com/psf/black">black</a> for formatting so that we don’t spend time worrying about formatting.</p>
+<p>When you run <code class="docutils literal notranslate"><span class="pre">tox</span></code> it will check all files before running tests, and will fail if any of them are not formatted to black’s standards.</p>
+<p>To re-format those files you can run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">tox</span> <span class="o">-</span><span class="n">e</span> <span class="n">black</span> <span class="o">--</span> <span class="o">.</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">DynamORM</a></h1>
+
+
+
+<p class="blurb">Python object & relation mapping library for Amazon's DynamoDB service.<br /></p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=NerdWalletOSS&repo=dynamorm&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://travis-ci.org/NerdWalletOSS/dynamorm">
+    <img
+        alt="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+        src="https://secure.travis-ci.org/NerdWalletOSS/dynamorm.svg?branch=master"
+    />
+</a>
+</p>
+
+
+
+
+    
+
+<p>
+<a class="badge" href="https://codecov.io/github/NerdWalletOSS/dynamorm">
+    <img
+    alt="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    src="https://codecov.io/github/NerdWalletOSS/dynamorm/coverage.svg?branch=master"
+    />
+</a>
+</p>
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Developing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#testing-with-tox">Testing with tox</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#formatting-with-black">Formatting with black</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">DynamORM API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="motivation.html">Motivation for creating DynamORM</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage</a></li>
+      <li>Next: <a href="api.html" title="next chapter">DynamORM API</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy; 2020 <a href="http://nerdwallet.com">NerdWallet</a>.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/NerdWalletOSS/dynamorm" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
