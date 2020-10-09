@@ -385,7 +385,7 @@ class DynaModel(object):
         * ``>``: ``Thing.scan(count__gt=10)``
         * ``>=``: ``Thing.scan(count__gte=10)``
         * ``BETWEEN``: ``Thing.scan(count__between=[10, 20])``
-        * ``IN``: ``Thing.scan(count__in=[11, 12, 13])``
+        * ``IN``: ``Thing.scan(count__is_in=[11, 12, 13])``
         * ``attribute_exists``: ``Thing.scan(foo__exists=True)``
         * ``attribute_not_exists``: ``Thing.scan(foo__not_exists=True)``
         * ``attribute_type``: ``Thing.scan(foo__type='S')``
