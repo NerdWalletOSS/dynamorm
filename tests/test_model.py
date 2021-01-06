@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import os
 import pytest
 
@@ -503,6 +505,39 @@ def test_sparse_indexes(dynamo_local):
     assert items[0].foo == "2"
 
 
+def test_partial_save_simple(TestModel):
+    """Tests the bare minimum partial save functionality.
+
+    Currently fails for Marshmallow-backed models because the marshmallow Schema.dynamorm_validate() does not return
+    keys with None values (Schematics does). This means any changes to keys not in the original data aren't identified
+    as changed in Model.model.save() where it calculates `updates`.
+    """
+    data = {
+        "foo": "first",
+        "bar": "one",
+        "baz": "bbq",
+    }
+    model = TestModel(**data)
+    model.put = MagicMock()
+    model.update_item = MagicMock()
+
+    model.count = 1
+    model.save(partial=True)
+
+    count_update_call = call(
+        # no conditions should we set
+        conditions=None,
+        # our ReturnValues should be set to return updates values
+        update_item_kwargs={"ReturnValues": "UPDATED_NEW"},
+        # the the we changed should be included
+        count=1,
+        # and so should the primary key
+        foo="first",
+        bar="one",
+    )
+    model.update_item.assert_has_calls([count_update_call])
+
+
 def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     def get_first():
         first = TestModel.get(foo="first", bar="one")
@@ -515,28 +550,33 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
     first.save()
     first.update_item.assert_not_called()
 
-    # next do a partial save without any changed and again with a change
-    # put should not be called, and update should only be called once dispite save being called twice
+    # next do a partial save without any changed and again with a change.
+    # put should not be called, and update should only be called once despite save being called twice.
+    # by using a field that has a different native/primitive format, we can check that the model saves the native data
+    # in _validated_data.
     first = get_first()
     first.save(partial=True)
 
-    first.baz = "changed"
-    first.update_item.return_value = {"Attributes": {"baz": "changed"}}
+    now = datetime.utcnow()
+    first.when = now
+    primitive_when = first.to_dict()["when"]
+
+    first.update_item.return_value = {"Attributes": {"when": primitive_when}}
     first.save(partial=True)
     first.put.assert_not_called()
 
-    baz_update_call = call(
+    when_update_call = call(
         # no conditions should we set
         conditions=None,
         # our ReturnValues should be set to return updates values
         update_item_kwargs={"ReturnValues": "UPDATED_NEW"},
         # the the we changed should be included
-        baz="changed",
+        when=first.when,
         # and so should the primary key
         foo="first",
         bar="one",
     )
-    first.update_item.assert_has_calls([baz_update_call])
+    first.update_item.assert_has_calls([when_update_call])
 
     # do it again, and just count should be sent
     first.count = 999
@@ -551,7 +591,7 @@ def test_partial_save(TestModel, TestModel_entries, dynamo_local):
         foo="first",
         bar="one",
     )
-    first.update_item.assert_has_calls([baz_update_call, count_update_call])
+    first.update_item.assert_has_calls([when_update_call, count_update_call])
 
 
 def test_partial_save_with_return_all(TestModel, TestModel_entries, dynamo_local):
