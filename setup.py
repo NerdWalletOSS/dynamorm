@@ -11,6 +11,10 @@ setup(
     author="Evan Borgstrom",
     author_email="evan@borgstrom.ca",
     url="https://github.com/NerdWalletOSS/DynamORM",
+    project_urls={
+        "Documentation": "https://nerdwalletoss.github.io/dynamorm/",
+        "Source": "https://github.com/NerdWalletOSS/DynamORM",
+    },
     license="Apache License Version 2.0",
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
     install_requires=["blinker>=1.4,<2.0", "boto3>=1.3,<2.0", "six"],
