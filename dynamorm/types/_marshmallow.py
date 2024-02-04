@@ -1,7 +1,7 @@
 import six
 from pkg_resources import parse_version
 
-from marshmallow import Schema as MarshmallowSchema
+from marshmallow import Schema as MarshmallowSchema, EXCLUDE
 from marshmallow.exceptions import MarshmallowError
 from marshmallow import fields, __version__ as marshmallow_version
 
@@ -15,9 +15,9 @@ if parse_version(marshmallow_version) >= parse_version("3.0.0a1"):
         """Validate using a Marshmallow v3+ schema"""
         try:
             if native:
-                data = cls().load(obj, partial=partial, unknown="EXCLUDE")
+                data = cls().load(obj, partial=partial, unknown=EXCLUDE)
             else:
-                data = cls(partial=partial, unknown="EXCLUDE").dump(obj)
+                data = cls(partial=partial, unknown=EXCLUDE).dump(obj)
         except MarshmallowError as e:
             raise ValidationError(obj, cls.__name__, e)
         return data
